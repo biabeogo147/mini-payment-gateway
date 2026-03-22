@@ -1,2 +1,16 @@
-.idea
+.env
+*.pyc
+*.pyo
+*.pyd
+
 __pycache__
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+dist/
+build/
+htmlcov/
+pgdata/
+backend/.venv/
+.worktrees/
+worktrees/
