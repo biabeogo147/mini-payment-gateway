@@ -17,7 +17,17 @@ branch_labels = None
 depends_on = None
 
 
-entity_type = postgresql.ENUM("PAYMENT", "REFUND", "MERCHANT", "WEBHOOK_EVENT", "RECONCILIATION", name="entity_type", create_type=False)
+entity_type = postgresql.ENUM(
+    "PAYMENT",
+    "REFUND",
+    "MERCHANT",
+    "MERCHANT_CREDENTIAL",
+    "ONBOARDING_CASE",
+    "WEBHOOK_EVENT",
+    "RECONCILIATION",
+    name="entity_type",
+    create_type=False,
+)
 webhook_event_status = postgresql.ENUM("PENDING", "DELIVERED", "FAILED", name="webhook_event_status", create_type=False)
 delivery_attempt_result = postgresql.ENUM("SUCCESS", "FAILED", "TIMEOUT", "NETWORK_ERROR", name="delivery_attempt_result", create_type=False)
 
@@ -39,6 +49,7 @@ def upgrade() -> None:
         sa.Column("last_attempt_at", sa.DateTime(timezone=True), nullable=True),
         sa.Column("created_at", sa.DateTime(timezone=True), server_default=sa.func.now(), nullable=False),
         sa.Column("updated_at", sa.DateTime(timezone=True), server_default=sa.func.now(), nullable=False),
+        sa.CheckConstraint("attempt_count >= 0", name="ck_webhook_events_attempt_count_non_negative"),
         sa.ForeignKeyConstraint(["merchant_db_id"], ["merchants.id"], name="fk_webhook_events_merchant"),
         sa.PrimaryKeyConstraint("id", name="pk_webhook_events"),
         sa.UniqueConstraint("event_id", name="uq_webhook_events_event_id"),

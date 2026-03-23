@@ -5,6 +5,7 @@ from datetime import datetime, timedelta, timezone
 from decimal import Decimal
 
 from sqlalchemy import create_engine, text
+from sqlalchemy.exc import SQLAlchemyError
 
 
 DATABASE_URL = os.getenv(
@@ -15,6 +16,15 @@ DATABASE_URL = os.getenv(
 
 def scalar_uuid(connection, sql: str, params: dict) -> str:
     return str(connection.execute(text(sql), params).scalar_one())
+
+
+def expect_statement_failure(connection, sql: str, params: dict) -> bool:
+    try:
+        with connection.begin_nested():
+            connection.execute(text(sql), params)
+    except SQLAlchemyError:
+        return True
+    return False
 
 
 def main() -> None:
@@ -29,6 +39,7 @@ def main() -> None:
         connection.execute(text("DELETE FROM refund_transactions"))
         connection.execute(text("DELETE FROM payment_transactions"))
         connection.execute(text("DELETE FROM order_references"))
+        connection.execute(text("DELETE FROM merchant_onboarding_cases"))
         connection.execute(text("DELETE FROM merchant_credentials"))
         connection.execute(text("DELETE FROM merchants"))
         connection.execute(text("DELETE FROM internal_users"))
@@ -54,14 +65,12 @@ def main() -> None:
             INSERT INTO merchants (
               merchant_id, merchant_name, legal_name, contact_name, contact_email,
               contact_phone, webhook_url, allowed_ip_list, status,
-              settlement_account_name, settlement_account_number, settlement_bank_code,
-              approved_at, approved_by
+              settlement_account_name, settlement_account_number, settlement_bank_code
             )
             VALUES (
               :merchant_id, :merchant_name, :legal_name, :contact_name, :contact_email,
               :contact_phone, :webhook_url, :allowed_ip_list, :status,
-              :settlement_account_name, :settlement_account_number, :settlement_bank_code,
-              :approved_at, :approved_by
+              :settlement_account_name, :settlement_account_number, :settlement_bank_code
             )
             RETURNING id
             """,
@@ -78,8 +87,32 @@ def main() -> None:
                 "settlement_account_name": "Demo Settlement",
                 "settlement_account_number": "123456789",
                 "settlement_bank_code": "VCB",
-                "approved_at": datetime.now(timezone.utc),
-                "approved_by": admin_id,
+            },
+        )
+
+        onboarding_case_id = scalar_uuid(
+            connection,
+            """
+            INSERT INTO merchant_onboarding_cases (
+              merchant_db_id, status, domain_or_app_name, submitted_profile_json,
+              documents_json, review_checks_json, decision_note, reviewed_by, reviewed_at
+            )
+            VALUES (
+              :merchant_db_id, :status, :domain_or_app_name, CAST(:submitted_profile_json AS jsonb),
+              CAST(:documents_json AS jsonb), CAST(:review_checks_json AS jsonb), :decision_note, :reviewed_by, :reviewed_at
+            )
+            RETURNING id
+            """,
+            {
+                "merchant_db_id": merchant_uuid,
+                "status": "APPROVED",
+                "domain_or_app_name": "merchant-app.example",
+                "submitted_profile_json": '{"merchant_name":"Demo Merchant","contact_email":"merchant@example.com"}',
+                "documents_json": '{"business_license":{"status":"received"}}',
+                "review_checks_json": '{"settlement_account":{"status":"verified"},"webhook_url":{"status":"verified"}}',
+                "decision_note": "Approved by ops during smoke verification",
+                "reviewed_by": admin_id,
+                "reviewed_at": datetime.now(timezone.utc),
             },
         )
 
@@ -100,6 +133,26 @@ def main() -> None:
                 "status": "ACTIVE",
             },
         )
+
+        duplicate_active_credential_rejected = expect_statement_failure(
+            connection,
+            """
+            INSERT INTO merchant_credentials (
+              merchant_db_id, access_key, secret_key_encrypted, secret_key_last4, status
+            )
+            VALUES (:merchant_db_id, :access_key, :secret_key_encrypted, :secret_key_last4, :status)
+            """,
+            {
+                "merchant_db_id": merchant_uuid,
+                "access_key": "acc_demo_002",
+                "secret_key_encrypted": "encrypted-secret-value-2",
+                "secret_key_last4": "5678",
+                "status": "ACTIVE",
+            },
+        )
+
+        if not duplicate_active_credential_rejected:
+            raise RuntimeError("Expected second ACTIVE credential insert to fail.")
 
         order_reference_id = scalar_uuid(
             connection,
@@ -156,36 +209,31 @@ def main() -> None:
             },
         )
 
-        duplicate_payment_rejected = False
-        try:
-            connection.execute(
-                text(
-                    """
-                    INSERT INTO payment_transactions (
-                      transaction_id, merchant_db_id, order_reference_id, order_id,
-                      amount, currency, description, status, qr_content, expire_at
-                    )
-                    VALUES (
-                      :transaction_id, :merchant_db_id, :order_reference_id, :order_id,
-                      :amount, :currency, :description, :status, :qr_content, :expire_at
-                    )
-                    """
-                ),
-                {
-                    "transaction_id": "txn_demo_002",
-                    "merchant_db_id": merchant_uuid,
-                    "order_reference_id": order_reference_id,
-                    "order_id": "order_001",
-                    "amount": Decimal("125000.00"),
-                    "currency": "VND",
-                    "description": "Duplicate pending payment",
-                    "status": "PENDING",
-                    "qr_content": "duplicate",
-                    "expire_at": datetime.now(timezone.utc) + timedelta(minutes=15),
-                },
+        duplicate_payment_rejected = expect_statement_failure(
+            connection,
+            """
+            INSERT INTO payment_transactions (
+              transaction_id, merchant_db_id, order_reference_id, order_id,
+              amount, currency, description, status, qr_content, expire_at
             )
-        except Exception:
-            duplicate_payment_rejected = True
+            VALUES (
+              :transaction_id, :merchant_db_id, :order_reference_id, :order_id,
+              :amount, :currency, :description, :status, :qr_content, :expire_at
+            )
+            """,
+            {
+                "transaction_id": "txn_demo_002",
+                "merchant_db_id": merchant_uuid,
+                "order_reference_id": order_reference_id,
+                "order_id": "order_001",
+                "amount": Decimal("125000.00"),
+                "currency": "VND",
+                "description": "Duplicate pending payment",
+                "status": "PENDING",
+                "qr_content": "duplicate",
+                "expire_at": datetime.now(timezone.utc) + timedelta(minutes=15),
+            },
+        )
 
         if not duplicate_payment_rejected:
             raise RuntimeError("Expected duplicate active payment insert to fail.")
@@ -204,7 +252,7 @@ def main() -> None:
             },
         )
 
-        refund_id = scalar_uuid(
+        failed_refund_id = scalar_uuid(
             connection,
             """
             INSERT INTO refund_transactions (
@@ -223,42 +271,63 @@ def main() -> None:
                 "payment_transaction_id": payment_id,
                 "refund_id": "refund_001",
                 "refund_amount": Decimal("125000.00"),
-                "reason": "Customer cancelled",
-                "status": "REFUND_PENDING",
+                "reason": "Provider failure simulation",
+                "status": "REFUND_FAILED",
                 "idempotency_key": "idem_refund_001",
             },
         )
 
-        duplicate_refund_rejected = False
-        try:
-            connection.execute(
-                text(
-                    """
-                    INSERT INTO refund_transactions (
-                      refund_transaction_id, merchant_db_id, payment_transaction_id,
-                      refund_id, refund_amount, reason, status
-                    )
-                    VALUES (
-                      :refund_transaction_id, :merchant_db_id, :payment_transaction_id,
-                      :refund_id, :refund_amount, :reason, :status
-                    )
-                    """
-                ),
-                {
-                    "refund_transaction_id": "rtxn_demo_002",
-                    "merchant_db_id": merchant_uuid,
-                    "payment_transaction_id": payment_id,
-                    "refund_id": "refund_001",
-                    "refund_amount": Decimal("125000.00"),
-                    "reason": "Duplicate refund id",
-                    "status": "REFUND_PENDING",
-                },
+        refunded_refund_id = scalar_uuid(
+            connection,
+            """
+            INSERT INTO refund_transactions (
+              refund_transaction_id, merchant_db_id, payment_transaction_id,
+              refund_id, refund_amount, reason, status, idempotency_key, processed_at
             )
-        except Exception:
-            duplicate_refund_rejected = True
+            VALUES (
+              :refund_transaction_id, :merchant_db_id, :payment_transaction_id,
+              :refund_id, :refund_amount, :reason, :status, :idempotency_key, :processed_at
+            )
+            RETURNING id
+            """,
+            {
+                "refund_transaction_id": "rtxn_demo_002",
+                "merchant_db_id": merchant_uuid,
+                "payment_transaction_id": payment_id,
+                "refund_id": "refund_002",
+                "refund_amount": Decimal("125000.00"),
+                "reason": "Customer cancelled",
+                "status": "REFUNDED",
+                "idempotency_key": "idem_refund_002",
+                "processed_at": datetime.now(timezone.utc),
+            },
+        )
 
-        if not duplicate_refund_rejected:
-            raise RuntimeError("Expected duplicate refund_id insert to fail.")
+        duplicate_refunded_payment_rejected = expect_statement_failure(
+            connection,
+            """
+            INSERT INTO refund_transactions (
+              refund_transaction_id, merchant_db_id, payment_transaction_id,
+              refund_id, refund_amount, reason, status
+            )
+            VALUES (
+              :refund_transaction_id, :merchant_db_id, :payment_transaction_id,
+              :refund_id, :refund_amount, :reason, :status
+            )
+            """,
+            {
+                "refund_transaction_id": "rtxn_demo_003",
+                "merchant_db_id": merchant_uuid,
+                "payment_transaction_id": payment_id,
+                "refund_id": "refund_003",
+                "refund_amount": Decimal("125000.00"),
+                "reason": "Should fail because payment already refunded",
+                "status": "REFUNDED",
+            },
+        )
+
+        if not duplicate_refunded_payment_rejected:
+            raise RuntimeError("Expected second REFUNDED refund for the same payment to fail.")
 
         webhook_event_id = scalar_uuid(
             connection,
@@ -390,13 +459,13 @@ def main() -> None:
                 """
             ),
             {
-                "event_type": "WEBHOOK_RETRIED_MANUALLY",
-                "entity_type": "WEBHOOK_EVENT",
-                "entity_id": webhook_event_id,
+                "event_type": "MERCHANT_ONBOARDING_APPROVED",
+                "entity_type": "ONBOARDING_CASE",
+                "entity_id": onboarding_case_id,
                 "actor_type": "OPS",
                 "actor_id": admin_id,
-                "before_state_json": '{"status":"FAILED"}',
-                "after_state_json": '{"status":"PENDING"}',
+                "before_state_json": '{"status":"PENDING_REVIEW"}',
+                "after_state_json": '{"status":"APPROVED"}',
                 "reason": "Smoke verification log",
             },
         )
@@ -408,6 +477,7 @@ def main() -> None:
             "ix_payment_transactions_transaction_id",
             "ix_payment_transactions_merchant_order",
             "ix_refund_transactions_refund_id",
+            "ux_refund_transactions_refunded_payment",
             "ix_webhook_events_merchant_status_retry",
             "ix_reconciliation_records_match_result",
         }
@@ -430,8 +500,10 @@ def main() -> None:
 
         print("Smoke verification passed.")
         print(f"Merchant UUID: {merchant_uuid}")
+        print(f"Onboarding Case UUID: {onboarding_case_id}")
         print(f"Payment UUID: {payment_id}")
-        print(f"Refund UUID: {refund_id}")
+        print(f"Failed Refund UUID: {failed_refund_id}")
+        print(f"Refunded Refund UUID: {refunded_refund_id}")
 
 
 if __name__ == "__main__":

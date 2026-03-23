@@ -2,7 +2,7 @@ from datetime import datetime
 from decimal import Decimal
 from uuid import UUID
 
-from sqlalchemy import DateTime, Enum, ForeignKey, Numeric, String, Text, UniqueConstraint
+from sqlalchemy import CheckConstraint, DateTime, Enum, ForeignKey, Index, Numeric, String, Text, UniqueConstraint, text
 from sqlalchemy.dialects.postgresql import UUID as PGUUID
 from sqlalchemy.orm import Mapped, mapped_column
 
@@ -14,26 +14,18 @@ class RefundTransaction(UUIDPrimaryKeyMixin, TimestampMixin, Base):
     """
     What this model means:
     Refund flow record linked to a successful payment transaction.
-
-    Field meanings:
-    - id: internal UUID primary key.
-    - refund_transaction_id: public refund transaction identifier.
-    - merchant_db_id: owning merchant internal UUID.
-    - payment_transaction_id: original payment being refunded.
-    - refund_id: merchant-provided refund business id.
-    - refund_amount: requested refund amount.
-    - reason: merchant reason for refund.
-    - status: refund lifecycle state.
-    - external_reference: provider-side refund reference.
-    - idempotency_key: technical idempotency key from caller.
-    - processed_at: when final processing result was recorded.
-    - failed_reason_*: refund failure diagnostics.
-    - created_at/updated_at: record timestamps.
     """
 
     __tablename__ = "refund_transactions"
     __table_args__ = (
         UniqueConstraint("merchant_db_id", "refund_id", name="uq_refund_transactions_merchant_refund"),
+        CheckConstraint("refund_amount > 0", name="ck_refund_transactions_refund_amount_positive"),
+        Index(
+            "ux_refund_transactions_refunded_payment",
+            "payment_transaction_id",
+            unique=True,
+            postgresql_where=text("status = 'REFUNDED'"),
+        ),
     )
 
     refund_transaction_id: Mapped[str] = mapped_column(String(64), unique=True, nullable=False)

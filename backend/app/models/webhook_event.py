@@ -1,7 +1,7 @@
 from datetime import datetime
 from uuid import UUID
 
-from sqlalchemy import DateTime, Enum, ForeignKey, Index, Integer, JSON, String, Text
+from sqlalchemy import CheckConstraint, DateTime, Enum, ForeignKey, Index, Integer, JSON, String, Text
 from sqlalchemy.dialects.postgresql import JSONB, UUID as PGUUID
 from sqlalchemy.orm import Mapped, mapped_column
 
@@ -13,22 +13,11 @@ class WebhookEvent(UUIDPrimaryKeyMixin, TimestampMixin, Base):
     """
     What this model means:
     Snapshot of a business event queued for delivery to a merchant webhook.
-
-    Field meanings:
-    - id: internal UUID primary key.
-    - event_id: public event identifier.
-    - merchant_db_id: target merchant internal UUID.
-    - event_type: business event code such as PAYMENT_SUCCESS.
-    - entity_type/entity_id: source entity behind the event.
-    - payload_json: immutable payload snapshot to deliver.
-    - signature: signature generated for the payload.
-    - status: delivery state of the webhook event.
-    - next_retry_at/attempt_count/last_attempt_at: retry scheduling metadata.
-    - created_at/updated_at: record timestamps.
     """
 
     __tablename__ = "webhook_events"
     __table_args__ = (
+        CheckConstraint("attempt_count >= 0", name="ck_webhook_events_attempt_count_non_negative"),
         Index("ix_webhook_events_merchant_status_retry", "merchant_db_id", "status", "next_retry_at"),
     )
 

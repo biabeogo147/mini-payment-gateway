@@ -2,7 +2,7 @@ from datetime import datetime
 from decimal import Decimal
 from uuid import UUID
 
-from sqlalchemy import DateTime, Enum, ForeignKey, Index, Numeric, String, Text, text
+from sqlalchemy import CheckConstraint, DateTime, Enum, ForeignKey, Index, Numeric, String, Text, text
 from sqlalchemy.dialects.postgresql import UUID as PGUUID
 from sqlalchemy.orm import Mapped, mapped_column
 
@@ -14,26 +14,11 @@ class PaymentTransaction(UUIDPrimaryKeyMixin, TimestampMixin, Base):
     """
     What this model means:
     Core payment transaction row representing one QR payment attempt.
-
-    Field meanings:
-    - id: internal UUID primary key.
-    - transaction_id: public transaction identifier.
-    - merchant_db_id: owning merchant internal UUID.
-    - order_reference_id: linked business order reference.
-    - order_id: denormalized merchant order id for quick lookup.
-    - amount/currency: requested payment amount and currency.
-    - description: merchant-facing payment description.
-    - status: payment lifecycle state.
-    - qr_content/qr_image_*: QR payload and rendered image fields.
-    - external_reference: provider/bank reference if available.
-    - idempotency_key: technical idempotency key from caller.
-    - expire_at/paid_at: important payment timestamps.
-    - failed_reason_*: failure diagnostics.
-    - created_at/updated_at: record timestamps.
     """
 
     __tablename__ = "payment_transactions"
     __table_args__ = (
+        CheckConstraint("amount > 0", name="ck_payment_transactions_amount_positive"),
         Index(
             "ux_payment_transactions_active_order",
             "merchant_db_id",

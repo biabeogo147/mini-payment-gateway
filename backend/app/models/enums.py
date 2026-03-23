@@ -12,7 +12,7 @@ class InternalUserStatus(str, enum.Enum):
 
 
 class MerchantStatus(str, enum.Enum):
-    PENDING = "PENDING"
+    PENDING_REVIEW = "PENDING_REVIEW"
     ACTIVE = "ACTIVE"
     REJECTED = "REJECTED"
     SUSPENDED = "SUSPENDED"
@@ -36,6 +36,13 @@ class RefundStatus(str, enum.Enum):
     REFUND_PENDING = "REFUND_PENDING"
     REFUNDED = "REFUNDED"
     REFUND_FAILED = "REFUND_FAILED"
+
+
+class OnboardingCaseStatus(str, enum.Enum):
+    DRAFT = "DRAFT"
+    PENDING_REVIEW = "PENDING_REVIEW"
+    APPROVED = "APPROVED"
+    REJECTED = "REJECTED"
 
 
 class WebhookEventStatus(str, enum.Enum):
@@ -81,6 +88,8 @@ class EntityType(str, enum.Enum):
     PAYMENT = "PAYMENT"
     REFUND = "REFUND"
     MERCHANT = "MERCHANT"
+    MERCHANT_CREDENTIAL = "MERCHANT_CREDENTIAL"
+    ONBOARDING_CASE = "ONBOARDING_CASE"
     WEBHOOK_EVENT = "WEBHOOK_EVENT"
     RECONCILIATION = "RECONCILIATION"
 

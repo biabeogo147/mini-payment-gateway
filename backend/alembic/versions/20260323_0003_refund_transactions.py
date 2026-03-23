@@ -38,6 +38,7 @@ def upgrade() -> None:
         sa.Column("failed_reason_message", sa.Text(), nullable=True),
         sa.Column("created_at", sa.DateTime(timezone=True), server_default=sa.func.now(), nullable=False),
         sa.Column("updated_at", sa.DateTime(timezone=True), server_default=sa.func.now(), nullable=False),
+        sa.CheckConstraint("refund_amount > 0", name="ck_refund_transactions_refund_amount_positive"),
         sa.ForeignKeyConstraint(["merchant_db_id"], ["merchants.id"], name="fk_refunds_merchant"),
         sa.ForeignKeyConstraint(["payment_transaction_id"], ["payment_transactions.id"], name="fk_refunds_payment"),
         sa.PrimaryKeyConstraint("id", name="pk_refund_transactions"),
@@ -46,9 +47,17 @@ def upgrade() -> None:
     )
     op.create_index("ix_refund_transactions_refund_id", "refund_transactions", ["refund_id"], unique=False)
     op.create_index("ix_refund_transactions_payment_transaction_id", "refund_transactions", ["payment_transaction_id"], unique=False)
+    op.create_index(
+        "ux_refund_transactions_refunded_payment",
+        "refund_transactions",
+        ["payment_transaction_id"],
+        unique=True,
+        postgresql_where=sa.text("status = 'REFUNDED'"),
+    )
 
 
 def downgrade() -> None:
+    op.drop_index("ux_refund_transactions_refunded_payment", table_name="refund_transactions")
     op.drop_index("ix_refund_transactions_payment_transaction_id", table_name="refund_transactions")
     op.drop_index("ix_refund_transactions_refund_id", table_name="refund_transactions")
     op.drop_table("refund_transactions")

@@ -58,6 +58,7 @@ def upgrade() -> None:
         sa.Column("failed_reason_message", sa.Text(), nullable=True),
         sa.Column("created_at", sa.DateTime(timezone=True), server_default=sa.func.now(), nullable=False),
         sa.Column("updated_at", sa.DateTime(timezone=True), server_default=sa.func.now(), nullable=False),
+        sa.CheckConstraint("amount > 0", name="ck_payment_transactions_amount_positive"),
         sa.ForeignKeyConstraint(["merchant_db_id"], ["merchants.id"], name="fk_payment_transactions_merchant_db_id_merchants"),
         sa.ForeignKeyConstraint(["order_reference_id"], ["order_references.id"], name="fk_payments_order_ref"),
         sa.PrimaryKeyConstraint("id", name="pk_payment_transactions"),

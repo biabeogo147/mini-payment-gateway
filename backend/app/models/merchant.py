@@ -1,8 +1,4 @@
-from datetime import datetime
-from uuid import UUID
-
-from sqlalchemy import ARRAY, DateTime, Enum, ForeignKey, String, Text
-from sqlalchemy.dialects.postgresql import UUID as PGUUID
+from sqlalchemy import ARRAY, Enum, String, Text
 from sqlalchemy.orm import Mapped, mapped_column
 
 from .base import Base, TimestampMixin, UUIDPrimaryKeyMixin
@@ -12,7 +8,7 @@ from .enums import MerchantStatus
 class Merchant(UUIDPrimaryKeyMixin, TimestampMixin, Base):
     """
     What this model means:
-    Merchant master profile and integration configuration.
+    Merchant master profile and operational integration configuration.
 
     Field meanings:
     - id: internal UUID primary key.
@@ -22,10 +18,8 @@ class Merchant(UUIDPrimaryKeyMixin, TimestampMixin, Base):
     - contact_name/contact_email/contact_phone: merchant contact details.
     - webhook_url: merchant endpoint receiving payment/refund events.
     - allowed_ip_list: optional whitelist of allowed caller IPs.
-    - status: merchant lifecycle status.
+    - status: operational merchant lifecycle status.
     - settlement_account_*: payout account metadata.
-    - approved_at: when merchant was approved.
-    - approved_by: internal user who approved the merchant.
     - created_at/updated_at: record timestamps.
     """
 
@@ -42,14 +36,9 @@ class Merchant(UUIDPrimaryKeyMixin, TimestampMixin, Base):
     status: Mapped[MerchantStatus] = mapped_column(
         Enum(MerchantStatus, name="merchant_status"),
         nullable=False,
-        default=MerchantStatus.PENDING,
+        default=MerchantStatus.PENDING_REVIEW,
+        server_default=MerchantStatus.PENDING_REVIEW.value,
     )
     settlement_account_name: Mapped[str | None] = mapped_column(String(255), nullable=True)
     settlement_account_number: Mapped[str | None] = mapped_column(String(64), nullable=True)
     settlement_bank_code: Mapped[str | None] = mapped_column(String(32), nullable=True)
-    approved_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
-    approved_by: Mapped[UUID | None] = mapped_column(
-        PGUUID(as_uuid=True),
-        ForeignKey("internal_users.id"),
-        nullable=True,
-    )

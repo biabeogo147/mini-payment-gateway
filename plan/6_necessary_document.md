@@ -1,39 +1,44 @@
-## Tài liệu sản phẩm
+# Necessary documentation set
 
-* PRD
+## Product docs
+
+* PRD or product brief
 * use case list
 * user story list
 * acceptance criteria
 
-## Tài liệu phân tích nghiệp vụ
+## Business analysis docs
 
+* merchant onboarding flow
 * payment flow
 * refund flow
-* merchant onboarding flow
-* exception flow
 * reconciliation flow
+* exception and failure handling flow
 
-## Tài liệu hệ thống
+## System docs
 
 * architecture diagram
-* sequence diagram
+* sequence diagrams
 * API spec
 * webhook spec
 * state transition diagram
-* DB schema
+* canonical DB schema
+* enum catalog for merchant, onboarding case, payment, refund, webhook, and audit entities
 
-## Tài liệu kiểm thử
+## Testing docs
 
-* test cases happy path
-* test cases failure path
+* happy-path cases
+* auth and signature cases
 * duplicate/idempotency cases
-* timeout/retry cases
-* refund cases
-* webhook security cases
+* timeout and retry cases
+* refund-window and full-refund cases
+* onboarding approval and activation cases
+* DB constraint verification cases
 
-## Tài liệu vận hành
+## Operations docs
 
 * runbook
-* incident handling
+* incident handling guide
 * reconciliation SOP
 * merchant onboarding SOP
+* webhook retry SOP

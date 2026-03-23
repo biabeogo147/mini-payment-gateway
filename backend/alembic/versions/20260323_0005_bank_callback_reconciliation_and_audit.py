@@ -20,7 +20,17 @@ depends_on = None
 callback_source_type = postgresql.ENUM("BANK", "NAPAS", "SIMULATOR", "QR_PROVIDER", name="callback_source_type", create_type=False)
 callback_type = postgresql.ENUM("PAYMENT_RESULT", "REFUND_RESULT", name="callback_type", create_type=False)
 callback_processing_result = postgresql.ENUM("PROCESSED", "IGNORED", "FAILED", "PENDING_REVIEW", name="callback_processing_result", create_type=False)
-entity_type = postgresql.ENUM("PAYMENT", "REFUND", "MERCHANT", "WEBHOOK_EVENT", "RECONCILIATION", name="entity_type", create_type=False)
+entity_type = postgresql.ENUM(
+    "PAYMENT",
+    "REFUND",
+    "MERCHANT",
+    "MERCHANT_CREDENTIAL",
+    "ONBOARDING_CASE",
+    "WEBHOOK_EVENT",
+    "RECONCILIATION",
+    name="entity_type",
+    create_type=False,
+)
 reconciliation_status = postgresql.ENUM("MATCHED", "MISMATCHED", "PENDING_REVIEW", "RESOLVED", name="reconciliation_status", create_type=False)
 actor_type = postgresql.ENUM("SYSTEM", "ADMIN", "OPS", name="actor_type", create_type=False)
 

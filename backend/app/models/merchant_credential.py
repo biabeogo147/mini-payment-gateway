@@ -1,7 +1,7 @@
 from datetime import datetime
 from uuid import UUID
 
-from sqlalchemy import DateTime, Enum, ForeignKey, String, Text
+from sqlalchemy import DateTime, Enum, ForeignKey, Index, String, Text, text
 from sqlalchemy.dialects.postgresql import UUID as PGUUID
 from sqlalchemy.orm import Mapped, mapped_column
 
@@ -27,6 +27,14 @@ class MerchantCredential(UUIDPrimaryKeyMixin, TimestampMixin, Base):
     """
 
     __tablename__ = "merchant_credentials"
+    __table_args__ = (
+        Index(
+            "ux_merchant_credentials_active_per_merchant",
+            "merchant_db_id",
+            unique=True,
+            postgresql_where=text("status = 'ACTIVE'"),
+        ),
+    )
 
     merchant_db_id: Mapped[UUID] = mapped_column(
         PGUUID(as_uuid=True),
@@ -40,6 +48,7 @@ class MerchantCredential(UUIDPrimaryKeyMixin, TimestampMixin, Base):
         Enum(CredentialStatus, name="credential_status"),
         nullable=False,
         default=CredentialStatus.ACTIVE,
+        server_default=CredentialStatus.ACTIVE.value,
     )
     expired_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
     rotated_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
