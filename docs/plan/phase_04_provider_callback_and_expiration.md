@@ -23,6 +23,24 @@ Implement:
 - late callback after expiration goes to reconciliation/manual review path.
 - no automatic webhook delivery yet; create an extension point for phase 06.
 
+## Scenario References
+
+Use `docs/scenarios/callback.md` as the behavior source for:
+
+- `CB-01 Payment Success Callback`
+- `CB-02 Payment Failed Callback`
+- `CB-03 Unknown Transaction Callback`
+- `CB-04 Duplicate Provider Callback`
+- `EXP-01 Expire Overdue Payment`
+
+Use `docs/scenarios/reconciliation.md` as the behavior source for:
+
+- `REC-01 Late Success Callback After Expiration`
+- `REC-02 Callback Amount Mismatch`
+
+Use `docs/scenarios/testing_matrix.md` to keep the phase 04 test names aligned
+with the scenario IDs.
+
 ## Files
 
 - Create: `backend/app/controllers/provider_callback_controller.py`

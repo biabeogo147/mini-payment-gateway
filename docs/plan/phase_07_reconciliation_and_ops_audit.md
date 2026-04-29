@@ -19,6 +19,32 @@ Implement:
 - audit log service.
 - minimal internal merchant onboarding and credential operation endpoints if not already implemented.
 
+## Scenario References
+
+Use `docs/scenarios/mer.md` as the behavior source for:
+
+- `ONB-01 Ops Registers Merchant`
+- `ONB-02 Ops Submits Onboarding Case`
+- `ONB-03 Ops Approves Onboarding Case`
+- `ONB-04 Ops Activates Merchant With Approved Onboarding And Active Credential`
+
+Use `docs/scenarios/ops.md` as the behavior source for:
+
+- `OPS-01 Ops Suspends Merchant`
+- `OPS-02 Ops Disables Merchant`
+- `OPS-03 Credential Rotation`
+- `AUD-01 Ops Merchant Action Writes Audit Log`
+- `AUD-02 Credential Rotation Writes Audit Log`
+
+Use `docs/scenarios/reconciliation.md` as the behavior source for:
+
+- `REC-03 Matching Provider Evidence`
+- `REC-04 Mismatch Evidence`
+- `REC-05 Resolve Reconciliation Record`
+
+Use `docs/scenarios/testing_matrix.md` to keep the phase 07 test names aligned
+with the scenario IDs.
+
 ## Files
 
 - Create: `backend/app/controllers/ops_merchant_controller.py`

@@ -23,6 +23,13 @@ Create the documentation and tests needed for internal demo readiness:
 - Reconciliation SOP.
 - Sequence diagrams.
 
+Do not recreate the scenario catalog in this phase. Use
+`docs/scenarios/e2e_scenarios.md` as the scenario index,
+`docs/scenarios/happy_path.md` as the main E2E source, the grouped scenario
+files in `docs/scenarios/`, and `docs/scenarios/testing_matrix.md` as the
+coverage source. Convert selected scenarios into automated E2E tests and
+runbooks.
+
 ## Files
 
 - Create: `backend/tests/test_e2e_payment_refund_webhook.py`
@@ -34,14 +41,15 @@ Create the documentation and tests needed for internal demo readiness:
 - Create: `docs/merchant_onboarding_sop.md`
 - Create: `docs/webhook_retry_sop.md`
 - Create: `docs/reconciliation_sop.md`
-- Create: `docs/testing_matrix.md`
+- Modify: `docs/scenarios/testing_matrix.md`
 - Modify: `README.md` if a root README exists; otherwise create it if useful.
 
 ## Tasks
 
 ### Task 1: Add E2E Test Matrix
 
-- [ ] Create `docs/testing_matrix.md`.
+- [ ] Update `docs/scenarios/testing_matrix.md`.
+- [ ] Keep scenario IDs aligned with the grouped files in `docs/scenarios/`.
 - [ ] Cover:
   - happy-path payment.
   - auth/signature failure.

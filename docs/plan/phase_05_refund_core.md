@@ -21,6 +21,23 @@ Implement:
 
 No partial refunds. No settlement or ledger.
 
+## Scenario References
+
+Use `docs/scenarios/refund.md` as the behavior source for:
+
+- `REF-01 Full Refund Request For Successful Payment`
+- `REF-02 Refund Query By Transaction Id`
+- `REF-03 Refund Query By Merchant Refund Id`
+- `REF-04 Provider Refund Success Callback`
+- `REF-05 Provider Refund Failed Callback`
+- `REF-06 Partial Refund Rejects`
+- `REF-07 Refund After 7-Day Window Rejects`
+- `REF-08 Duplicate Refund Id Returns Existing Refund`
+- `REF-09 Refund Against Non-Success Payment Rejects`
+
+Use `docs/scenarios/testing_matrix.md` to keep the phase 05 test names aligned
+with the scenario IDs.
+
 ## Files
 
 - Create: `backend/app/controllers/refund_controller.py`

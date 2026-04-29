@@ -14,6 +14,18 @@ pulling in out-of-scope features.
 - `docs/6_necessary_document.md`
 - `docs/7_usecase_diagram.md`
 - `docs/architecture.md`
+- `docs/scenarios/README.md`
+- `docs/scenarios/e2e_scenarios.md` (scenario index)
+- `docs/scenarios/happy_path.md`
+- `docs/scenarios/auth.md`
+- `docs/scenarios/mer.md`
+- `docs/scenarios/pay.md`
+- `docs/scenarios/callback.md`
+- `docs/scenarios/refund.md`
+- `docs/scenarios/webhook.md`
+- `docs/scenarios/ops.md`
+- `docs/scenarios/reconciliation.md`
+- `docs/scenarios/testing_matrix.md`
 - `docs/usecase_diagram.puml`
 
 ## Current Baseline
@@ -29,6 +41,8 @@ pulling in out-of-scope features.
 - Payment core exists with create payment, status query, order query, QR content,
   duplicate pending reuse, retry-after-failure/expiration, and success rejection
   rules.
+- Phase 3.5 added the shared scenario catalog, split by business group, and
+  testing matrix in `docs/scenarios/`.
 - Provider callback, refund, webhook delivery, reconciliation, ops workflows,
   and simulator finalization flow are still pending.
 - Existing tests cover schema contract, smoke verification, backend foundation,
@@ -44,14 +58,16 @@ pulling in out-of-scope features.
 4. `phase_02_5_mvc_refactor.md` - reorganize backend into lightweight MVC
    layers before feature growth. Completed.
 5. `phase_03_payment_core.md` - implement create payment and get payment status. Completed.
-6. `phase_04_provider_callback_and_expiration.md` - implement provider callback,
+6. `phase_03_5_e2e_scenario_catalog.md` - document E2E operating and testing
+   scenarios before continuing feature work. Completed.
+7. `phase_04_provider_callback_and_expiration.md` - implement provider callback,
    callback logging, and expiration behavior.
-7. `phase_05_refund_core.md` - implement full refund and refund status query.
-8. `phase_06_webhook_delivery.md` - implement webhook events, signing, retry, and
+8. `phase_05_refund_core.md` - implement full refund and refund status query.
+9. `phase_06_webhook_delivery.md` - implement webhook events, signing, retry, and
    manual retry.
-9. `phase_07_reconciliation_and_ops_audit.md` - implement reconciliation records
+10. `phase_07_reconciliation_and_ops_audit.md` - implement reconciliation records
    and audit trail for internal actions.
-10. `phase_08_readiness_docs_and_e2e.md` - finish docs, runbooks, and end-to-end
+11. `phase_08_readiness_docs_and_e2e.md` - finish docs, runbooks, and end-to-end
    demo tests.
 
 ## Dependency Map
@@ -62,6 +78,7 @@ pulling in out-of-scope features.
   -> [done] merchant auth/readiness
   -> [done] MVC refactor
   -> [done] payment core
+  -> [done] E2E scenario catalog
   -> [next] provider callback/expiration
   -> refund core
   -> webhook delivery
@@ -113,3 +130,5 @@ When payment API smoke verification is needed:
   remaining phase 03 entry point.
 - `phase_03_completion.md` records the payment core implementation and the next
   provider callback/expiration phase.
+- `phase_03_5_completion.md` records the grouped scenario catalog and testing
+  matrix added before provider callback work.

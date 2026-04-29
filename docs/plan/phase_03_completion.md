@@ -108,9 +108,12 @@ Result:
 - The smoke script intentionally leaves its unique test merchant/payment in the
   local database so the DB update can be inspected after the run.
 
-## Next Phase
+## Superseded Next Phase
 
-Proceed to `docs/plan/phase_04_provider_callback_and_expiration.md`.
+Phase 3.5 has now been completed. See
+`docs/plan/phase_03_5_completion.md`.
 
-Phase 04 should implement provider/simulator payment callbacks, callback
-evidence logging, payment final-state transitions, and expiration handling.
+That slice documented the grouped end-to-end scenario catalog in
+`docs/scenarios/`, including APIs, requests, responses, DB effects, state
+transitions, and owning phases for merchant onboarding, payment, callback,
+refund, webhook, reconciliation, and ops workflows.

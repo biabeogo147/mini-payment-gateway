@@ -21,6 +21,24 @@ Implement:
 - total attempts: 4.
 - manual retry internal endpoint.
 
+## Scenario References
+
+Use `docs/scenarios/webhook.md` as the behavior source for:
+
+- `WH-01 Payment Success Creates Webhook Event`
+- `WH-02 Payment Failure Creates Webhook Event`
+- `WH-03 Payment Expiration Creates Webhook Event`
+- `WH-04 Refund Success Creates Webhook Event`
+- `WH-05 HTTP 2xx Marks Webhook Delivered`
+- `WH-06 HTTP 500 Schedules Retry`
+- `WH-07 Timeout Schedules Retry`
+- `WH-08 Network Error Schedules Retry`
+- `WH-09 Attempt 4 Exhaustion Marks Failed`
+- `WH-10 Ops Manual Retry Sends Failed Event Again`
+
+Use `docs/scenarios/testing_matrix.md` to keep the phase 06 test names aligned
+with the scenario IDs.
+
 ## Files
 
 - Create: `backend/app/controllers/webhook_ops_controller.py`
