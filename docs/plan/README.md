@@ -26,8 +26,11 @@ pulling in out-of-scope features.
   repositories, auth service, auth dependency, and merchant readiness guards.
 - Phase 2.5 completed the structural cleanup from `app.api` to
   `app.controllers`.
-- Payment, provider callback, refund, webhook delivery, reconciliation, ops
-  workflows, and simulator flow are still pending.
+- Payment core exists with create payment, status query, order query, QR content,
+  duplicate pending reuse, retry-after-failure/expiration, and success rejection
+  rules.
+- Provider callback, refund, webhook delivery, reconciliation, ops workflows,
+  and simulator finalization flow are still pending.
 - Existing tests cover schema contract, smoke verification, backend foundation,
   merchant auth, and merchant readiness.
 
@@ -40,7 +43,7 @@ pulling in out-of-scope features.
    merchant operational readiness checks. Completed.
 4. `phase_02_5_mvc_refactor.md` - reorganize backend into lightweight MVC
    layers before feature growth. Completed.
-5. `phase_03_payment_core.md` - implement create payment and get payment status.
+5. `phase_03_payment_core.md` - implement create payment and get payment status. Completed.
 6. `phase_04_provider_callback_and_expiration.md` - implement provider callback,
    callback logging, and expiration behavior.
 7. `phase_05_refund_core.md` - implement full refund and refund status query.
@@ -58,8 +61,8 @@ pulling in out-of-scope features.
   -> [done] backend foundation
   -> [done] merchant auth/readiness
   -> [done] MVC refactor
-  -> [next] payment core
-  -> provider callback/expiration
+  -> [done] payment core
+  -> [next] provider callback/expiration
   -> refund core
   -> webhook delivery
   -> reconciliation/audit
@@ -96,9 +99,17 @@ When FastAPI controllers are implemented:
 & 'D:\Anaconda\envs\mini-payment-gateway\python.exe' -m uvicorn app.main:app --reload
 ```
 
+When payment API smoke verification is needed:
+
+```powershell
+& 'D:\Anaconda\envs\mini-payment-gateway\python.exe' scripts\smoke_payment_api.py
+```
+
 ## Latest Completion Record
 
 - `phase_00_02_completion.md` records what changed, what was verified, and what
   remains for phase 2.5 and phase 03.
 - `phase_02_5_completion.md` records the MVC refactor verification and the
   remaining phase 03 entry point.
+- `phase_03_completion.md` records the payment core implementation and the next
+  provider callback/expiration phase.

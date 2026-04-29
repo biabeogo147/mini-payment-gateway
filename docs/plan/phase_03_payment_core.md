@@ -10,6 +10,21 @@
 
 ---
 
+## Implementation Status
+
+Completed. The implementation added payment schemas, deterministic QR content,
+order/payment repositories, payment service rules, merchant payment controller,
+and route/service tests.
+
+Verification commands used:
+
+```powershell
+& 'D:\Anaconda\envs\mini-payment-gateway\python.exe' -m unittest tests.test_payment_service -v
+& 'D:\Anaconda\envs\mini-payment-gateway\python.exe' -m unittest tests.test_payment_routes -v
+& 'D:\Anaconda\envs\mini-payment-gateway\python.exe' -m unittest discover tests -v
+& 'D:\Anaconda\envs\mini-payment-gateway\python.exe' scripts\smoke_payment_api.py
+```
+
 ## Scope
 
 Implement the first working merchant-facing payment slice:
@@ -46,19 +61,19 @@ No provider callback or webhook delivery in this phase.
 
 ### Task 1: Define Payment Schemas
 
-- [ ] Write failing schema tests in `backend/tests/test_payment_service.py`.
-- [ ] Create `backend/app/schemas/payment.py`.
-- [ ] Define:
+- [x] Write failing schema tests in `backend/tests/test_payment_service.py`.
+- [x] Create `backend/app/schemas/payment.py`.
+- [x] Define:
   - `CreatePaymentRequest`
   - `PaymentResponse`
   - `PaymentStatusResponse`
-- [ ] Required request fields:
+- [x] Required request fields:
   - `order_id`
   - `amount`
   - `description`
   - either `expire_at` or `ttl_seconds`
   - optional `metadata`
-- [ ] Response fields:
+- [x] Response fields:
   - `transaction_id`
   - `order_id`
   - `merchant_id`
@@ -67,37 +82,37 @@ No provider callback or webhook delivery in this phase.
   - `qr_image_base64`
   - `status`
   - `expire_at`
-- [ ] Run schema tests.
+- [x] Run schema tests.
 
 ### Task 2: Add QR Service
 
-- [ ] Create `backend/app/services/qr_service.py`.
-- [ ] Implement deterministic MVP QR content:
+- [x] Create `backend/app/services/qr_service.py`.
+- [x] Implement deterministic MVP QR content:
 
 ```text
 MINI_GATEWAY|merchant_id={merchant_id}|transaction_id={transaction_id}|amount={amount}|currency={currency}
 ```
 
-- [ ] Add tests that assert QR contains merchant id, transaction id, amount, and currency.
+- [x] Add tests that assert QR contains merchant id, transaction id, amount, and currency.
 
 ### Task 3: Add Repositories
 
-- [ ] Create `backend/app/repositories/order_reference_repository.py`.
-- [ ] Add:
+- [x] Create `backend/app/repositories/order_reference_repository.py`.
+- [x] Add:
   - `get_by_merchant_and_order(db, merchant_db_id, order_id)`
   - `create(db, merchant_db_id, order_id)`
   - `set_latest_payment(db, order_reference, payment_transaction_id)`
-- [ ] Create `backend/app/repositories/payment_repository.py`.
-- [ ] Add:
+- [x] Create `backend/app/repositories/payment_repository.py`.
+- [x] Add:
   - `get_by_transaction_id(db, transaction_id)`
   - `get_latest_by_merchant_order(db, merchant_db_id, order_id)`
   - `get_pending_by_merchant_order(db, merchant_db_id, order_id)`
   - `create(db, ...)`
-- [ ] Add repository tests where practical.
+- [x] Add repository tests where practical.
 
 ### Task 4: Implement Payment Service Tests
 
-- [ ] Add tests in `backend/tests/test_payment_service.py`:
+- [x] Add tests in `backend/tests/test_payment_service.py`:
   - create payment creates order reference and pending transaction.
   - duplicate pending semantically identical returns existing transaction.
   - duplicate pending with different amount/description/expire rejects.
@@ -106,51 +121,51 @@ MINI_GATEWAY|merchant_id={merchant_id}|transaction_id={transaction_id}|amount={a
   - previous `SUCCESS` rejects new attempt.
   - query by transaction id works.
   - query by order id works.
-- [ ] Run:
+- [x] Run:
 
 ```powershell
 cd backend
 python -m unittest tests.test_payment_service -v
 ```
 
-- [ ] Expected: FAIL before service exists.
+- [x] Expected: FAIL before service exists.
 
 ### Task 5: Implement Payment Service
 
-- [ ] Create `backend/app/services/payment_service.py`.
-- [ ] Implement `create_payment(db, authenticated_merchant, request, idempotency_key)`.
-- [ ] Implement `get_payment_by_transaction_id(db, authenticated_merchant, transaction_id)`.
-- [ ] Implement `get_payment_by_order_id(db, authenticated_merchant, order_id)`.
-- [ ] Ensure service validates merchant ownership on reads.
-- [ ] Run service tests.
-- [ ] Expected: PASS.
+- [x] Create `backend/app/services/payment_service.py`.
+- [x] Implement `create_payment(db, authenticated_merchant, request, idempotency_key)`.
+- [x] Implement `get_payment_by_transaction_id(db, authenticated_merchant, transaction_id)`.
+- [x] Implement `get_payment_by_order_id(db, authenticated_merchant, order_id)`.
+- [x] Ensure service validates merchant ownership on reads.
+- [x] Run service tests.
+- [x] Expected: PASS.
 
 ### Task 6: Add Payment Controller
 
-- [ ] Create `backend/app/controllers/payment_controller.py`.
-- [ ] Add:
+- [x] Create `backend/app/controllers/payment_controller.py`.
+- [x] Add:
   - `POST /v1/payments`
   - `GET /v1/payments/{transaction_id}`
   - `GET /v1/payments/by-order/{order_id}`
-- [ ] Use `get_authenticated_merchant` dependency.
-- [ ] Modify `backend/app/main.py` to include the router.
-- [ ] Add route tests in `backend/tests/test_payment_routes.py`.
+- [x] Use `get_authenticated_merchant` dependency.
+- [x] Modify `backend/app/main.py` to include the router.
+- [x] Add route tests in `backend/tests/test_payment_routes.py`.
 
 ### Task 7: Verification
 
-- [ ] Run:
+- [x] Run:
 
 ```powershell
 cd backend
 python -m unittest discover tests -v
 ```
 
-- [ ] Expected: all tests pass.
-- [ ] Optional manual smoke:
+- [x] Expected: all tests pass.
+- [x] Optional manual smoke:
 
 ```powershell
 cd backend
-python -m uvicorn app.main:app --reload
+& 'D:\Anaconda\envs\mini-payment-gateway\python.exe' scripts\smoke_payment_api.py
 ```
 
 ### Task 8: Commit

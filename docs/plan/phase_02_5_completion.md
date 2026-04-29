@@ -68,11 +68,11 @@ Result:
   exist there, but the source modules were removed and runtime imports no longer
   depend on `app.api`.
 
-## Next Phase
+## Superseded Next Phase
 
-Proceed to `docs/plan/phase_03_payment_core.md`.
+Phase 03 has now been completed. See `docs/plan/phase_03_completion.md`.
 
-Phase 03 should add:
+That slice added:
 
 - `backend/app/controllers/payment_controller.py`;
 - payment request/response schemas;

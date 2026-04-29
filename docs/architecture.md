@@ -94,7 +94,8 @@ Examples:
 
 - `backend/app/services/auth_service.py`
 - `backend/app/services/merchant_readiness_service.py`
-- future `payment_service.py`, `refund_service.py`, and `webhook_service.py`
+- `backend/app/services/payment_service.py`
+- future `refund_service.py` and `webhook_service.py`
 
 ### Repositories
 
