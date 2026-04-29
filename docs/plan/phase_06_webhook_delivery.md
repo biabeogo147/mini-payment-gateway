@@ -23,7 +23,7 @@ Implement:
 
 ## Files
 
-- Create: `backend/app/api/routes/webhooks_ops.py`
+- Create: `backend/app/controllers/webhook_ops_controller.py`
 - Create: `backend/app/repositories/webhook_repository.py`
 - Create: `backend/app/schemas/webhook.py`
 - Create: `backend/app/services/webhook_event_factory.py`
@@ -129,9 +129,9 @@ python -m unittest tests.test_webhook_retry_policy -v
 - [ ] Modify refund provider callback so refund success/failure creates webhook event.
 - [ ] Keep delivery separate; event creation should not require successful HTTP delivery.
 
-### Task 7: Add Manual Retry Endpoint
+### Task 7: Add Manual Retry Controller
 
-- [ ] Create `backend/app/api/routes/webhooks_ops.py`.
+- [ ] Create `backend/app/controllers/webhook_ops_controller.py`.
 - [ ] Add internal endpoint:
   - `POST /v1/ops/webhooks/{event_id}/retry`
 - [ ] Register route in `backend/app/main.py`.

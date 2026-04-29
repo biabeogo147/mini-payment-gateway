@@ -27,22 +27,27 @@ def expect_statement_failure(connection, sql: str, params: dict) -> bool:
     return False
 
 
+def cleanup_database(connection) -> None:
+    connection.execute(text("DELETE FROM audit_logs"))
+    connection.execute(text("DELETE FROM reconciliation_records"))
+    connection.execute(text("DELETE FROM bank_callback_logs"))
+    connection.execute(text("DELETE FROM webhook_delivery_attempts"))
+    connection.execute(text("DELETE FROM webhook_events"))
+    connection.execute(text("DELETE FROM refund_transactions"))
+    connection.execute(text("UPDATE order_references SET latest_payment_transaction_id = NULL"))
+    connection.execute(text("DELETE FROM payment_transactions"))
+    connection.execute(text("DELETE FROM order_references"))
+    connection.execute(text("DELETE FROM merchant_onboarding_cases"))
+    connection.execute(text("DELETE FROM merchant_credentials"))
+    connection.execute(text("DELETE FROM merchants"))
+    connection.execute(text("DELETE FROM internal_users"))
+
+
 def main() -> None:
     engine = create_engine(DATABASE_URL, future=True)
 
     with engine.begin() as connection:
-        connection.execute(text("DELETE FROM audit_logs"))
-        connection.execute(text("DELETE FROM reconciliation_records"))
-        connection.execute(text("DELETE FROM bank_callback_logs"))
-        connection.execute(text("DELETE FROM webhook_delivery_attempts"))
-        connection.execute(text("DELETE FROM webhook_events"))
-        connection.execute(text("DELETE FROM refund_transactions"))
-        connection.execute(text("DELETE FROM payment_transactions"))
-        connection.execute(text("DELETE FROM order_references"))
-        connection.execute(text("DELETE FROM merchant_onboarding_cases"))
-        connection.execute(text("DELETE FROM merchant_credentials"))
-        connection.execute(text("DELETE FROM merchants"))
-        connection.execute(text("DELETE FROM internal_users"))
+        cleanup_database(connection)
 
         admin_id = scalar_uuid(
             connection,

@@ -6,48 +6,59 @@ pulling in out-of-scope features.
 
 ## Source Plans
 
-- `plan/1_product_scope.md`
-- `plan/2_bussiness_flow.md`
-- `plan/3_requirement.md`
-- `plan/4_module_and_core_entity.md`
-- `plan/5_state_machine.md`
-- `plan/6_necessary_document.md`
-- `plan/7_usecase_diagram.md`
-- `plan/usecase_diagram.puml`
+- `docs/1_product_scope.md`
+- `docs/2_bussiness_flow.md`
+- `docs/3_requirement.md`
+- `docs/4_module_and_core_entity.md`
+- `docs/5_state_machine.md`
+- `docs/6_necessary_document.md`
+- `docs/7_usecase_diagram.md`
+- `docs/architecture.md`
+- `docs/usecase_diagram.puml`
 
 ## Current Baseline
 
 - Database models and Alembic migrations exist.
-- The backend exposes only a FastAPI healthcheck.
-- No service layer, route layer, schema layer, auth layer, webhook worker, or
-  simulator flow exists yet.
-- Existing tests focus on schema contract and smoke verification.
+- API contract docs exist in `docs/api/`.
+- Backend foundation exists with MVC-style `controllers/`, health controller,
+  database dependency, standard `AppError`, and UTC time helper.
+- Merchant auth foundation exists with HMAC helpers, merchant/credential
+  repositories, auth service, auth dependency, and merchant readiness guards.
+- Phase 2.5 completed the structural cleanup from `app.api` to
+  `app.controllers`.
+- Payment, provider callback, refund, webhook delivery, reconciliation, ops
+  workflows, and simulator flow are still pending.
+- Existing tests cover schema contract, smoke verification, backend foundation,
+  merchant auth, and merchant readiness.
 
 ## Implementation Order
 
-1. `phase_00_api_contract.md` - freeze API and webhook contracts before code.
+1. `phase_00_api_contract.md` - freeze API and webhook contracts before code. Completed.
 2. `phase_01_backend_foundation.md` - create backend structure, dependency
-   injection, error shape, and test scaffolding.
+   injection, error shape, and test scaffolding. Completed.
 3. `phase_02_auth_and_merchant_readiness.md` - implement merchant HMAC auth and
-   merchant operational readiness checks.
-4. `phase_03_payment_core.md` - implement create payment and get payment status.
-5. `phase_04_provider_callback_and_expiration.md` - implement provider callback,
+   merchant operational readiness checks. Completed.
+4. `phase_02_5_mvc_refactor.md` - reorganize backend into lightweight MVC
+   layers before feature growth. Completed.
+5. `phase_03_payment_core.md` - implement create payment and get payment status.
+6. `phase_04_provider_callback_and_expiration.md` - implement provider callback,
    callback logging, and expiration behavior.
-6. `phase_05_refund_core.md` - implement full refund and refund status query.
-7. `phase_06_webhook_delivery.md` - implement webhook events, signing, retry, and
+7. `phase_05_refund_core.md` - implement full refund and refund status query.
+8. `phase_06_webhook_delivery.md` - implement webhook events, signing, retry, and
    manual retry.
-8. `phase_07_reconciliation_and_ops_audit.md` - implement reconciliation records
+9. `phase_07_reconciliation_and_ops_audit.md` - implement reconciliation records
    and audit trail for internal actions.
-9. `phase_08_readiness_docs_and_e2e.md` - finish docs, runbooks, and end-to-end
+10. `phase_08_readiness_docs_and_e2e.md` - finish docs, runbooks, and end-to-end
    demo tests.
 
 ## Dependency Map
 
 ```text
-API contract
-  -> backend foundation
-  -> merchant auth/readiness
-  -> payment core
+[done] API contract
+  -> [done] backend foundation
+  -> [done] merchant auth/readiness
+  -> [done] MVC refactor
+  -> [next] payment core
   -> provider callback/expiration
   -> refund core
   -> webhook delivery
@@ -58,8 +69,9 @@ API contract
 ## Phase Rules
 
 - Use TDD for implementation phases: write failing tests first, then implement.
-- Keep route handlers thin; business rules belong in services.
+- Keep controllers thin; business rules belong in services.
 - Keep data access behind repositories or focused query helpers.
+- Keep new HTTP files under `backend/app/controllers/` after phase 2.5.
 - Do not add self-service merchant UI, settlement, dispute, multi-provider
   routing, partial refund, or analytics.
 - Commit after each phase or after each independently testable task.
@@ -69,7 +81,7 @@ API contract
 Run from `backend/` unless noted otherwise.
 
 ```powershell
-python -m unittest discover tests -v
+& 'D:\Anaconda\envs\mini-payment-gateway\python.exe' -m unittest discover tests -v
 ```
 
 When pytest is added:
@@ -78,8 +90,15 @@ When pytest is added:
 python -m pytest tests -q
 ```
 
-When FastAPI routes are implemented:
+When FastAPI controllers are implemented:
 
 ```powershell
-python -m uvicorn app.main:app --reload
+& 'D:\Anaconda\envs\mini-payment-gateway\python.exe' -m uvicorn app.main:app --reload
 ```
+
+## Latest Completion Record
+
+- `phase_00_02_completion.md` records what changed, what was verified, and what
+  remains for phase 2.5 and phase 03.
+- `phase_02_5_completion.md` records the MVC refactor verification and the
+  remaining phase 03 entry point.

@@ -6,6 +6,24 @@ from scripts import smoke_verify_db
 
 
 class SmokeVerifyDbTest(unittest.TestCase):
+    def test_cleanup_database_clears_latest_payment_before_deleting_payments(self) -> None:
+        class FakeConnection:
+            def __init__(self) -> None:
+                self.statements: list[str] = []
+
+            def execute(self, statement, params=None):
+                self.statements.append(str(statement))
+
+        connection = FakeConnection()
+
+        smoke_verify_db.cleanup_database(connection)
+
+        clear_latest_index = connection.statements.index(
+            "UPDATE order_references SET latest_payment_transaction_id = NULL"
+        )
+        delete_payment_index = connection.statements.index("DELETE FROM payment_transactions")
+        self.assertLess(clear_latest_index, delete_payment_index)
+
     def test_expect_statement_failure_keeps_outer_transaction_usable(self) -> None:
         engine = create_engine("sqlite+pysqlite:///:memory:", future=True)
         metadata = MetaData()

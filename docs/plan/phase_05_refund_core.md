@@ -4,7 +4,7 @@
 
 **Goal:** Implement full refund creation, refund status query, and refund provider result updates.
 
-**Architecture:** Refund routes authenticate the merchant and call a refund service. The refund service validates original payment eligibility, enforces `merchant_id + refund_id` idempotency, creates `RefundTransaction`, and applies refund state transitions.
+**Architecture:** Refund controllers authenticate the merchant and call a refund service. The refund service validates original payment eligibility, enforces `merchant_id + refund_id` idempotency, creates `RefundTransaction`, and applies refund state transitions.
 
 **Tech Stack:** FastAPI, SQLAlchemy, existing payment/refund models, HMAC auth dependency.
 
@@ -23,12 +23,12 @@ No partial refunds. No settlement or ledger.
 
 ## Files
 
-- Create: `backend/app/api/routes/refunds.py`
+- Create: `backend/app/controllers/refund_controller.py`
 - Create: `backend/app/repositories/refund_repository.py`
 - Create: `backend/app/schemas/refund.py`
 - Create: `backend/app/services/refund_service.py`
 - Create: `backend/app/services/refund_state_machine.py`
-- Modify: `backend/app/api/routes/provider_callbacks.py`
+- Modify: `backend/app/controllers/provider_callback_controller.py`
 - Modify: `backend/app/schemas/provider_callback.py`
 - Modify: `backend/app/services/provider_callback_service.py`
 - Modify: `backend/app/main.py`
@@ -130,9 +130,9 @@ python -m unittest tests.test_refund_service -v
 - [ ] Run refund service tests.
 - [ ] Expected: PASS.
 
-### Task 7: Add Refund Routes
+### Task 7: Add Refund Controller
 
-- [ ] Create `backend/app/api/routes/refunds.py`.
+- [ ] Create `backend/app/controllers/refund_controller.py`.
 - [ ] Add:
   - `POST /v1/refunds`
   - `GET /v1/refunds/{refund_transaction_id}`
@@ -143,7 +143,7 @@ python -m unittest tests.test_refund_service -v
 ### Task 8: Add Refund Provider Callback
 
 - [ ] Extend `backend/app/schemas/provider_callback.py`.
-- [ ] Extend `backend/app/api/routes/provider_callbacks.py` with:
+- [ ] Extend `backend/app/controllers/provider_callback_controller.py` with:
   - `POST /v1/provider/callbacks/refund`
 - [ ] Extend provider callback service to mark refund `REFUNDED` or `REFUND_FAILED`.
 - [ ] Log callback evidence.

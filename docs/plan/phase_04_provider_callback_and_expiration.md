@@ -4,7 +4,7 @@
 
 **Goal:** Implement provider/simulator callbacks, raw callback logging, payment state transitions, and expiration handling.
 
-**Architecture:** Provider callback routes call a callback service that stores `BankCallbackLog`, normalizes provider status, and delegates payment state updates to the payment service. Expiration is a separate service operation that moves overdue pending payments to `EXPIRED`.
+**Architecture:** Provider callback controllers call a callback service that stores `BankCallbackLog`, normalizes provider status, and delegates payment state updates to the payment service. Expiration is a separate service operation that moves overdue pending payments to `EXPIRED`.
 
 **Tech Stack:** FastAPI, SQLAlchemy, existing `BankCallbackLog`, `PaymentTransaction`, and `ReconciliationRecord` models.
 
@@ -25,7 +25,7 @@ Implement:
 
 ## Files
 
-- Create: `backend/app/api/routes/provider_callbacks.py`
+- Create: `backend/app/controllers/provider_callback_controller.py`
 - Create: `backend/app/repositories/bank_callback_repository.py`
 - Create: `backend/app/repositories/reconciliation_repository.py`
 - Create: `backend/app/schemas/provider_callback.py`
@@ -114,11 +114,11 @@ python -m unittest tests.test_payment_state_machine -v
 - [ ] Add repository method to find pending payments with `expire_at <= now`.
 - [ ] Run expiration tests.
 
-### Task 7: Add Provider Callback Route
+### Task 7: Add Provider Callback Controller
 
-- [ ] Create `backend/app/api/routes/provider_callbacks.py`.
+- [ ] Create `backend/app/controllers/provider_callback_controller.py`.
 - [ ] Add `POST /v1/provider/callbacks/payment`.
-- [ ] Register route in `backend/app/main.py`.
+- [ ] Register controller router in `backend/app/main.py`.
 - [ ] Keep provider auth simple for MVP; document simulator trust clearly.
 
 ### Task 8: Verification

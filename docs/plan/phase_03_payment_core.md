@@ -4,7 +4,7 @@
 
 **Goal:** Implement create dynamic QR payment and get payment status for merchant backends.
 
-**Architecture:** Payment routes authenticate the merchant, validate request schemas, and call a payment service. The service enforces business idempotency, creates or reuses `OrderReference`, creates `PaymentTransaction` in `PENDING`, generates QR content, and exposes status query methods.
+**Architecture:** Payment controllers authenticate the merchant, validate request schemas, and call a payment service. The service enforces business idempotency, creates or reuses `OrderReference`, creates `PaymentTransaction` in `PENDING`, generates QR content, and exposes status query methods.
 
 **Tech Stack:** FastAPI, SQLAlchemy repositories, Pydantic schemas, existing payment/order models.
 
@@ -22,7 +22,7 @@ No provider callback or webhook delivery in this phase.
 
 ## Files
 
-- Create: `backend/app/api/routes/payments.py`
+- Create: `backend/app/controllers/payment_controller.py`
 - Create: `backend/app/repositories/order_reference_repository.py`
 - Create: `backend/app/repositories/payment_repository.py`
 - Create: `backend/app/schemas/payment.py`
@@ -125,9 +125,9 @@ python -m unittest tests.test_payment_service -v
 - [ ] Run service tests.
 - [ ] Expected: PASS.
 
-### Task 6: Add Payment Routes
+### Task 6: Add Payment Controller
 
-- [ ] Create `backend/app/api/routes/payments.py`.
+- [ ] Create `backend/app/controllers/payment_controller.py`.
 - [ ] Add:
   - `POST /v1/payments`
   - `GET /v1/payments/{transaction_id}`

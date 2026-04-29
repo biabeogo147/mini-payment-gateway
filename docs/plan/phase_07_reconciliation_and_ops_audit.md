@@ -6,7 +6,7 @@
 
 **Architecture:** Reconciliation is a service that compares internal records with provider evidence and stores match or mismatch results. Audit logging is a shared service called by ops flows and manual interventions.
 
-**Tech Stack:** FastAPI internal routes, SQLAlchemy, existing `ReconciliationRecord` and `AuditLog` models.
+**Tech Stack:** FastAPI internal controllers, SQLAlchemy, existing `ReconciliationRecord` and `AuditLog` models.
 
 ---
 
@@ -21,8 +21,8 @@ Implement:
 
 ## Files
 
-- Create: `backend/app/api/routes/ops_merchants.py`
-- Create: `backend/app/api/routes/ops_reconciliation.py`
+- Create: `backend/app/controllers/ops_merchant_controller.py`
+- Create: `backend/app/controllers/ops_reconciliation_controller.py`
 - Create: `backend/app/repositories/audit_repository.py`
 - Create: `backend/app/repositories/reconciliation_repository.py` if not created in phase 04.
 - Create: `backend/app/schemas/ops.py`
@@ -78,7 +78,7 @@ python -m unittest tests.test_audit_service -v
   - credential rotation leaves one active credential.
 - [ ] Create `backend/app/services/merchant_ops_service.py`.
 - [ ] Create `backend/app/schemas/ops.py`.
-- [ ] Create `backend/app/api/routes/ops_merchants.py`.
+- [ ] Create `backend/app/controllers/ops_merchant_controller.py`.
 - [ ] Register ops merchant router.
 - [ ] Ensure audit service is called for ops state changes.
 
@@ -96,9 +96,9 @@ python -m unittest tests.test_audit_service -v
 - [ ] Reuse or create `backend/app/repositories/reconciliation_repository.py`.
 - [ ] Run reconciliation tests.
 
-### Task 5: Add Reconciliation Ops Routes
+### Task 5: Add Reconciliation Ops Controller
 
-- [ ] Create `backend/app/api/routes/ops_reconciliation.py`.
+- [ ] Create `backend/app/controllers/ops_reconciliation_controller.py`.
 - [ ] Add:
   - `GET /v1/ops/reconciliation`
   - `GET /v1/ops/reconciliation/{record_id}`

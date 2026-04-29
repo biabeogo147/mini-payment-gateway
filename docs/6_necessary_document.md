@@ -17,10 +17,11 @@
 
 ## System docs
 
-* architecture diagram
+* architecture diagram: `docs/architecture.md`
 * sequence diagrams
-* API spec
-* webhook spec
+* API spec: `docs/api/merchant_api.md`, `docs/api/provider_callback_api.md`, `docs/api/ops_api.md`
+* webhook spec: `docs/api/webhook_spec.md`
+* error catalog: `docs/api/error_catalog.md`
 * state transition diagram
 * canonical DB schema
 * enum catalog for merchant, onboarding case, payment, refund, webhook, and audit entities
