@@ -5,7 +5,8 @@ raw callback evidence, and payment expiration.
 
 ## CB-01 Payment Success Callback
 
-Implementation Status: Planned - phase 04.
+Implementation Status: Implemented with DB seed - phase 04. Webhook event
+creation remains planned for phase 06.
 
 Actor: Provider simulator.
 
@@ -56,7 +57,8 @@ Expected Assertions:
 
 ## CB-02 Payment Failed Callback
 
-Implementation Status: Planned - phase 04.
+Implementation Status: Implemented with DB seed - phase 04. Webhook event
+creation remains planned for phase 06.
 
 DB Effects:
 
@@ -71,7 +73,7 @@ Expected Assertions:
 
 ## CB-03 Unknown Transaction Callback
 
-Implementation Status: Planned - phase 04.
+Implementation Status: Implemented - phase 04.
 
 DB Effects:
 
@@ -86,7 +88,7 @@ Expected Assertions:
 
 ## CB-04 Duplicate Provider Callback
 
-Implementation Status: Planned - phase 04.
+Implementation Status: Implemented - phase 04.
 
 DB Effects:
 
@@ -101,7 +103,8 @@ Expected Assertions:
 
 ## EXP-01 Expire Overdue Payment
 
-Implementation Status: Planned - phase 04.
+Implementation Status: Implemented at service level - phase 04. Webhook event
+creation remains planned for phase 06.
 
 Actor: System.
 
@@ -121,3 +124,14 @@ Expected Assertions:
 - Non-overdue pending payments stay pending.
 - Final-state payments do not change.
 - Expiration is repeat-safe.
+
+## Runnable Smoke
+
+The provider callback smoke script starts the API, seeds an active merchant,
+creates a payment, sends a provider success callback, and verifies both
+`payment_transactions` and `bank_callback_logs` in PostgreSQL:
+
+```powershell
+cd backend
+& 'D:\Anaconda\envs\mini-payment-gateway\python.exe' scripts\smoke_provider_callback_api.py
+```

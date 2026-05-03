@@ -43,10 +43,17 @@ pulling in out-of-scope features.
   rules.
 - Phase 3.5 added the shared scenario catalog, split by business group, and
   testing matrix in `docs/scenarios/`.
-- Provider callback, refund, webhook delivery, reconciliation, ops workflows,
-  and simulator finalization flow are still pending.
+- Provider callback and payment expiration exist with callback evidence logging,
+  payment final-state transitions, and reconciliation evidence creation for
+  ambiguous callbacks.
+- Phase 05 refund core has an execution-ready plan covering refund service,
+  refund callbacks, reconciliation evidence, smoke verification, and docs
+  updates.
+- Refund, webhook delivery, ops reconciliation review, audit workflows, and full
+  simulator finalization flow are still pending.
 - Existing tests cover schema contract, smoke verification, backend foundation,
-  merchant auth, and merchant readiness.
+  merchant auth, merchant readiness, payment core, provider callbacks, and
+  expiration.
 
 ## Implementation Order
 
@@ -61,7 +68,7 @@ pulling in out-of-scope features.
 6. `phase_03_5_e2e_scenario_catalog.md` - document E2E operating and testing
    scenarios before continuing feature work. Completed.
 7. `phase_04_provider_callback_and_expiration.md` - implement provider callback,
-   callback logging, and expiration behavior.
+   callback logging, and expiration behavior. Completed.
 8. `phase_05_refund_core.md` - implement full refund and refund status query.
 9. `phase_06_webhook_delivery.md` - implement webhook events, signing, retry, and
    manual retry.
@@ -79,8 +86,8 @@ pulling in out-of-scope features.
   -> [done] MVC refactor
   -> [done] payment core
   -> [done] E2E scenario catalog
-  -> [next] provider callback/expiration
-  -> refund core
+  -> [done] provider callback/expiration
+  -> [next] refund core
   -> webhook delivery
   -> reconciliation/audit
   -> readiness docs/e2e
@@ -122,6 +129,12 @@ When payment API smoke verification is needed:
 & 'D:\Anaconda\envs\mini-payment-gateway\python.exe' scripts\smoke_payment_api.py
 ```
 
+When provider callback smoke verification is needed:
+
+```powershell
+& 'D:\Anaconda\envs\mini-payment-gateway\python.exe' scripts\smoke_provider_callback_api.py
+```
+
 ## Latest Completion Record
 
 - `phase_00_02_completion.md` records what changed, what was verified, and what
@@ -132,3 +145,5 @@ When payment API smoke verification is needed:
   provider callback/expiration phase.
 - `phase_03_5_completion.md` records the grouped scenario catalog and testing
   matrix added before provider callback work.
+- `phase_04_completion.md` records provider callback, expiration, and
+  reconciliation evidence implementation.

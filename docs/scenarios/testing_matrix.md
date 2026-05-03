@@ -49,13 +49,13 @@ Status values:
 | OPS-01 | Ops suspends merchant | Service, route, E2E | Phase 07 | Planned | No | `backend/tests/test_merchant_ops_service.py` |
 | OPS-02 | Ops disables merchant | Service, route, E2E | Phase 07 | Planned | No | `backend/tests/test_merchant_ops_service.py` |
 | OPS-03 | Credential rotation leaves one active credential | Service, route, E2E | Phase 07 | Planned | No | `backend/tests/test_merchant_ops_service.py` |
-| CB-01 | Payment success callback marks payment success | Service, route, E2E | Phase 04 | Planned | No | `backend/tests/test_provider_callback_service.py` |
-| CB-02 | Payment failed callback marks payment failed | Service, route, E2E | Phase 04 | Planned | No | `backend/tests/test_provider_callback_service.py` |
-| CB-03 | Unknown transaction callback is logged | Service | Phase 04 | Planned | No | `backend/tests/test_provider_callback_service.py` |
-| CB-04 | Duplicate provider callback is safe | Service | Phase 04 | Planned | No | `backend/tests/test_provider_callback_service.py` |
-| EXP-01 | Overdue pending payment expires | Service | Phase 04 | Planned | No | `backend/tests/test_expiration_service.py` |
-| REC-01 | Late success after expiration creates reconciliation evidence | Service, E2E | Phase 04, Phase 07 | Planned | No | `backend/tests/test_provider_callback_service.py`, `backend/tests/test_reconciliation_service.py` |
-| REC-02 | Callback amount mismatch creates reconciliation evidence | Service, E2E | Phase 04, Phase 07 | Planned | No | `backend/tests/test_provider_callback_service.py`, `backend/tests/test_reconciliation_service.py` |
+| CB-01 | Payment success callback marks payment success | Service, route, smoke | Phase 04 | Covered with DB seed | Yes | `backend/tests/test_provider_callback_service.py`, `backend/tests/test_provider_callback_routes.py`, `backend/scripts/smoke_provider_callback_api.py` |
+| CB-02 | Payment failed callback marks payment failed | Service | Phase 04 | Covered | Yes | `backend/tests/test_provider_callback_service.py` |
+| CB-03 | Unknown transaction callback is logged | Service | Phase 04 | Covered | Yes | `backend/tests/test_provider_callback_service.py` |
+| CB-04 | Duplicate provider callback is safe | Service | Phase 04 | Covered | Yes | `backend/tests/test_provider_callback_service.py` |
+| EXP-01 | Overdue pending payment expires | Service | Phase 04 | Covered | Yes | `backend/tests/test_expiration_service.py` |
+| REC-01 | Late success after expiration creates reconciliation evidence | Service | Phase 04, Phase 07 | Partially covered | Yes | `backend/tests/test_provider_callback_service.py`, later `backend/tests/test_reconciliation_service.py` |
+| REC-02 | Callback amount mismatch creates reconciliation evidence | Service | Phase 04, Phase 07 | Partially covered | Yes | `backend/tests/test_provider_callback_service.py`, later `backend/tests/test_reconciliation_service.py` |
 | REF-01 | Successful payment can create full refund | Service, route, E2E | Phase 05 | Planned | No | `backend/tests/test_refund_service.py`, `backend/tests/test_refund_routes.py` |
 | REF-02 | Refund query by transaction id | Service, route | Phase 05 | Planned | No | `backend/tests/test_refund_service.py`, `backend/tests/test_refund_routes.py` |
 | REF-03 | Refund query by merchant refund id | Service, route | Phase 05 | Planned | No | `backend/tests/test_refund_service.py`, `backend/tests/test_refund_routes.py` |

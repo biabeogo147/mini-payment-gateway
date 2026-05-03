@@ -6,7 +6,8 @@ resolution APIs.
 
 ## REC-01 Late Success Callback After Expiration
 
-Implementation Status: Planned - phase 04 and phase 07.
+Implementation Status: Evidence creation implemented - phase 04. Ops review and
+resolution remain planned - phase 07.
 
 Actors:
 
@@ -34,7 +35,8 @@ Expected Assertions:
 
 ## REC-02 Callback Amount Mismatch
 
-Implementation Status: Planned - phase 04 and phase 07.
+Implementation Status: Evidence creation implemented - phase 04. Ops review and
+resolution remain planned - phase 07.
 
 DB Effects:
 

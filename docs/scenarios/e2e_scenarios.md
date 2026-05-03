@@ -26,14 +26,19 @@ Implemented now:
   identical.
 - Duplicate pending mismatch rejection.
 - Success-order duplicate rejection at service level.
+- `POST /v1/provider/callbacks/payment`
+- Provider payment callback evidence logging.
+- Payment callback transitions from `PENDING` to `SUCCESS` or `FAILED`.
+- Payment expiration service for overdue `PENDING` payments.
+- Reconciliation evidence creation for amount mismatch or late success after
+  expiration.
 
 Not implemented yet:
 
 - Ops merchant onboarding APIs.
-- Provider payment callback and expiration.
 - Refund APIs.
 - Webhook event delivery.
-- Reconciliation and audit services.
+- Ops reconciliation review and audit services.
 - Automated full E2E test.
 
 ## Scenario Files
@@ -76,13 +81,13 @@ Not implemented yet:
 | PAY-08 Previous success payment rejects new attempt | Merchant backend | `pay.md` | `POST /v1/payments` | no new payment insert | Implemented at service level | Phase 03 |
 | PAY-09 Merchant cannot read another merchant payment | Merchant backend | `pay.md` | payment query APIs | no business table change | Implemented at service level | Phase 03 |
 | PAY-10 Non-active merchant cannot create payment | Merchant backend | `pay.md` | `POST /v1/payments` | no payment insert | Implemented at service level | Phase 02, Phase 03 |
-| CB-01 Payment success callback | Provider simulator | `callback.md` | `POST /v1/provider/callbacks/payment` | `bank_callback_logs`, `payment_transactions`, later `webhook_events` | Planned - phase 04 | Phase 04 |
-| CB-02 Payment failed callback | Provider simulator | `callback.md` | `POST /v1/provider/callbacks/payment` | `bank_callback_logs`, `payment_transactions`, later `webhook_events` | Planned - phase 04 | Phase 04 |
-| CB-03 Unknown transaction callback | Provider simulator | `callback.md` | `POST /v1/provider/callbacks/payment` | `bank_callback_logs` | Planned - phase 04 | Phase 04 |
-| CB-04 Duplicate provider callback | Provider simulator | `callback.md` | `POST /v1/provider/callbacks/payment` | `bank_callback_logs`, `payment_transactions` | Planned - phase 04 | Phase 04 |
-| EXP-01 Expire overdue payment | System | `callback.md` | scheduled service or internal command | `payment_transactions`, later `webhook_events` | Planned - phase 04 | Phase 04 |
-| REC-01 Late success after expiration | Provider simulator, Ops | `reconciliation.md` | callback API, ops reconciliation API | `bank_callback_logs`, `reconciliation_records` | Planned - phase 04 and 07 | Phase 04, Phase 07 |
-| REC-02 Callback amount mismatch | Provider simulator, Ops | `reconciliation.md` | callback API, ops reconciliation API | `bank_callback_logs`, `reconciliation_records` | Planned - phase 04 and 07 | Phase 04, Phase 07 |
+| CB-01 Payment success callback | Provider simulator | `callback.md` | `POST /v1/provider/callbacks/payment` | `bank_callback_logs`, `payment_transactions`, later `webhook_events` | Implemented with DB seed | Phase 04 |
+| CB-02 Payment failed callback | Provider simulator | `callback.md` | `POST /v1/provider/callbacks/payment` | `bank_callback_logs`, `payment_transactions`, later `webhook_events` | Implemented | Phase 04 |
+| CB-03 Unknown transaction callback | Provider simulator | `callback.md` | `POST /v1/provider/callbacks/payment` | `bank_callback_logs` | Implemented | Phase 04 |
+| CB-04 Duplicate provider callback | Provider simulator | `callback.md` | `POST /v1/provider/callbacks/payment` | `bank_callback_logs`, `payment_transactions` | Implemented | Phase 04 |
+| EXP-01 Expire overdue payment | System | `callback.md` | scheduled service or internal command | `payment_transactions`, later `webhook_events` | Implemented at service level | Phase 04 |
+| REC-01 Late success after expiration | Provider simulator, Ops | `reconciliation.md` | callback API, ops reconciliation API | `bank_callback_logs`, `reconciliation_records` | Evidence creation implemented; ops review planned | Phase 04, Phase 07 |
+| REC-02 Callback amount mismatch | Provider simulator, Ops | `reconciliation.md` | callback API, ops reconciliation API | `bank_callback_logs`, `reconciliation_records` | Evidence creation implemented; ops review planned | Phase 04, Phase 07 |
 | REF-01 Merchant creates full refund | Merchant backend | `refund.md` | `POST /v1/refunds` | `refund_transactions` | Planned - phase 05 | Phase 05 |
 | REF-02 Merchant queries refund by transaction id | Merchant backend | `refund.md` | `GET /v1/refunds/{refund_transaction_id}` | `refund_transactions` | Planned - phase 05 | Phase 05 |
 | REF-03 Merchant queries refund by merchant refund id | Merchant backend | `refund.md` | `GET /v1/refunds/by-refund-id/{refund_id}` | `refund_transactions` | Planned - phase 05 | Phase 05 |

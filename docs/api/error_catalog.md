@@ -32,10 +32,12 @@ All API errors use the same response shape.
 | `PAYMENT_PENDING_EXISTS` | 409 | A non-identical pending payment already exists for the order. |
 | `PAYMENT_ALREADY_SUCCESS` | 409 | The order already has a successful payment. |
 | `PAYMENT_NOT_FOUND` | 404 | Payment cannot be found for this merchant. |
+| `PAYMENT_INVALID_STATE_TRANSITION` | 409 | Requested payment state transition is not allowed. |
 | `PAYMENT_NOT_REFUNDABLE` | 409 | Payment is not in a refundable state. |
 | `REFUND_NOT_ALLOWED` | 409 | Refund request violates refund business rules. |
 | `REFUND_WINDOW_EXPIRED` | 409 | Refund is outside the 7 day window from `paid_at`. |
 | `REFUND_AMOUNT_NOT_FULL` | 409 | Refund amount does not match the original payment amount. |
+| `REFUND_INVALID_STATE_TRANSITION` | 409 | Requested refund state transition is not allowed. |
 | `REFUND_NOT_FOUND` | 404 | Refund cannot be found for this merchant. |
 | `WEBHOOK_EVENT_NOT_FOUND` | 404 | Webhook event cannot be found for manual retry. |
 | `WEBHOOK_RETRY_NOT_ALLOWED` | 409 | Webhook event is not eligible for retry. |

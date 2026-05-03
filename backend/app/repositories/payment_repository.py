@@ -48,6 +48,20 @@ def get_pending_by_merchant_order(
     )
 
 
+def find_overdue_pending(
+    db: Session,
+    now: datetime,
+) -> list[PaymentTransaction]:
+    return list(
+        db.scalars(
+            select(PaymentTransaction).where(
+                PaymentTransaction.status == PaymentStatus.PENDING,
+                PaymentTransaction.expire_at <= now,
+            )
+        ).all()
+    )
+
+
 def create(
     db: Session,
     transaction_id: str,
@@ -74,6 +88,15 @@ def create(
         expire_at=expire_at,
         idempotency_key=idempotency_key,
     )
+    db.add(payment)
+    db.flush()
+    return payment
+
+
+def save(
+    db: Session,
+    payment: PaymentTransaction,
+) -> PaymentTransaction:
     db.add(payment)
     db.flush()
     return payment
