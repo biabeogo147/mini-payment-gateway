@@ -4,210 +4,250 @@ This directory contains the core SQLAlchemy models for the mini payment gateway.
 The diagram focuses on MVP entities and the relationships needed for merchant
 onboarding, QR payments, refunds, webhook delivery, reconciliation, and audit.
 
-```mermaid
-erDiagram
-    INTERNAL_USER {
-        UUID id PK
-        string email UK
-        string full_name
-        enum role
-        enum status
-        datetime created_at
-        datetime updated_at
-    }
+```plantuml
+@startuml models_entity_diagram
+hide circle
+skinparam classAttributeIconSize 0
+skinparam nodesep 80
+skinparam ranksep 80
 
-    MERCHANT {
-        UUID id PK
-        string merchant_id UK
-        string merchant_name
-        string legal_name
-        string contact_name
-        string contact_email
-        string contact_phone
-        text webhook_url
-        string_array allowed_ip_list
-        enum status
-        string settlement_account_name
-        string settlement_account_number
-        string settlement_bank_code
-        datetime created_at
-        datetime updated_at
-    }
+entity "internal_users" as INTERNAL_USER {
+  * id : UUID <<PK>>
+  --
+  email : string <<UK>>
+  full_name : string
+  role : enum
+  status : enum
+  created_at : datetime
+  updated_at : datetime
+}
 
-    MERCHANT_ONBOARDING_CASE {
-        UUID id PK
-        UUID merchant_db_id FK
-        enum status
-        string domain_or_app_name
-        jsonb submitted_profile_json
-        jsonb documents_json
-        jsonb review_checks_json
-        text decision_note
-        UUID reviewed_by FK
-        datetime reviewed_at
-        datetime created_at
-        datetime updated_at
-    }
+entity "merchants" as MERCHANT {
+  * id : UUID <<PK>>
+  --
+  merchant_id : string <<UK>>
+  merchant_name : string
+  legal_name : string
+  contact_name : string
+  contact_email : string
+  contact_phone : string
+  webhook_url : text
+  allowed_ip_list : string[]
+  status : enum
+  settlement_account_name : string
+  settlement_account_number : string
+  settlement_bank_code : string
+  created_at : datetime
+  updated_at : datetime
+}
 
-    MERCHANT_CREDENTIAL {
-        UUID id PK
-        UUID merchant_db_id FK
-        string access_key UK
-        text secret_key_encrypted
-        string secret_key_last4
-        enum status
-        datetime expired_at
-        datetime rotated_at
-        datetime created_at
-        datetime updated_at
-    }
+entity "merchant_onboarding_cases" as MERCHANT_ONBOARDING_CASE {
+  * id : UUID <<PK>>
+  --
+  merchant_db_id : UUID <<FK>>
+  status : enum
+  domain_or_app_name : string
+  submitted_profile_json : jsonb
+  documents_json : jsonb
+  review_checks_json : jsonb
+  decision_note : text
+  reviewed_by : UUID <<FK>>
+  reviewed_at : datetime
+  created_at : datetime
+  updated_at : datetime
+}
 
-    ORDER_REFERENCE {
-        UUID id PK
-        UUID merchant_db_id FK
-        string order_id
-        string order_status_snapshot
-        UUID latest_payment_transaction_id FK
-        datetime created_at
-        datetime updated_at
-    }
+entity "merchant_credentials" as MERCHANT_CREDENTIAL {
+  * id : UUID <<PK>>
+  --
+  merchant_db_id : UUID <<FK>>
+  access_key : string <<UK>>
+  secret_key_encrypted : text
+  secret_key_last4 : string
+  status : enum
+  expired_at : datetime
+  rotated_at : datetime
+  created_at : datetime
+  updated_at : datetime
+}
 
-    PAYMENT_TRANSACTION {
-        UUID id PK
-        string transaction_id UK
-        UUID merchant_db_id FK
-        UUID order_reference_id FK
-        string order_id
-        numeric amount
-        string currency
-        text description
-        enum status
-        text qr_content
-        text qr_image_url
-        text qr_image_base64
-        string external_reference
-        string idempotency_key
-        datetime expire_at
-        datetime paid_at
-        string failed_reason_code
-        text failed_reason_message
-        datetime created_at
-        datetime updated_at
-    }
+entity "order_references" as ORDER_REFERENCE {
+  * id : UUID <<PK>>
+  --
+  merchant_db_id : UUID <<FK>>
+  order_id : string
+  order_status_snapshot : string
+  latest_payment_transaction_id : UUID <<FK>>
+  created_at : datetime
+  updated_at : datetime
+}
 
-    REFUND_TRANSACTION {
-        UUID id PK
-        string refund_transaction_id UK
-        UUID merchant_db_id FK
-        UUID payment_transaction_id FK
-        string refund_id
-        numeric refund_amount
-        text reason
-        enum status
-        string external_reference
-        string idempotency_key
-        datetime processed_at
-        string failed_reason_code
-        text failed_reason_message
-        datetime created_at
-        datetime updated_at
-    }
+entity "payment_transactions" as PAYMENT_TRANSACTION {
+  * id : UUID <<PK>>
+  --
+  transaction_id : string <<UK>>
+  merchant_db_id : UUID <<FK>>
+  order_reference_id : UUID <<FK>>
+  order_id : string
+  amount : numeric
+  currency : string
+  description : text
+  status : enum
+  qr_content : text
+  qr_image_url : text
+  qr_image_base64 : text
+  external_reference : string
+  idempotency_key : string
+  expire_at : datetime
+  paid_at : datetime
+  failed_reason_code : string
+  failed_reason_message : text
+  created_at : datetime
+  updated_at : datetime
+}
 
-    WEBHOOK_EVENT {
-        UUID id PK
-        string event_id UK
-        UUID merchant_db_id FK
-        string event_type
-        enum entity_type
-        UUID entity_id
-        jsonb payload_json
-        text signature
-        enum status
-        datetime next_retry_at
-        int attempt_count
-        datetime last_attempt_at
-        datetime created_at
-        datetime updated_at
-    }
+entity "refund_transactions" as REFUND_TRANSACTION {
+  * id : UUID <<PK>>
+  --
+  refund_transaction_id : string <<UK>>
+  merchant_db_id : UUID <<FK>>
+  payment_transaction_id : UUID <<FK>>
+  refund_id : string
+  refund_amount : numeric
+  reason : text
+  status : enum
+  external_reference : string
+  idempotency_key : string
+  processed_at : datetime
+  failed_reason_code : string
+  failed_reason_message : text
+  created_at : datetime
+  updated_at : datetime
+}
 
-    WEBHOOK_DELIVERY_ATTEMPT {
-        UUID id PK
-        UUID webhook_event_id FK
-        int attempt_no
-        text request_url
-        jsonb request_headers_json
-        jsonb request_body_json
-        int response_status_code
-        text response_body_snippet
-        text error_message
-        datetime started_at
-        datetime finished_at
-        enum result
-    }
+entity "webhook_events" as WEBHOOK_EVENT {
+  * id : UUID <<PK>>
+  --
+  event_id : string <<UK>>
+  merchant_db_id : UUID <<FK>>
+  event_type : string
+  entity_type : enum
+  entity_id : UUID
+  payload_json : jsonb
+  signature : text
+  status : enum
+  next_retry_at : datetime
+  attempt_count : int
+  last_attempt_at : datetime
+  created_at : datetime
+  updated_at : datetime
+}
 
-    BANK_CALLBACK_LOG {
-        UUID id PK
-        enum source_type
-        string external_reference
-        string transaction_reference
-        enum callback_type
-        jsonb raw_payload_json
-        string normalized_status
-        datetime received_at
-        datetime processed_at
-        enum processing_result
-        text error_message
-        datetime created_at
-        datetime updated_at
-    }
+entity "webhook_delivery_attempts" as WEBHOOK_DELIVERY_ATTEMPT {
+  * id : UUID <<PK>>
+  --
+  webhook_event_id : UUID <<FK>>
+  attempt_no : int
+  request_url : text
+  request_headers_json : jsonb
+  request_body_json : jsonb
+  response_status_code : int
+  response_body_snippet : text
+  error_message : text
+  started_at : datetime
+  finished_at : datetime
+  result : enum
+}
 
-    RECONCILIATION_RECORD {
-        UUID id PK
-        enum entity_type
-        UUID entity_id
-        string internal_status
-        string external_status
-        numeric internal_amount
-        numeric external_amount
-        enum match_result
-        string mismatch_reason_code
-        text mismatch_reason_message
-        UUID reviewed_by FK
-        text review_note
-        datetime created_at
-        datetime updated_at
-    }
+entity "bank_callback_logs" as BANK_CALLBACK_LOG {
+  * id : UUID <<PK>>
+  --
+  source_type : enum
+  external_reference : string
+  transaction_reference : string
+  callback_type : enum
+  raw_payload_json : jsonb
+  normalized_status : string
+  received_at : datetime
+  processed_at : datetime
+  processing_result : enum
+  error_message : text
+  created_at : datetime
+  updated_at : datetime
+}
 
-    AUDIT_LOG {
-        UUID id PK
-        string event_type
-        enum entity_type
-        UUID entity_id
-        enum actor_type
-        UUID actor_id FK
-        jsonb before_state_json
-        jsonb after_state_json
-        text reason
-        datetime created_at
-    }
+entity "reconciliation_records" as RECONCILIATION_RECORD {
+  * id : UUID <<PK>>
+  --
+  entity_type : enum
+  entity_id : UUID
+  internal_status : string
+  external_status : string
+  internal_amount : numeric
+  external_amount : numeric
+  match_result : enum
+  mismatch_reason_code : string
+  mismatch_reason_message : text
+  reviewed_by : UUID <<FK>>
+  review_note : text
+  created_at : datetime
+  updated_at : datetime
+}
 
-    MERCHANT ||--|| MERCHANT_ONBOARDING_CASE : has
-    MERCHANT ||--o{ MERCHANT_CREDENTIAL : owns
-    MERCHANT ||--o{ ORDER_REFERENCE : owns
-    MERCHANT ||--o{ PAYMENT_TRANSACTION : receives
-    MERCHANT ||--o{ REFUND_TRANSACTION : owns
-    MERCHANT ||--o{ WEBHOOK_EVENT : receives_events
+entity "audit_logs" as AUDIT_LOG {
+  * id : UUID <<PK>>
+  --
+  event_type : string
+  entity_type : enum
+  entity_id : UUID
+  actor_type : enum
+  actor_id : UUID <<FK>>
+  before_state_json : jsonb
+  after_state_json : jsonb
+  reason : text
+  created_at : datetime
+}
 
-    INTERNAL_USER ||--o{ MERCHANT_ONBOARDING_CASE : reviews
-    INTERNAL_USER ||--o{ RECONCILIATION_RECORD : reviews
-    INTERNAL_USER ||--o{ AUDIT_LOG : acts
+MERCHANT "1" -down- "0..1" MERCHANT_ONBOARDING_CASE
+MERCHANT "1" -down- "0..*" MERCHANT_CREDENTIAL
+MERCHANT "1" -right- "0..*" ORDER_REFERENCE
+MERCHANT "1" -right- "0..*" PAYMENT_TRANSACTION
+MERCHANT "1" -right- "0..*" REFUND_TRANSACTION
+MERCHANT "1" -right- "0..*" WEBHOOK_EVENT
 
-    ORDER_REFERENCE ||--o{ PAYMENT_TRANSACTION : groups_attempts
-    ORDER_REFERENCE o|--o| PAYMENT_TRANSACTION : latest_attempt
-    PAYMENT_TRANSACTION ||--o{ REFUND_TRANSACTION : can_refund
+INTERNAL_USER "1" -down- "0..*" MERCHANT_ONBOARDING_CASE
+INTERNAL_USER "1" -right- "0..*" RECONCILIATION_RECORD
+INTERNAL_USER "1" -right- "0..*" AUDIT_LOG
 
-    WEBHOOK_EVENT ||--o{ WEBHOOK_DELIVERY_ATTEMPT : attempts
+ORDER_REFERENCE "1" -right- "0..*" PAYMENT_TRANSACTION
+ORDER_REFERENCE "0..1" ..> "0..1" PAYMENT_TRANSACTION
+PAYMENT_TRANSACTION "1" -right- "0..*" REFUND_TRANSACTION
+
+WEBHOOK_EVENT "1" -down- "0..*" WEBHOOK_DELIVERY_ATTEMPT
+@enduml
 ```
+
+## Relationship Notes
+
+The PlantUML diagram intentionally keeps relation labels out of the drawing so
+the lines do not overlap or obscure each other. This table carries the semantic
+meaning of each relation.
+
+| From | To | Cardinality | Meaning |
+| --- | --- | --- | --- |
+| `MERCHANT` | `MERCHANT_ONBOARDING_CASE` | `1 -> 0..1` | Merchant has one onboarding case in the MVP. |
+| `MERCHANT` | `MERCHANT_CREDENTIAL` | `1 -> 0..*` | Merchant owns API credentials. |
+| `MERCHANT` | `ORDER_REFERENCE` | `1 -> 0..*` | Merchant owns order references. |
+| `MERCHANT` | `PAYMENT_TRANSACTION` | `1 -> 0..*` | Merchant receives payment transactions. |
+| `MERCHANT` | `REFUND_TRANSACTION` | `1 -> 0..*` | Merchant owns refund transactions. |
+| `MERCHANT` | `WEBHOOK_EVENT` | `1 -> 0..*` | Merchant receives webhook events. |
+| `INTERNAL_USER` | `MERCHANT_ONBOARDING_CASE` | `1 -> 0..*` | Internal user reviews onboarding cases. |
+| `INTERNAL_USER` | `RECONCILIATION_RECORD` | `1 -> 0..*` | Internal user reviews reconciliation records. |
+| `INTERNAL_USER` | `AUDIT_LOG` | `1 -> 0..*` | Internal user acts as an audit actor. |
+| `ORDER_REFERENCE` | `PAYMENT_TRANSACTION` | `1 -> 0..*` | Order reference groups payment attempts. |
+| `ORDER_REFERENCE` | `PAYMENT_TRANSACTION` | `0..1 -> 0..1` | Order reference points to the latest payment attempt. |
+| `PAYMENT_TRANSACTION` | `REFUND_TRANSACTION` | `1 -> 0..*` | Payment transaction can have refund attempts. |
+| `WEBHOOK_EVENT` | `WEBHOOK_DELIVERY_ATTEMPT` | `1 -> 0..*` | Webhook event records delivery attempts. |
 
 ## Important DB Invariants
 
