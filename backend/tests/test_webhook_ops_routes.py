@@ -47,6 +47,45 @@ class WebhookOpsRouteTest(unittest.TestCase):
         kwargs = service.call_args.kwargs
         self.assertIs(kwargs["db"], db)
         self.assertEqual(kwargs["event_id"], "evt_123")
+        self.assertIsNone(kwargs["audit_context"])
+
+    def test_manual_retry_route_accepts_optional_audit_context_body(self) -> None:
+        from app.controllers import webhook_ops_controller
+        from app.main import app
+
+        db = object()
+        response_body = WebhookRetryResponse(
+            event_id="evt_123",
+            status=WebhookEventStatus.DELIVERED,
+            attempt_count=2,
+            last_attempt_result=DeliveryAttemptResult.SUCCESS,
+            next_retry_at=None,
+        )
+        self._override_db(app, db)
+
+        try:
+            with patch.object(
+                webhook_ops_controller.webhook_delivery_service,
+                "manual_retry",
+                return_value=response_body,
+            ) as service:
+                response = TestClient(app).post(
+                    "/v1/ops/webhooks/evt_123/retry",
+                    json={
+                        "actor_type": "OPS",
+                        "actor_id": None,
+                        "reason": "Retry after merchant endpoint recovered.",
+                    },
+                )
+        finally:
+            app.dependency_overrides.clear()
+
+        self.assertEqual(response.status_code, 200)
+        kwargs = service.call_args.kwargs
+        self.assertIs(kwargs["db"], db)
+        self.assertEqual(kwargs["event_id"], "evt_123")
+        self.assertEqual(kwargs["audit_context"].actor_type.value, "OPS")
+        self.assertEqual(kwargs["audit_context"].reason, "Retry after merchant endpoint recovered.")
 
     def test_manual_retry_route_serializes_next_retry_at(self) -> None:
         from app.controllers import webhook_ops_controller

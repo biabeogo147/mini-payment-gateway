@@ -139,7 +139,8 @@ DB Effects:
 
 ## WH-10 Ops Manual Retry Sends Failed Event Again
 
-Implementation Status: Implemented - phase 06.
+Implementation Status: Implemented - phase 06. Optional audit context
+implemented - phase 07.
 
 Actor: Ops.
 
@@ -149,14 +150,26 @@ API:
 POST /v1/ops/webhooks/{event_id}/retry
 ```
 
+Optional Audit Request:
+
+```json
+{
+  "actor_type": "OPS",
+  "actor_id": null,
+  "reason": "Retry after merchant endpoint recovered."
+}
+```
+
 DB Effects:
 
 - `webhook_delivery_attempts`: insert manual retry attempt.
 - `webhook_events`: update delivery status.
-- `audit_logs`: deferred to phase 07.
+- `audit_logs`: insert `WEBHOOK_MANUAL_RETRY` when optional audit context is
+  supplied.
 
 Expected Assertions:
 
-- Manual retry is auditable when ops audit exists.
+- Manual retry is auditable when optional actor context is supplied.
+- No-body manual retry remains backward-compatible with phase 06.
 - Manual retry does not mutate payment/refund final state.
 - Manual retry rejects missing events and events that are not `FAILED`.

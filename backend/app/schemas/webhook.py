@@ -3,6 +3,11 @@ from datetime import datetime, timezone
 from pydantic import BaseModel, field_serializer
 
 from app.models.enums import DeliveryAttemptResult, WebhookEventStatus
+from app.schemas.ops import OpsActorContext
+
+
+class WebhookManualRetryRequest(OpsActorContext):
+    pass
 
 
 class WebhookRetryResponse(BaseModel):

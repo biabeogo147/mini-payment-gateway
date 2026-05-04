@@ -65,10 +65,8 @@ Examples:
 - `backend/app/controllers/refund_controller.py`
 - `backend/app/controllers/provider_callback_controller.py`
 - `backend/app/controllers/webhook_ops_controller.py`
-
-Future examples:
-
-- `backend/app/controllers/ops_controller.py`
+- `backend/app/controllers/ops_merchant_controller.py`
+- `backend/app/controllers/ops_reconciliation_controller.py`
 
 ### Schemas
 
@@ -96,6 +94,9 @@ Examples:
 - `backend/app/services/merchant_readiness_service.py`
 - `backend/app/services/payment_service.py`
 - `backend/app/services/refund_service.py`
+- `backend/app/services/audit_service.py`
+- `backend/app/services/merchant_ops_service.py`
+- `backend/app/services/reconciliation_service.py`
 - `backend/app/services/webhook_event_factory.py`
 - `backend/app/services/webhook_delivery_service.py`
 
@@ -115,6 +116,27 @@ Examples:
 - `backend/app/repositories/payment_repository.py`
 - `backend/app/repositories/order_reference_repository.py`
 - `backend/app/repositories/webhook_repository.py`
+- `backend/app/repositories/audit_repository.py`
+- `backend/app/repositories/onboarding_repository.py`
+- `backend/app/repositories/reconciliation_repository.py`
+
+### Ops And Audit Layer
+
+Phase 07 adds internal ops routes without full internal authentication. Mutating
+ops requests carry an explicit actor context for auditability; services pass
+that context to `audit_service.record_event(...)` before committing their
+workflow transaction.
+
+Audit rows store event code, entity type/id, actor type/id, before/after state,
+and reason. State snapshots are sanitized centrally so keys named `secret_key`
+or `secret_key_encrypted` are masked recursively.
+
+Ops endpoints remain thin controllers:
+
+- merchant onboarding and lifecycle actions live in `merchant_ops_service`;
+- reconciliation list/detail/resolve lives in `reconciliation_service`;
+- webhook manual retry accepts optional actor context and remains backward
+  compatible with no-body phase 06 retry calls.
 
 ### Models
 

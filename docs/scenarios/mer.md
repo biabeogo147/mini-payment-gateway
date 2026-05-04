@@ -1,7 +1,6 @@
 # Merchant Scenarios
 
-Merchant scenarios cover readiness checks that exist today and the target ops
-onboarding flow planned for phase 07.
+Merchant scenarios cover readiness checks and the internal ops onboarding flow.
 
 ## MER-01 Active Merchant Can Use Payment Or Refund Entry Points
 
@@ -12,7 +11,7 @@ Actor: Merchant backend.
 APIs:
 
 - `POST /v1/payments`
-- Future `POST /v1/refunds`
+- `POST /v1/refunds`
 
 DB Reads:
 
@@ -34,7 +33,7 @@ Actor: Merchant backend.
 APIs:
 
 - `POST /v1/payments`
-- Future `POST /v1/refunds`
+- `POST /v1/refunds`
 
 DB Effects:
 
@@ -60,7 +59,7 @@ Expected Assertions:
 
 ## ONB-01 Ops Registers Merchant
 
-Implementation Status: Planned - phase 07.
+Implementation Status: Implemented - phase 07.
 
 Actor: Ops.
 
@@ -74,6 +73,11 @@ Request:
 
 ```json
 {
+  "actor": {
+    "actor_type": "OPS",
+    "actor_id": null,
+    "reason": "Register merchant."
+  },
   "merchant_id": "m_demo",
   "merchant_name": "Demo Merchant",
   "legal_name": "Demo Merchant LLC",
@@ -92,6 +96,7 @@ Response:
 ```json
 {
   "merchant_id": "m_demo",
+  "merchant_name": "Demo Merchant",
   "status": "PENDING_REVIEW"
 }
 ```
@@ -99,18 +104,19 @@ Response:
 DB Effects:
 
 - `merchants`: insert merchant row with `status=PENDING_REVIEW`.
-- `audit_logs`: insert merchant creation event.
+- `audit_logs`: insert `MERCHANT_CREATED`.
 
 State Transition: none to merchant `PENDING_REVIEW`.
 
 Expected Assertions:
 
 - Merchant exists by public `merchant_id`.
+- Duplicate public `merchant_id` returns `MERCHANT_ALREADY_EXISTS`.
 - Merchant cannot create payment yet.
 
 ## ONB-02 Ops Submits Onboarding Case
 
-Implementation Status: Planned - phase 07.
+Implementation Status: Implemented - phase 07.
 
 Actor: Ops.
 
@@ -124,6 +130,11 @@ Request:
 
 ```json
 {
+  "actor": {
+    "actor_type": "OPS",
+    "actor_id": null,
+    "reason": "Submit onboarding case."
+  },
   "domain_or_app_name": "Demo Shop",
   "submitted_profile_json": {
     "business_type": "online_shop"
@@ -141,27 +152,34 @@ Response:
 
 ```json
 {
-  "case_id": "case_...",
+  "case_id": "case-uuid",
   "merchant_id": "m_demo",
-  "status": "PENDING_REVIEW"
+  "status": "PENDING_REVIEW",
+  "domain_or_app_name": "Demo Shop",
+  "reviewed_by": null,
+  "reviewed_at": null,
+  "decision_note": null
 }
 ```
 
 DB Effects:
 
-- `merchant_onboarding_cases`: insert or update case row.
-- `audit_logs`: insert onboarding case submitted event.
+- `merchant_onboarding_cases`: insert or update the single merchant case.
+- `audit_logs`: insert `ONBOARDING_CASE_SUBMITTED`.
 
-State Transition: onboarding case `DRAFT -> PENDING_REVIEW`.
+State Transition: onboarding case `DRAFT -> PENDING_REVIEW` or non-final case
+back to `PENDING_REVIEW`.
 
 Expected Assertions:
 
 - One onboarding case exists for the merchant in MVP.
+- Approved or rejected cases are final in this phase and return
+  `ONBOARDING_CASE_FINAL` on update.
 - Merchant remains `PENDING_REVIEW`.
 
 ## ONB-03 Ops Approves Onboarding Case
 
-Implementation Status: Planned - phase 07.
+Implementation Status: Implemented - phase 07.
 
 Actor: Ops.
 
@@ -175,7 +193,12 @@ Request:
 
 ```json
 {
-  "reviewed_by": "ops_admin",
+  "actor": {
+    "actor_type": "OPS",
+    "actor_id": null,
+    "reason": "Approve onboarding."
+  },
+  "reviewed_by": null,
   "decision_note": "Documents verified for demo."
 }
 ```
@@ -184,17 +207,20 @@ Response:
 
 ```json
 {
-  "case_id": "case_...",
+  "case_id": "case-uuid",
+  "merchant_id": "m_demo",
   "status": "APPROVED",
-  "reviewed_by": "ops_admin",
-  "reviewed_at": "2026-04-29T10:00:00Z"
+  "domain_or_app_name": "Demo Shop",
+  "reviewed_by": null,
+  "reviewed_at": "2026-05-01T09:00:00Z",
+  "decision_note": "Documents verified for demo."
 }
 ```
 
 DB Effects:
 
 - `merchant_onboarding_cases`: update status, reviewer, reviewed timestamp, and note.
-- `audit_logs`: insert onboarding approval event.
+- `audit_logs`: insert `ONBOARDING_CASE_APPROVED`.
 
 State Transition: onboarding case `PENDING_REVIEW -> APPROVED`.
 
@@ -202,10 +228,12 @@ Expected Assertions:
 
 - Onboarding case is approved.
 - Merchant is not active until active credential/config exists.
+- Reject uses the same merchant-scoped path with `/reject` and writes
+  `ONBOARDING_CASE_REJECTED`.
 
 ## ONB-04 Ops Activates Merchant With Approved Onboarding And Active Credential
 
-Implementation Status: Planned - phase 07.
+Implementation Status: Implemented - phase 07.
 
 Actor: Ops.
 
@@ -220,6 +248,11 @@ Credential Request:
 
 ```json
 {
+  "actor": {
+    "actor_type": "OPS",
+    "actor_id": null,
+    "reason": "Create first active credential."
+  },
   "access_key": "ak_demo",
   "secret_key": "super-secret"
 }
@@ -229,7 +262,11 @@ Activation Request:
 
 ```json
 {
-  "reason": "Onboarding approved and credential created."
+  "actor": {
+    "actor_type": "OPS",
+    "actor_id": null,
+    "reason": "Onboarding approved and credential created."
+  }
 }
 ```
 
@@ -238,6 +275,7 @@ Response:
 ```json
 {
   "merchant_id": "m_demo",
+  "merchant_name": "Demo Merchant",
   "status": "ACTIVE"
 }
 ```
@@ -246,7 +284,7 @@ DB Effects:
 
 - `merchant_credentials`: insert active credential.
 - `merchants`: update status to `ACTIVE`.
-- `audit_logs`: insert credential creation and merchant activation events.
+- `audit_logs`: insert `CREDENTIAL_CREATED` and `MERCHANT_ACTIVATED`.
 
 State Transition: merchant `PENDING_REVIEW -> ACTIVE`.
 
@@ -254,9 +292,5 @@ Expected Assertions:
 
 - Exactly one active credential exists for the merchant.
 - Merchant activation requires approved onboarding and active credential.
+- Credential responses do not expose plaintext `secret_key`.
 - Merchant APIs can authenticate after activation.
-
-Current Workaround:
-
-- Use direct DB seed through `backend/scripts/smoke_payment_api.py` until ops APIs
-  exist.

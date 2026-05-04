@@ -52,11 +52,12 @@ pulling in out-of-scope features.
 - Webhook delivery exists with durable webhook event creation, signed HTTP
   delivery, delivery attempt persistence, retry scheduling, due-event service
   operation, manual retry route, and smoke verification.
-- Phase 07 reconciliation and ops audit has an execution-ready plan covering
-  merchant ops, onboarding, credential operations, audit logging,
-  reconciliation review/resolution, and webhook manual retry audit.
-- Ops reconciliation review, audit workflows, and full simulator finalization
-  flow are still pending.
+- Phase 07 reconciliation and ops audit is implemented with merchant ops,
+  onboarding, credential operations, audit logging, reconciliation
+  review/resolution, optional webhook manual retry audit, and smoke
+  verification script.
+- Full simulator finalization flow and automated E2E packaging remain for
+  phase 08.
 - Existing tests cover schema contract, smoke verification, backend foundation,
   merchant auth, merchant readiness, payment core, provider callbacks, and
   expiration, and refund core.
@@ -79,7 +80,7 @@ pulling in out-of-scope features.
 9. `phase_06_webhook_delivery.md` - implement webhook events, signing, retry, and
    manual retry. Completed.
 10. `phase_07_reconciliation_and_ops_audit.md` - implement reconciliation records
-   and audit trail for internal actions.
+   and audit trail for internal actions. Completed.
 11. `phase_08_readiness_docs_and_e2e.md` - finish docs, runbooks, and end-to-end
    demo tests.
 
@@ -95,8 +96,8 @@ pulling in out-of-scope features.
   -> [done] provider callback/expiration
   -> [done] refund core
   -> [done] webhook delivery
-  -> [next] reconciliation/audit
-  -> readiness docs/e2e
+  -> [done] reconciliation/audit
+  -> [next] readiness docs/e2e
 ```
 
 ## Phase Rules
@@ -153,6 +154,12 @@ When webhook delivery smoke verification is needed:
 & 'D:\Anaconda\envs\mini-payment-gateway\python.exe' scripts\smoke_webhook_api.py
 ```
 
+When ops onboarding and reconciliation smoke verification is needed:
+
+```powershell
+& 'D:\Anaconda\envs\mini-payment-gateway\python.exe' scripts\smoke_ops_reconciliation_api.py
+```
+
 ## Latest Completion Record
 
 - `phase_00_02_completion.md` records what changed, what was verified, and what
@@ -169,3 +176,6 @@ When webhook delivery smoke verification is needed:
   smoke verification.
 - `phase_06_completion.md` records webhook event creation, delivery, retry,
   manual retry, and webhook smoke verification.
+- `phase_07_completion.md` records ops onboarding, credentials, audit,
+  reconciliation review/resolution, webhook manual retry audit, tests, and
+  phase 07 smoke verification.

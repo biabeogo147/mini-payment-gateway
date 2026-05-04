@@ -47,11 +47,20 @@ Implemented now:
 - Webhook retry state for HTTP failure, timeout, and network error.
 - `POST /v1/ops/webhooks/{event_id}/retry` for internal manual retry of failed
   webhook events.
+- `POST /v1/ops/merchants` for internal merchant registration.
+- `PUT /v1/ops/merchants/{merchant_id}/onboarding-case`.
+- `POST /v1/ops/merchants/{merchant_id}/onboarding-case/approve` and
+  `/reject`.
+- `POST /v1/ops/merchants/{merchant_id}/credentials` and
+  `/credentials/rotate`.
+- `POST /v1/ops/merchants/{merchant_id}/activate`, `/suspend`, and `/disable`.
+- `GET /v1/ops/reconciliation`, `GET /v1/ops/reconciliation/{record_id}`, and
+  `POST /v1/ops/reconciliation/{record_id}/resolve`.
+- Audit logging for ops merchant actions, credential operations,
+  reconciliation resolution, and optional webhook manual retry actor context.
 
 Not implemented yet:
 
-- Ops merchant onboarding APIs.
-- Ops reconciliation review and audit services.
 - Automated full E2E test.
 
 ## Scenario Files
@@ -80,10 +89,10 @@ Not implemented yet:
 | AUTH-05 Inactive credential fails | Merchant backend | `auth.md` | any merchant API | no business table change | Implemented | Phase 02 |
 | MER-01 Active merchant can use payment/refund entry points | Merchant backend | `mer.md` | service entry points | `merchants`, `merchant_credentials` | Implemented | Phase 02 |
 | MER-02 Non-active merchant cannot use payment/refund entry points | Merchant backend | `mer.md` | service entry points | no payment/refund insert | Implemented | Phase 02 |
-| ONB-01 Ops registers merchant | Ops | `mer.md` | `/v1/ops/merchants` | `merchants`, `audit_logs` | Planned - phase 07 | Phase 07 |
-| ONB-02 Ops submits onboarding case | Ops | `mer.md` | `/v1/ops/merchants/{merchant_id}/onboarding-case` | `merchant_onboarding_cases`, `audit_logs` | Planned - phase 07 | Phase 07 |
-| ONB-03 Ops approves onboarding case | Ops | `mer.md` | `/v1/ops/onboarding-cases/{case_id}/approve` | `merchant_onboarding_cases`, `audit_logs` | Planned - phase 07 | Phase 07 |
-| ONB-04 Ops activates merchant | Ops | `mer.md` | credential and activation APIs | `merchants`, `merchant_credentials`, `audit_logs` | Planned - phase 07 | Phase 07 |
+| ONB-01 Ops registers merchant | Ops | `mer.md` | `/v1/ops/merchants` | `merchants`, `audit_logs` | Implemented | Phase 07 |
+| ONB-02 Ops submits onboarding case | Ops | `mer.md` | `/v1/ops/merchants/{merchant_id}/onboarding-case` | `merchant_onboarding_cases`, `audit_logs` | Implemented | Phase 07 |
+| ONB-03 Ops approves onboarding case | Ops | `mer.md` | `/v1/ops/merchants/{merchant_id}/onboarding-case/approve` | `merchant_onboarding_cases`, `audit_logs` | Implemented | Phase 07 |
+| ONB-04 Ops activates merchant | Ops | `mer.md` | credential and activation APIs | `merchants`, `merchant_credentials`, `audit_logs` | Implemented | Phase 07 |
 | PAY-01 Active merchant creates payment | Merchant backend | `pay.md` | `POST /v1/payments` | `order_references`, `payment_transactions` | Implemented with DB seed | Phase 03 |
 | PAY-02 Merchant queries payment by transaction id | Merchant backend | `pay.md` | `GET /v1/payments/{transaction_id}` | `payment_transactions` | Implemented with DB seed | Phase 03 |
 | PAY-03 Merchant queries payment by order id | Merchant backend | `pay.md` | `GET /v1/payments/by-order/{order_id}` | `payment_transactions`, `order_references` | Implemented with DB seed | Phase 03 |
@@ -99,8 +108,8 @@ Not implemented yet:
 | CB-03 Unknown transaction callback | Provider simulator | `callback.md` | `POST /v1/provider/callbacks/payment` | `bank_callback_logs` | Implemented | Phase 04 |
 | CB-04 Duplicate provider callback | Provider simulator | `callback.md` | `POST /v1/provider/callbacks/payment` | `bank_callback_logs`, `payment_transactions` | Implemented | Phase 04 |
 | EXP-01 Expire overdue payment | System | `callback.md` | scheduled service or internal command | `payment_transactions`, `webhook_events` | Implemented at service level | Phase 04, Phase 06 |
-| REC-01 Late success after expiration | Provider simulator, Ops | `reconciliation.md` | callback API, ops reconciliation API | `bank_callback_logs`, `reconciliation_records` | Evidence creation implemented; ops review planned | Phase 04, Phase 07 |
-| REC-02 Callback amount mismatch | Provider simulator, Ops | `reconciliation.md` | callback API, ops reconciliation API | `bank_callback_logs`, `reconciliation_records` | Evidence creation implemented; ops review planned | Phase 04, Phase 07 |
+| REC-01 Late success after expiration | Provider simulator, Ops | `reconciliation.md` | callback API, ops reconciliation API | `bank_callback_logs`, `reconciliation_records`, `audit_logs` | Implemented | Phase 04, Phase 07 |
+| REC-02 Callback amount mismatch | Provider simulator, Ops | `reconciliation.md` | callback API, ops reconciliation API | `bank_callback_logs`, `reconciliation_records`, `audit_logs` | Implemented | Phase 04, Phase 07 |
 | REF-01 Merchant creates full refund | Merchant backend | `refund.md` | `POST /v1/refunds` | `refund_transactions` | Implemented with DB seed | Phase 05 |
 | REF-02 Merchant queries refund by transaction id | Merchant backend | `refund.md` | `GET /v1/refunds/{refund_transaction_id}` | `refund_transactions` | Implemented with DB seed | Phase 05 |
 | REF-03 Merchant queries refund by merchant refund id | Merchant backend | `refund.md` | `GET /v1/refunds/by-refund-id/{refund_id}` | `refund_transactions` | Implemented with DB seed | Phase 05 |
@@ -108,11 +117,11 @@ Not implemented yet:
 | REF-05 Provider marks refund failed | Provider simulator | `refund.md` | `POST /v1/provider/callbacks/refund` | `bank_callback_logs`, `refund_transactions`, `webhook_events` | Implemented | Phase 05, Phase 06 |
 | WH-01 Payment success creates webhook event | Gateway worker | `webhook.md` | internal event factory | `webhook_events` | Implemented | Phase 06 |
 | WH-05 HTTP 2xx marks webhook delivered | Gateway worker | `webhook.md` | merchant webhook URL | `webhook_events`, `webhook_delivery_attempts` | Implemented with DB seed | Phase 06 |
-| WH-10 Ops manual retry sends failed event again | Gateway worker, Ops | `webhook.md` | `POST /v1/ops/webhooks/{event_id}/retry` | `webhook_events`, `webhook_delivery_attempts` | Implemented without ops audit | Phase 06 |
-| OPS-01 Ops suspends merchant | Ops | `ops.md` | suspend API | `merchants`, `audit_logs` | Planned - phase 07 | Phase 07 |
-| OPS-02 Ops disables merchant | Ops | `ops.md` | disable API | `merchants`, `audit_logs` | Planned - phase 07 | Phase 07 |
-| OPS-03 Credential rotation | Ops | `ops.md` | `/v1/ops/merchants/{merchant_id}/credentials/rotate` | `merchant_credentials`, `audit_logs` | Planned - phase 07 | Phase 07 |
-| REC-05 Resolve reconciliation record | Ops | `reconciliation.md` | `POST /v1/ops/reconciliation/{record_id}/resolve` | `reconciliation_records`, `audit_logs` | Planned - phase 07 | Phase 07 |
+| WH-10 Ops manual retry sends failed event again | Gateway worker, Ops | `webhook.md` | `POST /v1/ops/webhooks/{event_id}/retry` | `webhook_events`, `webhook_delivery_attempts`, `audit_logs` | Implemented | Phase 06, Phase 07 |
+| OPS-01 Ops suspends merchant | Ops | `ops.md` | suspend API | `merchants`, `audit_logs` | Implemented | Phase 07 |
+| OPS-02 Ops disables merchant | Ops | `ops.md` | disable API | `merchants`, `audit_logs` | Implemented | Phase 07 |
+| OPS-03 Credential rotation | Ops | `ops.md` | `/v1/ops/merchants/{merchant_id}/credentials/rotate` | `merchant_credentials`, `audit_logs` | Implemented | Phase 07 |
+| REC-05 Resolve reconciliation record | Ops | `reconciliation.md` | `POST /v1/ops/reconciliation/{record_id}/resolve` | `reconciliation_records`, `audit_logs` | Implemented | Phase 07 |
 
 ## Runnable Smoke
 
@@ -126,7 +135,8 @@ cd backend
 & 'D:\Anaconda\envs\mini-payment-gateway\python.exe' scripts\smoke_provider_callback_api.py
 & 'D:\Anaconda\envs\mini-payment-gateway\python.exe' scripts\smoke_refund_api.py
 & 'D:\Anaconda\envs\mini-payment-gateway\python.exe' scripts\smoke_webhook_api.py
+& 'D:\Anaconda\envs\mini-payment-gateway\python.exe' scripts\smoke_ops_reconciliation_api.py
 ```
 
-See `pay.md`, `callback.md`, `refund.md`, and `webhook.md` for the API and DB
-effects of these runnable slices.
+See `pay.md`, `callback.md`, `refund.md`, `webhook.md`, `mer.md`, `ops.md`,
+and `reconciliation.md` for the API and DB effects of these runnable slices.

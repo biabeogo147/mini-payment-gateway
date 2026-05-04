@@ -7,11 +7,12 @@ from sqlalchemy.orm import Session
 from app.core.errors import AppError
 from app.core.security import sha256_hex, sign_hmac_sha256
 from app.core.time import utc_now
-from app.models.enums import DeliveryAttemptResult, WebhookEventStatus
+from app.models.enums import DeliveryAttemptResult, EntityType, WebhookEventStatus
 from app.models.webhook_event import WebhookEvent
 from app.repositories import credential_repository, merchant_repository, webhook_repository
+from app.schemas.ops import OpsActorContext
 from app.schemas.webhook import WebhookRetryResponse
-from app.services import webhook_retry_policy
+from app.services import audit_service, webhook_retry_policy
 
 HTTP_TIMEOUT_SECONDS = 10
 
@@ -120,6 +121,7 @@ def manual_retry(
     event_id: str,
     now: datetime | None = None,
     http_client=None,
+    audit_context: OpsActorContext | None = None,
 ) -> WebhookRetryResponse:
     event = webhook_repository.get_by_event_id(db, event_id)
     if event is None:
@@ -136,7 +138,22 @@ def manual_retry(
             status_code=409,
             details={"event_id": event_id, "status": event.status.value},
         )
-    return deliver_event(db, event, now=now, http_client=http_client, manual=True)
+    before_state = _event_state(event) if audit_context is not None else None
+    response = deliver_event(db, event, now=now, http_client=http_client, manual=True)
+    if audit_context is not None:
+        audit_service.record_event(
+            db=db,
+            event_type="WEBHOOK_MANUAL_RETRY",
+            entity_type=EntityType.WEBHOOK_EVENT,
+            entity_id=event.id,
+            actor_type=audit_context.actor_type,
+            actor_id=audit_context.actor_id,
+            before_state=before_state,
+            after_state=_event_state(event),
+            reason=audit_context.reason,
+        )
+        db.commit()
+    return response
 
 
 def _post_webhook(http_client, url: str, body: bytes, headers: dict[str, str]):
@@ -240,3 +257,19 @@ def _snippet(value: str | None) -> str | None:
     if value is None:
         return None
     return value[:1000]
+
+
+def _event_state(event: WebhookEvent) -> dict:
+    return {
+        "id": str(event.id),
+        "event_id": event.event_id,
+        "merchant_db_id": str(event.merchant_db_id),
+        "event_type": event.event_type,
+        "entity_type": event.entity_type.value,
+        "entity_id": str(event.entity_id),
+        "status": event.status.value,
+        "attempt_count": event.attempt_count,
+        "next_retry_at": event.next_retry_at.isoformat() if event.next_retry_at else None,
+        "last_attempt_at": event.last_attempt_at.isoformat() if event.last_attempt_at else None,
+        "payload_json": event.payload_json,
+    }

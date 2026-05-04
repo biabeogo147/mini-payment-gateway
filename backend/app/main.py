@@ -2,6 +2,8 @@ from fastapi import FastAPI
 
 from app.controllers.errors import app_error_handler
 from app.controllers.health_controller import router as health_router
+from app.controllers.ops_merchant_controller import router as ops_merchant_router
+from app.controllers.ops_reconciliation_controller import router as ops_reconciliation_router
 from app.controllers.payment_controller import router as payment_router
 from app.controllers.provider_callback_controller import router as provider_callback_router
 from app.controllers.refund_controller import router as refund_router
@@ -16,3 +18,5 @@ app.include_router(payment_router)
 app.include_router(refund_router)
 app.include_router(provider_callback_router)
 app.include_router(webhook_ops_router)
+app.include_router(ops_merchant_router)
+app.include_router(ops_reconciliation_router)

@@ -12,9 +12,9 @@
 
 ## Implementation Status
 
-Ready for implementation. Phase 07 application code has not been added yet.
-Models and migrations for merchants, onboarding cases, credentials, audit logs,
-internal users, and reconciliation records already exist.
+Completed. Phase 07 application code, tests, smoke script, and documentation
+updates have been added. See `docs/plan/phase_07_completion.md` for verification
+evidence and remaining phase 08 notes.
 
 Use the current repository checkout directly. Do not create a branch or worktree
 unless the user asks for one. Commit only when requested.

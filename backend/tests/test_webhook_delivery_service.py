@@ -153,6 +153,43 @@ class WebhookDeliveryServiceTest(unittest.TestCase):
         self.assertEqual(failed.attempt_count, 5)
         self.assertEqual(result.status, WebhookEventStatus.DELIVERED)
 
+    def test_manual_retry_with_audit_context_records_before_and_after_state(self) -> None:
+        from app.models.enums import ActorType, EntityType, WebhookEventStatus
+        from app.schemas.ops import OpsActorContext
+        from app.services.webhook_delivery_service import manual_retry
+
+        failed = _event(self.merchant.id, event_id="evt_failed", attempt_count=4)
+        failed.status = WebhookEventStatus.FAILED
+        actor = OpsActorContext(
+            actor_type=ActorType.OPS,
+            actor_id=None,
+            reason="Retry after merchant endpoint recovered.",
+        )
+        db = _FakeDb()
+        store = _WebhookDeliveryStore(
+            merchants=[self.merchant],
+            credentials=[self.credential],
+            events=[failed],
+        )
+
+        with store.patched_repositories():
+            result = manual_retry(
+                db,
+                "evt_failed",
+                now=self.now,
+                http_client=_FakeHttpClient([_FakeResponse(200, "ok")]),
+                audit_context=actor,
+            )
+
+        self.assertEqual(result.status, WebhookEventStatus.DELIVERED)
+        audit = db.audit_logs[0]
+        self.assertEqual(audit.event_type, "WEBHOOK_MANUAL_RETRY")
+        self.assertEqual(audit.entity_type, EntityType.WEBHOOK_EVENT)
+        self.assertEqual(audit.actor_type, ActorType.OPS)
+        self.assertEqual(audit.reason, "Retry after merchant endpoint recovered.")
+        self.assertEqual(audit.before_state_json["status"], "FAILED")
+        self.assertEqual(audit.after_state_json["status"], "DELIVERED")
+
     def assert_signed_request(self, request, event_id: str, secret: str) -> None:
         headers = request["headers"]
         body = request["content"]
@@ -169,10 +206,24 @@ class WebhookDeliveryServiceTest(unittest.TestCase):
 
 class _FakeDb:
     def __init__(self) -> None:
+        self.added = []
+        self.flushed = False
         self.committed = False
+
+    def add(self, item) -> None:
+        self.added.append(item)
+
+    def flush(self) -> None:
+        self.flushed = True
 
     def commit(self) -> None:
         self.committed = True
+
+    @property
+    def audit_logs(self):
+        from app.models.audit_log import AuditLog
+
+        return [item for item in self.added if isinstance(item, AuditLog)]
 
 
 class _WebhookDeliveryStore:
