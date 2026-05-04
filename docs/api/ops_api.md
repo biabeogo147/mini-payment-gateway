@@ -4,6 +4,17 @@ Ops APIs are internal-only. They are used by Admin/Ops users and are not exposed
 as merchant-facing endpoints in the MVP. A full internal identity layer can be
 added later; this contract defines the business actions only.
 
+Phase 07 keeps internal authentication out of scope. Mutating ops endpoints use
+a lightweight actor context in the request body for audit rows:
+
+```json
+{
+  "actor_type": "OPS",
+  "actor_id": null,
+  "reason": "Operator note"
+}
+```
+
 ## Merchant Management
 
 ### Create Merchant
@@ -12,6 +23,8 @@ added later; this contract defines the business actions only.
 
 Creates a merchant with status `PENDING_REVIEW`.
 
+Implementation status: planned - phase 07.
+
 ### Create Or Update Onboarding Case
 
 `PUT /v1/ops/merchants/{merchant_id}/onboarding-case`
@@ -19,11 +32,15 @@ Creates a merchant with status `PENDING_REVIEW`.
 Stores onboarding payload, documents, review checklist data, settlement details,
 webhook URL, allowed IP list, and domain/app name.
 
+Implementation status: planned - phase 07.
+
 ### Approve Onboarding
 
 `POST /v1/ops/merchants/{merchant_id}/onboarding-case/approve`
 
 Stores decision metadata on `MerchantOnboardingCase`, not on `Merchant`.
+
+Implementation status: planned - phase 07.
 
 ### Reject Onboarding
 
@@ -31,11 +48,15 @@ Stores decision metadata on `MerchantOnboardingCase`, not on `Merchant`.
 
 Stores rejection note and moves the onboarding case to `REJECTED`.
 
+Implementation status: planned - phase 07.
+
 ### Activate Merchant
 
 `POST /v1/ops/merchants/{merchant_id}/activate`
 
 Allowed only when onboarding is `APPROVED` and an active credential exists.
+
+Implementation status: planned - phase 07.
 
 ### Suspend Or Disable Merchant
 
@@ -46,6 +67,8 @@ Allowed only when onboarding is `APPROVED` and an active credential exists.
 Suspended and disabled merchants remain inspectable but cannot create new
 payments or refunds.
 
+Implementation status: planned - phase 07.
+
 ## Credentials
 
 ### Rotate Credential
@@ -54,6 +77,8 @@ payments or refunds.
 
 Creates a new active credential and marks the prior active credential as rotated
 or inactive. The database must keep only one `ACTIVE` credential per merchant.
+
+Implementation status: planned - phase 07.
 
 ## Inspection
 
@@ -72,6 +97,8 @@ Searchable by `event_id`, `merchant_id`, status, and next retry time.
 `GET /v1/ops/reconciliation`
 
 Searchable by match result, entity type, and entity id.
+
+Implementation status: planned - phase 07.
 
 ## Webhook Retry
 

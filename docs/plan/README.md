@@ -52,6 +52,9 @@ pulling in out-of-scope features.
 - Webhook delivery exists with durable webhook event creation, signed HTTP
   delivery, delivery attempt persistence, retry scheduling, due-event service
   operation, manual retry route, and smoke verification.
+- Phase 07 reconciliation and ops audit has an execution-ready plan covering
+  merchant ops, onboarding, credential operations, audit logging,
+  reconciliation review/resolution, and webhook manual retry audit.
 - Ops reconciliation review, audit workflows, and full simulator finalization
   flow are still pending.
 - Existing tests cover schema contract, smoke verification, backend foundation,

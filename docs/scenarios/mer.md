@@ -117,7 +117,7 @@ Actor: Ops.
 API:
 
 ```http
-POST /v1/ops/merchants/{merchant_id}/onboarding-case
+PUT /v1/ops/merchants/{merchant_id}/onboarding-case
 ```
 
 Request:
@@ -168,7 +168,7 @@ Actor: Ops.
 API:
 
 ```http
-POST /v1/ops/onboarding-cases/{case_id}/approve
+POST /v1/ops/merchants/{merchant_id}/onboarding-case/approve
 ```
 
 Request:
