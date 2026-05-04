@@ -65,16 +65,16 @@ Status values:
 | REF-07 | Refund after 7-day window rejects | Service | Phase 05 | Covered | Yes | `backend/tests/test_refund_service.py` |
 | REF-08 | Duplicate refund id returns existing refund | Service | Phase 05 | Covered | Yes | `backend/tests/test_refund_service.py` |
 | REF-09 | Refund against non-success payment rejects | Service | Phase 05 | Covered | Yes | `backend/tests/test_refund_service.py` |
-| WH-01 | Payment success creates webhook event | Service | Phase 06 | Planned | No | `backend/tests/test_webhook_event_factory.py` |
-| WH-02 | Payment failure creates webhook event | Service | Phase 06 | Planned | No | `backend/tests/test_webhook_event_factory.py` |
-| WH-03 | Payment expiration creates webhook event | Service | Phase 06 | Planned | No | `backend/tests/test_webhook_event_factory.py` |
-| WH-04 | Refund success creates webhook event | Service | Phase 06 | Planned | No | `backend/tests/test_webhook_event_factory.py` |
-| WH-05 | HTTP 2xx marks webhook delivered | Service | Phase 06 | Planned | No | `backend/tests/test_webhook_delivery_service.py` |
-| WH-06 | HTTP 500 schedules retry | Service | Phase 06 | Planned | No | `backend/tests/test_webhook_delivery_service.py` |
-| WH-07 | Timeout schedules retry | Service | Phase 06 | Planned | No | `backend/tests/test_webhook_delivery_service.py` |
-| WH-08 | Network error schedules retry | Service | Phase 06 | Planned | No | `backend/tests/test_webhook_delivery_service.py` |
-| WH-09 | Attempt 4 exhaustion marks failed | Service | Phase 06 | Planned | No | `backend/tests/test_webhook_retry_policy.py`, `backend/tests/test_webhook_delivery_service.py` |
-| WH-10 | Ops manual retry sends failed event again | Route, service | Phase 06 | Planned | No | `backend/tests/test_webhook_delivery_service.py` |
+| WH-01 | Payment success creates webhook event | Service, hook, smoke | Phase 06 | Covered with DB seed | Yes | `backend/tests/test_webhook_event_factory.py`, `backend/tests/test_webhook_hooks.py`, `backend/scripts/smoke_webhook_api.py` |
+| WH-02 | Payment failure creates webhook event | Service, hook | Phase 06 | Covered | Yes | `backend/tests/test_webhook_event_factory.py`, `backend/tests/test_webhook_hooks.py` |
+| WH-03 | Payment expiration creates webhook event | Service, hook | Phase 06 | Covered | Yes | `backend/tests/test_webhook_event_factory.py`, `backend/tests/test_webhook_hooks.py` |
+| WH-04 | Refund success creates webhook event | Service, hook | Phase 06 | Covered | Yes | `backend/tests/test_webhook_event_factory.py`, `backend/tests/test_webhook_hooks.py` |
+| WH-05 | HTTP 2xx marks webhook delivered | Service, smoke | Phase 06 | Covered with DB seed | Yes | `backend/tests/test_webhook_delivery_service.py`, `backend/scripts/smoke_webhook_api.py` |
+| WH-06 | HTTP 500 schedules retry | Service | Phase 06 | Covered | Yes | `backend/tests/test_webhook_delivery_service.py` |
+| WH-07 | Timeout schedules retry | Service | Phase 06 | Covered | Yes | `backend/tests/test_webhook_delivery_service.py` |
+| WH-08 | Network error schedules retry | Service | Phase 06 | Covered | Yes | `backend/tests/test_webhook_delivery_service.py` |
+| WH-09 | Attempt 4 exhaustion marks failed | Service | Phase 06 | Covered | Yes | `backend/tests/test_webhook_retry_policy.py`, `backend/tests/test_webhook_delivery_service.py` |
+| WH-10 | Ops manual retry sends failed event again | Route, service | Phase 06 | Covered without ops audit | Yes | `backend/tests/test_webhook_delivery_service.py`, `backend/tests/test_webhook_ops_routes.py` |
 | AUD-01 | Ops merchant action writes audit log | Service | Phase 07 | Planned | No | `backend/tests/test_audit_service.py` |
 | AUD-02 | Credential rotation writes audit log | Service | Phase 07 | Planned | No | `backend/tests/test_audit_service.py` |
 | REC-03 | Matching provider evidence creates matched record | Service | Phase 07 | Planned | No | `backend/tests/test_reconciliation_service.py` |

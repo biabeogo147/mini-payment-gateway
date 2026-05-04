@@ -6,7 +6,8 @@ refunds.
 
 ## REF-01 Full Refund Request For Successful Payment
 
-Implementation Status: Implemented - phase 05.
+Implementation Status: Implemented - phase 05. Webhook event creation
+implemented in phase 06.
 
 Actor: Merchant backend.
 
@@ -132,7 +133,7 @@ DB Effects:
 
 - `bank_callback_logs`: insert raw callback evidence.
 - `refund_transactions`: update `REFUND_PENDING -> REFUNDED`.
-- `webhook_events`: create `refund.succeeded` in phase 06.
+- `webhook_events`: create `refund.succeeded` when merchant has `webhook_url`.
 
 Expected Assertions:
 
@@ -141,13 +142,14 @@ Expected Assertions:
 
 ## REF-05 Provider Refund Failed Callback
 
-Implementation Status: Implemented - phase 05.
+Implementation Status: Implemented - phase 05. Webhook event creation
+implemented in phase 06.
 
 DB Effects:
 
 - `bank_callback_logs`: insert callback evidence.
 - `refund_transactions`: update `REFUND_PENDING -> REFUND_FAILED`.
-- `webhook_events`: create `refund.failed` in phase 06.
+- `webhook_events`: create `refund.failed` when merchant has `webhook_url`.
 
 ## REF-06 Partial Refund Rejects
 

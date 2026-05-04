@@ -6,7 +6,7 @@ raw callback evidence, and payment expiration.
 ## CB-01 Payment Success Callback
 
 Implementation Status: Implemented with DB seed - phase 04. Webhook event
-creation remains planned for phase 06.
+creation implemented in phase 06.
 
 Actor: Provider simulator.
 
@@ -47,7 +47,7 @@ DB Effects:
 - `bank_callback_logs`: insert raw callback evidence.
 - `payment_transactions`: update `PENDING -> SUCCESS`, set `paid_at`, and
   store external reference.
-- `webhook_events`: create `payment.succeeded` in phase 06.
+- `webhook_events`: create `payment.succeeded` when merchant has `webhook_url`.
 
 Expected Assertions:
 
@@ -58,13 +58,13 @@ Expected Assertions:
 ## CB-02 Payment Failed Callback
 
 Implementation Status: Implemented with DB seed - phase 04. Webhook event
-creation remains planned for phase 06.
+creation implemented in phase 06.
 
 DB Effects:
 
 - `bank_callback_logs`: insert raw callback evidence.
 - `payment_transactions`: update `PENDING -> FAILED`, set failure code/message.
-- `webhook_events`: create `payment.failed` in phase 06.
+- `webhook_events`: create `payment.failed` when merchant has `webhook_url`.
 
 Expected Assertions:
 
@@ -104,7 +104,7 @@ Expected Assertions:
 ## EXP-01 Expire Overdue Payment
 
 Implementation Status: Implemented at service level - phase 04. Webhook event
-creation remains planned for phase 06.
+creation implemented in phase 06.
 
 Actor: System.
 
@@ -117,7 +117,7 @@ scheduled service or internal command
 DB Effects:
 
 - `payment_transactions`: update `PENDING -> EXPIRED` when `expire_at <= now`.
-- `webhook_events`: create `payment.expired` in phase 06.
+- `webhook_events`: create `payment.expired` when merchant has `webhook_url`.
 
 Expected Assertions:
 

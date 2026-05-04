@@ -16,7 +16,7 @@ from app.schemas.provider_callback import (
     RefundCallbackResponse,
     RefundCallbackStatus,
 )
-from app.services import payment_state_machine, refund_state_machine
+from app.services import payment_state_machine, refund_state_machine, webhook_event_factory
 
 
 def process_payment_callback(
@@ -104,6 +104,7 @@ def process_payment_callback(
         )
 
     payment_repository.save(db, payment)
+    webhook_event_factory.create_payment_event_if_needed(db, payment, now=processed_at)
     _log_callback(db, request, processed_at, CallbackProcessingResult.PROCESSED)
     db.commit()
     return _response(payment, CallbackProcessingResult.PROCESSED)
@@ -194,6 +195,7 @@ def process_refund_callback(
         )
 
     refund_repository.save(db, refund)
+    webhook_event_factory.create_refund_event_if_needed(db, refund, now=processed_at)
     _log_refund_callback(db, request, processed_at, CallbackProcessingResult.PROCESSED)
     db.commit()
     return _refund_response(refund, CallbackProcessingResult.PROCESSED)

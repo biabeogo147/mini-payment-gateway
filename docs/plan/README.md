@@ -49,8 +49,11 @@ pulling in out-of-scope features.
 - Refund core exists with full refund creation, refund status queries, refund
   provider callbacks, callback evidence logging, and refund reconciliation
   evidence for ambiguous callbacks.
-- Webhook delivery, ops reconciliation review, audit workflows, and full
-  simulator finalization flow are still pending.
+- Webhook delivery exists with durable webhook event creation, signed HTTP
+  delivery, delivery attempt persistence, retry scheduling, due-event service
+  operation, manual retry route, and smoke verification.
+- Ops reconciliation review, audit workflows, and full simulator finalization
+  flow are still pending.
 - Existing tests cover schema contract, smoke verification, backend foundation,
   merchant auth, merchant readiness, payment core, provider callbacks, and
   expiration, and refund core.
@@ -71,7 +74,7 @@ pulling in out-of-scope features.
    callback logging, and expiration behavior. Completed.
 8. `phase_05_refund_core.md` - implement full refund and refund status query. Completed.
 9. `phase_06_webhook_delivery.md` - implement webhook events, signing, retry, and
-   manual retry.
+   manual retry. Completed.
 10. `phase_07_reconciliation_and_ops_audit.md` - implement reconciliation records
    and audit trail for internal actions.
 11. `phase_08_readiness_docs_and_e2e.md` - finish docs, runbooks, and end-to-end
@@ -88,8 +91,8 @@ pulling in out-of-scope features.
   -> [done] E2E scenario catalog
   -> [done] provider callback/expiration
   -> [done] refund core
-  -> [next] webhook delivery
-  -> reconciliation/audit
+  -> [done] webhook delivery
+  -> [next] reconciliation/audit
   -> readiness docs/e2e
 ```
 
@@ -141,6 +144,12 @@ When refund API smoke verification is needed:
 & 'D:\Anaconda\envs\mini-payment-gateway\python.exe' scripts\smoke_refund_api.py
 ```
 
+When webhook delivery smoke verification is needed:
+
+```powershell
+& 'D:\Anaconda\envs\mini-payment-gateway\python.exe' scripts\smoke_webhook_api.py
+```
+
 ## Latest Completion Record
 
 - `phase_00_02_completion.md` records what changed, what was verified, and what
@@ -155,3 +164,5 @@ When refund API smoke verification is needed:
   reconciliation evidence implementation.
 - `phase_05_completion.md` records refund core, refund callback, and refund
   smoke verification.
+- `phase_06_completion.md` records webhook event creation, delivery, retry,
+  manual retry, and webhook smoke verification.

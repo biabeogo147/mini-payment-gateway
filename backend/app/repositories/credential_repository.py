@@ -19,3 +19,15 @@ def get_active_by_merchant_and_access_key(
             MerchantCredential.status == CredentialStatus.ACTIVE,
         )
     ).scalar_one_or_none()
+
+
+def get_active_by_merchant(
+    db: Session,
+    merchant_db_id: UUID,
+) -> MerchantCredential | None:
+    return db.execute(
+        select(MerchantCredential).where(
+            MerchantCredential.merchant_db_id == merchant_db_id,
+            MerchantCredential.status == CredentialStatus.ACTIVE,
+        )
+    ).scalar_one_or_none()

@@ -1,8 +1,9 @@
 # Happy Path Scenarios
 
 Happy path scenarios describe target full journeys. Some steps are runnable
-today with DB seed; the complete journey becomes a phase 08 E2E test after
-webhook, ops, and reconciliation review phases exist.
+today with DB seed; webhook delivery is now runnable in phase 06, and the
+complete journey becomes a phase 08 E2E test after ops and reconciliation review
+phases exist.
 
 ## E2E-01 Merchant Onboarding To Successful Payment And Refund
 
@@ -68,7 +69,7 @@ DB Effects:
 
 - `bank_callback_logs`: insert callback evidence.
 - `payment_transactions`: update `PENDING -> SUCCESS`.
-- `webhook_events`: create `payment.succeeded` in phase 06.
+- `webhook_events`: create `payment.succeeded` when merchant has `webhook_url`.
 
 ### Step 6: Merchant Queries Payment
 
@@ -104,7 +105,7 @@ DB Effects:
 
 - `bank_callback_logs`: insert callback evidence.
 - `refund_transactions`: update `REFUND_PENDING -> REFUNDED`.
-- `webhook_events`: create `refund.succeeded` in phase 06.
+- `webhook_events`: create `refund.succeeded` when merchant has `webhook_url`.
 
 ### Step 10: Gateway Delivers Refund Webhook
 

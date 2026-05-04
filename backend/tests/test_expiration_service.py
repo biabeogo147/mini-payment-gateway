@@ -103,6 +103,10 @@ class _ExpirationStore:
                 "app.services.expiration_service.payment_repository.save",
                 side_effect=self.save_payment,
             ),
+            patch(
+                "app.services.expiration_service.webhook_event_factory.create_payment_event_if_needed",
+                return_value=None,
+            ),
         )
 
     def find_overdue_pending(self, db, now):

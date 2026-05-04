@@ -521,6 +521,10 @@ class _CallbackStore:
                 "app.services.provider_callback_service.reconciliation_repository.create_payment_reconciliation_record",
                 side_effect=self.create_reconciliation_record,
             ),
+            patch(
+                "app.services.provider_callback_service.webhook_event_factory.create_payment_event_if_needed",
+                return_value=None,
+            ),
         )
 
     def get_payment_by_transaction_id(self, db, transaction_id):
@@ -632,6 +636,10 @@ class _RefundCallbackStore:
             patch(
                 "app.services.provider_callback_service.reconciliation_repository.create_refund_reconciliation_record",
                 side_effect=self.create_reconciliation_record,
+            ),
+            patch(
+                "app.services.provider_callback_service.webhook_event_factory.create_refund_event_if_needed",
+                return_value=None,
             ),
         )
 

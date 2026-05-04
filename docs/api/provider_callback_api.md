@@ -69,7 +69,8 @@ also return `reconciliation_record_id`.
   successful.
 - Duplicate same-state callback is logged as `IGNORED` and does not mutate the
   payment.
-- Final payment updates emit webhook events in the webhook phase.
+- Final payment updates emit durable webhook events in phase 06 when the
+  merchant has a configured `webhook_url`.
 
 ## Refund Callback
 
@@ -131,7 +132,8 @@ For failed callbacks:
 - Duplicate same-state callbacks are logged as `IGNORED`.
 - Unknown refunds, amount mismatches, and final-state conflicts return
   `PENDING_REVIEW`; mismatch/conflict cases create reconciliation evidence.
-- Final refund updates emit webhook events in the webhook phase.
+- Final refund updates emit durable webhook events in phase 06 when the merchant
+  has a configured `webhook_url`.
 
 ## Normalized Processing Results
 

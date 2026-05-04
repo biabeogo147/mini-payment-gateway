@@ -56,19 +56,19 @@ Controllers are the top application layer. They should:
 - return response schemas;
 - avoid direct SQLAlchemy query logic.
 
-Examples after phase 2.5:
+Examples:
 
 - `backend/app/controllers/health_controller.py`
 - `backend/app/controllers/deps.py`
 - `backend/app/controllers/errors.py`
-
-Future examples:
-
 - `backend/app/controllers/payment_controller.py`
 - `backend/app/controllers/refund_controller.py`
 - `backend/app/controllers/provider_callback_controller.py`
+- `backend/app/controllers/webhook_ops_controller.py`
+
+Future examples:
+
 - `backend/app/controllers/ops_controller.py`
-- `backend/app/controllers/webhook_controller.py`
 
 ### Schemas
 
@@ -95,7 +95,9 @@ Examples:
 - `backend/app/services/auth_service.py`
 - `backend/app/services/merchant_readiness_service.py`
 - `backend/app/services/payment_service.py`
-- future `refund_service.py` and `webhook_service.py`
+- `backend/app/services/refund_service.py`
+- `backend/app/services/webhook_event_factory.py`
+- `backend/app/services/webhook_delivery_service.py`
 
 ### Repositories
 
@@ -110,7 +112,9 @@ Examples:
 
 - `backend/app/repositories/merchant_repository.py`
 - `backend/app/repositories/credential_repository.py`
-- future `payment_repository.py` and `order_reference_repository.py`
+- `backend/app/repositories/payment_repository.py`
+- `backend/app/repositories/order_reference_repository.py`
+- `backend/app/repositories/webhook_repository.py`
 
 ### Models
 

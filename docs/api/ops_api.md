@@ -77,7 +77,26 @@ Searchable by match result, entity type, and entity id.
 
 `POST /v1/ops/webhooks/{event_id}/retry`
 
-Manual retry is internal-only and writes an audit log entry.
+Implementation status: implemented in phase 06 without ops authentication.
+
+Manual retry is internal-only and only accepts webhook events with
+`status=FAILED`. It sends the stored event payload again, creates a new
+`webhook_delivery_attempts` row, and updates the `webhook_events` delivery
+status.
+
+Response:
+
+```json
+{
+  "event_id": "evt_...",
+  "status": "DELIVERED",
+  "attempt_count": 5,
+  "last_attempt_result": "SUCCESS",
+  "next_retry_at": null
+}
+```
+
+Manual retry audit logging is intentionally deferred to phase 07.
 
 ## Audit
 
