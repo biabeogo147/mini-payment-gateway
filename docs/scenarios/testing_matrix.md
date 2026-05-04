@@ -56,15 +56,15 @@ Status values:
 | EXP-01 | Overdue pending payment expires | Service | Phase 04 | Covered | Yes | `backend/tests/test_expiration_service.py` |
 | REC-01 | Late success after expiration creates reconciliation evidence | Service | Phase 04, Phase 07 | Partially covered | Yes | `backend/tests/test_provider_callback_service.py`, later `backend/tests/test_reconciliation_service.py` |
 | REC-02 | Callback amount mismatch creates reconciliation evidence | Service | Phase 04, Phase 07 | Partially covered | Yes | `backend/tests/test_provider_callback_service.py`, later `backend/tests/test_reconciliation_service.py` |
-| REF-01 | Successful payment can create full refund | Service, route, E2E | Phase 05 | Planned | No | `backend/tests/test_refund_service.py`, `backend/tests/test_refund_routes.py` |
-| REF-02 | Refund query by transaction id | Service, route | Phase 05 | Planned | No | `backend/tests/test_refund_service.py`, `backend/tests/test_refund_routes.py` |
-| REF-03 | Refund query by merchant refund id | Service, route | Phase 05 | Planned | No | `backend/tests/test_refund_service.py`, `backend/tests/test_refund_routes.py` |
-| REF-04 | Refund provider success callback marks refunded | Service, E2E | Phase 05 | Planned | No | `backend/tests/test_refund_state_machine.py`, `backend/tests/test_provider_callback_service.py` |
-| REF-05 | Refund provider failed callback marks failed | Service, E2E | Phase 05 | Planned | No | `backend/tests/test_refund_state_machine.py`, `backend/tests/test_provider_callback_service.py` |
-| REF-06 | Partial refund rejects | Service | Phase 05 | Planned | No | `backend/tests/test_refund_service.py` |
-| REF-07 | Refund after 7-day window rejects | Service | Phase 05 | Planned | No | `backend/tests/test_refund_service.py` |
-| REF-08 | Duplicate refund id returns existing refund | Service | Phase 05 | Planned | No | `backend/tests/test_refund_service.py` |
-| REF-09 | Refund against non-success payment rejects | Service | Phase 05 | Planned | No | `backend/tests/test_refund_service.py` |
+| REF-01 | Successful payment can create full refund | Service, route, smoke | Phase 05 | Covered with DB seed | Yes | `backend/tests/test_refund_service.py`, `backend/tests/test_refund_routes.py`, `backend/scripts/smoke_refund_api.py` |
+| REF-02 | Refund query by transaction id | Service, route, smoke | Phase 05 | Covered with DB seed | Yes | `backend/tests/test_refund_service.py`, `backend/tests/test_refund_routes.py`, `backend/scripts/smoke_refund_api.py` |
+| REF-03 | Refund query by merchant refund id | Service, route, smoke | Phase 05 | Covered with DB seed | Yes | `backend/tests/test_refund_service.py`, `backend/tests/test_refund_routes.py`, `backend/scripts/smoke_refund_api.py` |
+| REF-04 | Refund provider success callback marks refunded | Service, route, smoke | Phase 05 | Covered with DB seed | Yes | `backend/tests/test_refund_state_machine.py`, `backend/tests/test_provider_callback_service.py`, `backend/tests/test_provider_callback_routes.py`, `backend/scripts/smoke_refund_api.py` |
+| REF-05 | Refund provider failed callback marks failed | Service, route | Phase 05 | Covered | Yes | `backend/tests/test_refund_state_machine.py`, `backend/tests/test_provider_callback_service.py`, `backend/tests/test_provider_callback_routes.py` |
+| REF-06 | Partial refund rejects | Service | Phase 05 | Covered | Yes | `backend/tests/test_refund_service.py` |
+| REF-07 | Refund after 7-day window rejects | Service | Phase 05 | Covered | Yes | `backend/tests/test_refund_service.py` |
+| REF-08 | Duplicate refund id returns existing refund | Service | Phase 05 | Covered | Yes | `backend/tests/test_refund_service.py` |
+| REF-09 | Refund against non-success payment rejects | Service | Phase 05 | Covered | Yes | `backend/tests/test_refund_service.py` |
 | WH-01 | Payment success creates webhook event | Service | Phase 06 | Planned | No | `backend/tests/test_webhook_event_factory.py` |
 | WH-02 | Payment failure creates webhook event | Service | Phase 06 | Planned | No | `backend/tests/test_webhook_event_factory.py` |
 | WH-03 | Payment expiration creates webhook event | Service | Phase 06 | Planned | No | `backend/tests/test_webhook_event_factory.py` |

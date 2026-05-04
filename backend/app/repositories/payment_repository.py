@@ -18,6 +18,15 @@ def get_by_transaction_id(
     )
 
 
+def get_by_id(
+    db: Session,
+    payment_transaction_id: UUID,
+) -> PaymentTransaction | None:
+    return db.scalar(
+        select(PaymentTransaction).where(PaymentTransaction.id == payment_transaction_id)
+    )
+
+
 def get_latest_by_merchant_order(
     db: Session,
     merchant_db_id: UUID,
@@ -28,6 +37,23 @@ def get_latest_by_merchant_order(
         .where(
             PaymentTransaction.merchant_db_id == merchant_db_id,
             PaymentTransaction.order_id == order_id,
+        )
+        .order_by(PaymentTransaction.created_at.desc(), PaymentTransaction.transaction_id.desc())
+        .limit(1)
+    )
+
+
+def get_success_by_merchant_order(
+    db: Session,
+    merchant_db_id: UUID,
+    order_id: str,
+) -> PaymentTransaction | None:
+    return db.scalar(
+        select(PaymentTransaction)
+        .where(
+            PaymentTransaction.merchant_db_id == merchant_db_id,
+            PaymentTransaction.order_id == order_id,
+            PaymentTransaction.status == PaymentStatus.SUCCESS,
         )
         .order_by(PaymentTransaction.created_at.desc(), PaymentTransaction.transaction_id.desc())
         .limit(1)

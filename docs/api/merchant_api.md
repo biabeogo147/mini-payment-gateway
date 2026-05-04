@@ -123,7 +123,9 @@ original successful payment by merchant order.
 - Full refund only; `refund_amount` must equal the original payment amount.
 - Refund window is 7 days from `paid_at`.
 - Duplicate `merchant_id + refund_id` returns the existing refund.
-- At most one `REFUNDED` row is allowed per payment.
+- Existing `REFUND_PENDING` or `REFUNDED` refund blocks a new refund id for the
+  same payment.
+- A prior `REFUND_FAILED` refund does not block a new refund id.
 
 ## Get Refund Status
 

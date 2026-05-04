@@ -2,7 +2,7 @@
 
 Happy path scenarios describe target full journeys. Some steps are runnable
 today with DB seed; the complete journey becomes a phase 08 E2E test after
-provider callback, refund, webhook, ops, and reconciliation phases exist.
+webhook, ops, and reconciliation review phases exist.
 
 ## E2E-01 Merchant Onboarding To Successful Payment And Refund
 

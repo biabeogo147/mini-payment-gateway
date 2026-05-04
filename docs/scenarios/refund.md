@@ -6,7 +6,7 @@ refunds.
 
 ## REF-01 Full Refund Request For Successful Payment
 
-Implementation Status: Planned - phase 05.
+Implementation Status: Implemented - phase 05.
 
 Actor: Merchant backend.
 
@@ -54,7 +54,7 @@ Expected Assertions:
 
 ## REF-02 Refund Query By Transaction Id
 
-Implementation Status: Planned - phase 05.
+Implementation Status: Implemented - phase 05.
 
 API:
 
@@ -73,7 +73,7 @@ Expected Assertions:
 
 ## REF-03 Refund Query By Merchant Refund Id
 
-Implementation Status: Planned - phase 05.
+Implementation Status: Implemented - phase 05.
 
 API:
 
@@ -92,7 +92,7 @@ Expected Assertions:
 
 ## REF-04 Provider Refund Success Callback
 
-Implementation Status: Planned - phase 05.
+Implementation Status: Implemented - phase 05.
 
 Actor: Provider simulator.
 
@@ -141,7 +141,7 @@ Expected Assertions:
 
 ## REF-05 Provider Refund Failed Callback
 
-Implementation Status: Planned - phase 05.
+Implementation Status: Implemented - phase 05.
 
 DB Effects:
 
@@ -151,7 +151,7 @@ DB Effects:
 
 ## REF-06 Partial Refund Rejects
 
-Implementation Status: Planned - phase 05.
+Implementation Status: Implemented - phase 05.
 
 DB Effects:
 
@@ -163,7 +163,7 @@ Expected Assertions:
 
 ## REF-07 Refund After 7-Day Window Rejects
 
-Implementation Status: Planned - phase 05.
+Implementation Status: Implemented - phase 05.
 
 DB Effects:
 
@@ -175,7 +175,7 @@ Expected Assertions:
 
 ## REF-08 Duplicate Refund Id Returns Existing Refund
 
-Implementation Status: Planned - phase 05.
+Implementation Status: Implemented - phase 05.
 
 DB Effects:
 
@@ -188,7 +188,7 @@ Expected Assertions:
 
 ## REF-09 Refund Against Non-Success Payment Rejects
 
-Implementation Status: Planned - phase 05.
+Implementation Status: Implemented - phase 05.
 
 DB Effects:
 

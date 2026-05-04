@@ -35,8 +35,9 @@ Expected Assertions:
 
 ## REC-02 Callback Amount Mismatch
 
-Implementation Status: Evidence creation implemented - phase 04. Ops review and
-resolution remain planned - phase 07.
+Implementation Status: Payment evidence creation implemented - phase 04. Refund
+evidence creation implemented - phase 05. Ops review and resolution remain
+planned - phase 07.
 
 DB Effects:
 
@@ -47,6 +48,23 @@ DB Effects:
 Expected Assertions:
 
 - Provider amount must match internal payment amount.
+- Mismatch is visible to ops.
+
+## REC-02R Refund Callback Amount Mismatch
+
+Implementation Status: Evidence creation implemented - phase 05. Ops review and
+resolution remain planned - phase 07.
+
+DB Effects:
+
+- `bank_callback_logs`: insert refund callback evidence.
+- `reconciliation_records`: insert `MISMATCHED` evidence with
+  `entity_type=REFUND`.
+- `refund_transactions`: remains in its current state.
+
+Expected Assertions:
+
+- Provider amount must match internal refund amount.
 - Mismatch is visible to ops.
 
 ## REC-03 Matching Provider Evidence

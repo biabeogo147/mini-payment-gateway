@@ -75,7 +75,7 @@ also return `reconciliation_record_id`.
 
 `POST /v1/provider/callbacks/refund`
 
-Implementation status: planned for phase 05.
+Implementation status: implemented in phase 05 for refund callbacks.
 
 The provider reports result status as `SUCCESS` or `FAILED`. The gateway maps
 those provider statuses to internal refund states `REFUNDED` or

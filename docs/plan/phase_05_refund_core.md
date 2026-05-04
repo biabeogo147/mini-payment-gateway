@@ -12,10 +12,9 @@
 
 ## Implementation Status
 
-Ready for implementation. No phase 05 application code has been added yet.
-Models, enums, migrations, merchant auth, payment core, provider payment
-callbacks, callback evidence logging, and payment reconciliation evidence are
-already in place.
+Completed. The implementation added refund creation, refund lookup, provider
+refund callbacks, callback evidence logging, refund reconciliation evidence for
+ambiguous callbacks, API smoke verification, and docs updates.
 
 Use the current repository checkout directly. Do not create a branch or
 worktree unless the user asks for one. Commit only when requested.

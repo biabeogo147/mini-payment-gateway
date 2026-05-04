@@ -32,11 +32,19 @@ Implemented now:
 - Payment expiration service for overdue `PENDING` payments.
 - Reconciliation evidence creation for amount mismatch or late success after
   expiration.
+- `POST /v1/refunds`
+- `GET /v1/refunds/{refund_transaction_id}`
+- `GET /v1/refunds/by-refund-id/{refund_id}`
+- `POST /v1/provider/callbacks/refund`
+- Refund callback evidence logging.
+- Refund callback transitions from `REFUND_PENDING` to `REFUNDED` or
+  `REFUND_FAILED`.
+- Refund reconciliation evidence creation for amount mismatch or final-state
+  conflict.
 
 Not implemented yet:
 
 - Ops merchant onboarding APIs.
-- Refund APIs.
 - Webhook event delivery.
 - Ops reconciliation review and audit services.
 - Automated full E2E test.
@@ -88,11 +96,11 @@ Not implemented yet:
 | EXP-01 Expire overdue payment | System | `callback.md` | scheduled service or internal command | `payment_transactions`, later `webhook_events` | Implemented at service level | Phase 04 |
 | REC-01 Late success after expiration | Provider simulator, Ops | `reconciliation.md` | callback API, ops reconciliation API | `bank_callback_logs`, `reconciliation_records` | Evidence creation implemented; ops review planned | Phase 04, Phase 07 |
 | REC-02 Callback amount mismatch | Provider simulator, Ops | `reconciliation.md` | callback API, ops reconciliation API | `bank_callback_logs`, `reconciliation_records` | Evidence creation implemented; ops review planned | Phase 04, Phase 07 |
-| REF-01 Merchant creates full refund | Merchant backend | `refund.md` | `POST /v1/refunds` | `refund_transactions` | Planned - phase 05 | Phase 05 |
-| REF-02 Merchant queries refund by transaction id | Merchant backend | `refund.md` | `GET /v1/refunds/{refund_transaction_id}` | `refund_transactions` | Planned - phase 05 | Phase 05 |
-| REF-03 Merchant queries refund by merchant refund id | Merchant backend | `refund.md` | `GET /v1/refunds/by-refund-id/{refund_id}` | `refund_transactions` | Planned - phase 05 | Phase 05 |
-| REF-04 Provider marks refund success | Provider simulator | `refund.md` | `POST /v1/provider/callbacks/refund` | `bank_callback_logs`, `refund_transactions`, later `webhook_events` | Planned - phase 05 | Phase 05 |
-| REF-05 Provider marks refund failed | Provider simulator | `refund.md` | `POST /v1/provider/callbacks/refund` | `bank_callback_logs`, `refund_transactions`, later `webhook_events` | Planned - phase 05 | Phase 05 |
+| REF-01 Merchant creates full refund | Merchant backend | `refund.md` | `POST /v1/refunds` | `refund_transactions` | Implemented with DB seed | Phase 05 |
+| REF-02 Merchant queries refund by transaction id | Merchant backend | `refund.md` | `GET /v1/refunds/{refund_transaction_id}` | `refund_transactions` | Implemented with DB seed | Phase 05 |
+| REF-03 Merchant queries refund by merchant refund id | Merchant backend | `refund.md` | `GET /v1/refunds/by-refund-id/{refund_id}` | `refund_transactions` | Implemented with DB seed | Phase 05 |
+| REF-04 Provider marks refund success | Provider simulator | `refund.md` | `POST /v1/provider/callbacks/refund` | `bank_callback_logs`, `refund_transactions`, later `webhook_events` | Implemented with DB seed | Phase 05 |
+| REF-05 Provider marks refund failed | Provider simulator | `refund.md` | `POST /v1/provider/callbacks/refund` | `bank_callback_logs`, `refund_transactions`, later `webhook_events` | Implemented | Phase 05 |
 | WH-01 Payment success creates webhook event | Gateway worker | `webhook.md` | internal event factory | `webhook_events` | Planned - phase 06 | Phase 06 |
 | WH-05 HTTP 2xx marks webhook delivered | Gateway worker | `webhook.md` | merchant webhook URL | `webhook_events`, `webhook_delivery_attempts` | Planned - phase 06 | Phase 06 |
 | WH-10 Ops manual retry sends failed event again | Gateway worker, Ops | `webhook.md` | `POST /v1/ops/webhooks/{event_id}/retry` | `webhook_events`, `webhook_delivery_attempts`, `audit_logs` | Planned - phase 06 | Phase 06 |
@@ -103,12 +111,16 @@ Not implemented yet:
 
 ## Runnable Smoke
 
-The currently runnable end-to-end slice uses DB seed for merchant setup, then
-exercises payment creation and payment reads:
+The currently runnable end-to-end slices use DB seed for merchant setup, then
+exercise payment creation, payment callbacks, refund creation, refund callbacks,
+and reads:
 
 ```powershell
 cd backend
 & 'D:\Anaconda\envs\mini-payment-gateway\python.exe' scripts\smoke_payment_api.py
+& 'D:\Anaconda\envs\mini-payment-gateway\python.exe' scripts\smoke_provider_callback_api.py
+& 'D:\Anaconda\envs\mini-payment-gateway\python.exe' scripts\smoke_refund_api.py
 ```
 
-See `pay.md` for the API and DB effects of this runnable slice.
+See `pay.md`, `callback.md`, and `refund.md` for the API and DB effects of
+these runnable slices.
