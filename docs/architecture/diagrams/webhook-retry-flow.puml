@@ -1,0 +1,34 @@
+@startuml
+title Webhook Delivery Retry And Manual Retry
+
+actor "Gateway Worker" as Worker
+actor Ops
+participant "Webhook Delivery Service" as DeliveryService
+participant "Webhook Ops Controller" as WebhookOps
+participant "Audit Service" as Audit
+participant "Merchant Webhook URL" as MerchantWebhook
+database PostgreSQL as DB
+
+Worker -> DeliveryService: deliver_due_webhooks(now)
+DeliveryService -> DB: find webhook_events(status=PENDING, next_retry_at<=now)
+DB --> DeliveryService: due event
+DeliveryService -> DB: load merchant + active credential
+DeliveryService -> MerchantWebhook: POST signed webhook payload
+MerchantWebhook --> DeliveryService: HTTP 500
+DeliveryService -> DB: insert webhook_delivery_attempts(FAILED)
+DeliveryService -> DB: update webhook_events(PENDING, next_retry_at)
+
+Worker -> DeliveryService: repeated delivery attempts
+DeliveryService -> DB: attempt_count reaches 4
+DeliveryService -> DB: update webhook_events(FAILED, next_retry_at=null)
+
+Ops -> WebhookOps: POST /v1/ops/webhooks/{event_id}/retry\nactor context
+WebhookOps -> DeliveryService: manual_retry(event_id, audit_context)
+DeliveryService -> MerchantWebhook: POST signed webhook payload
+MerchantWebhook --> DeliveryService: HTTP 2xx
+DeliveryService -> DB: insert webhook_delivery_attempts(SUCCESS)
+DeliveryService -> DB: update webhook_events(DELIVERED)
+DeliveryService -> Audit: record WEBHOOK_MANUAL_RETRY
+Audit -> DB: insert audit_logs
+WebhookOps --> Ops: 200 WebhookRetryResponse(status=DELIVERED)
+@enduml

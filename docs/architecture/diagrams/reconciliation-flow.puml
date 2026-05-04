@@ -1,0 +1,35 @@
+@startuml
+title Late Callback Reconciliation And Ops Resolution
+
+actor "Provider Simulator" as Provider
+actor Ops
+participant "Expiration Service" as Expiration
+participant "Provider Callback Controller" as CallbackController
+participant "Provider Callback Service" as CallbackService
+participant "Ops Reconciliation Controller" as ReconciliationController
+participant "Reconciliation Service" as ReconciliationService
+participant "Audit Service" as Audit
+database PostgreSQL as DB
+
+Expiration -> DB: update overdue payment_transactions(PENDING -> EXPIRED)
+
+Provider -> CallbackController: POST /v1/provider/callbacks/payment\nstatus=SUCCESS
+CallbackController -> CallbackService: process_payment_callback(request)
+CallbackService -> DB: load payment(EXPIRED)
+CallbackService -> DB: insert reconciliation_records(PENDING_REVIEW)\nreason=LATE_SUCCESS_AFTER_EXPIRATION
+CallbackService -> DB: insert bank_callback_logs(PENDING_REVIEW)
+CallbackService --> CallbackController: reconciliation_record_id
+CallbackController --> Provider: 200 JSON
+
+Ops -> ReconciliationController: GET /v1/ops/reconciliation?match_result=PENDING_REVIEW
+ReconciliationController -> ReconciliationService: list_records(match_result)
+ReconciliationService -> DB: select reconciliation_records
+ReconciliationController --> Ops: records[]
+
+Ops -> ReconciliationController: POST /v1/ops/reconciliation/{record_id}/resolve\nactor + review_note
+ReconciliationController -> ReconciliationService: resolve_record(request)
+ReconciliationService -> DB: update reconciliation_records(RESOLVED)
+ReconciliationService -> Audit: record RECONCILIATION_RESOLVED
+Audit -> DB: insert audit_logs
+ReconciliationController --> Ops: match_result=RESOLVED
+@enduml

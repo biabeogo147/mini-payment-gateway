@@ -6,11 +6,11 @@ explicitly changes the behavior.
 
 ## Documents
 
-- `merchant_api.md` - merchant-facing payment and refund APIs.
-- `ops_api.md` - internal ops/admin APIs.
-- `provider_callback_api.md` - bank/provider/simulator callback APIs.
-- `webhook_spec.md` - outbound merchant webhook contract.
-- `error_catalog.md` - shared error response shape and error codes.
+- `merchant.md` - merchant-facing payment and refund APIs.
+- `ops.md` - internal ops/admin APIs.
+- `provider-callback.md` - bank/provider/simulator callback APIs.
+- `webhook.md` - outbound merchant webhook contract.
+- `errors.md` - shared error response shape and error codes.
 
 ## Endpoint Ownership
 

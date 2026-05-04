@@ -1,0 +1,34 @@
+@startuml
+title Refund Creation And Success Callback
+
+actor "Merchant Backend" as Merchant
+actor "Provider Simulator" as Provider
+participant "Refund Controller" as RefundController
+participant "Provider Callback Controller" as CallbackController
+participant "Auth Service" as Auth
+participant "Refund Service" as RefundService
+participant "Provider Callback Service" as CallbackService
+participant "Webhook Event Factory" as WebhookFactory
+database PostgreSQL as DB
+
+Merchant -> RefundController: POST /v1/refunds\nHMAC headers + refund DTO
+RefundController -> Auth: validate merchant signature
+Auth -> DB: load merchant + active credential
+DB --> Auth: authenticated merchant context
+RefundController -> RefundService: create_refund(context, request)
+RefundService -> DB: load original SUCCESS payment
+RefundService -> DB: insert refund_transactions(REFUND_PENDING)
+DB --> RefundService: refund row
+RefundService --> RefundController: RefundResponse(status=REFUND_PENDING)
+RefundController --> Merchant: 200 JSON
+
+Provider -> CallbackController: POST /v1/provider/callbacks/refund\nstatus=SUCCESS
+CallbackController -> CallbackService: process_refund_callback(request)
+CallbackService -> DB: load refund by refund_transaction_id
+CallbackService -> DB: update refund_transactions(REFUND_PENDING -> REFUNDED)
+CallbackService -> WebhookFactory: create refund.succeeded event
+WebhookFactory -> DB: insert webhook_events(PENDING)
+CallbackService -> DB: insert bank_callback_logs(PROCESSED)
+CallbackService --> CallbackController: processing_result=PROCESSED
+CallbackController --> Provider: 200 JSON
+@enduml

@@ -1,0 +1,33 @@
+@startuml
+title Payment Creation And Success Callback
+
+actor "Merchant Backend" as Merchant
+actor "Provider Simulator" as Provider
+participant "Payment Controller" as PaymentController
+participant "Provider Callback Controller" as CallbackController
+participant "Auth Service" as Auth
+participant "Payment Service" as PaymentService
+participant "Provider Callback Service" as CallbackService
+participant "Webhook Event Factory" as WebhookFactory
+database PostgreSQL as DB
+
+Merchant -> PaymentController: POST /v1/payments\nHMAC headers + payment DTO
+PaymentController -> Auth: validate merchant signature
+Auth -> DB: load merchant + active credential
+DB --> Auth: authenticated merchant context
+PaymentController -> PaymentService: create_payment(context, request)
+PaymentService -> DB: insert order_reference + payment_transactions(PENDING)
+DB --> PaymentService: payment row
+PaymentService --> PaymentController: PaymentResponse(status=PENDING)
+PaymentController --> Merchant: 200 JSON
+
+Provider -> CallbackController: POST /v1/provider/callbacks/payment\nstatus=SUCCESS
+CallbackController -> CallbackService: process_payment_callback(request)
+CallbackService -> DB: load payment by transaction_reference
+CallbackService -> DB: update payment_transactions(PENDING -> SUCCESS)
+CallbackService -> WebhookFactory: create payment.succeeded event
+WebhookFactory -> DB: insert webhook_events(PENDING)
+CallbackService -> DB: insert bank_callback_logs(PROCESSED)
+CallbackService --> CallbackController: processing_result=PROCESSED
+CallbackController --> Provider: 200 JSON
+@enduml
