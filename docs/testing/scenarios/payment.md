@@ -4,9 +4,9 @@ Payment scenarios cover the currently runnable merchant payment APIs.
 
 ## Runnable Smoke
 
-```powershell
+```bash
 cd backend
-& 'D:\Anaconda\envs\mini-payment-gateway\python.exe' scripts\smoke_payment_api.py
+python scripts/smoke_payment_api.py
 ```
 
 The smoke script seeds an active merchant and credential, creates a payment,

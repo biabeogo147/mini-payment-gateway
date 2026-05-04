@@ -156,18 +156,18 @@ Existing source that phase 08 should build on:
 
 - [ ] Run:
 
-```powershell
+```bash
 cd backend
-& 'D:\Anaconda\envs\mini-payment-gateway\python.exe' -m unittest discover tests -v
+python -m unittest discover tests -v
 ```
 
 - [ ] Expected: current phase 0-7 tests pass.
 - [ ] Run:
 
-```powershell
+```bash
 cd backend
-& 'D:\Anaconda\envs\mini-payment-gateway\python.exe' -m alembic upgrade head
-& 'D:\Anaconda\envs\mini-payment-gateway\python.exe' scripts\smoke_ops_reconciliation_api.py
+python -m alembic upgrade head
+python scripts/smoke_ops_reconciliation_api.py
 ```
 
 - [ ] Expected: smoke JSON shows merchant activation `ACTIVE`,
@@ -219,9 +219,9 @@ cd backend
   asserts the setup helper can create and activate a merchant through ops routes.
 - [ ] Run:
 
-```powershell
+```bash
 cd backend
-& 'D:\Anaconda\envs\mini-payment-gateway\python.exe' -m unittest tests.test_e2e_payment_refund_webhook -v
+python -m unittest tests.test_e2e_payment_refund_webhook -v
 ```
 
 - [ ] Expected before implementation: FAIL for missing helper/test behavior.
@@ -251,9 +251,9 @@ cd backend
 - [ ] Implement only the code/helpers needed to pass this test.
 - [ ] Rerun:
 
-```powershell
+```bash
 cd backend
-& 'D:\Anaconda\envs\mini-payment-gateway\python.exe' -m unittest tests.test_e2e_payment_refund_webhook -v
+python -m unittest tests.test_e2e_payment_refund_webhook -v
 ```
 
 - [ ] Expected: PASS.
@@ -351,13 +351,13 @@ Merchant <-- Controller: JSON response
   - how to inspect webhook attempts and reconciliation records.
 - [ ] Use existing scripts as canonical commands:
 
-```powershell
+```bash
 cd backend
-& 'D:\Anaconda\envs\mini-payment-gateway\python.exe' scripts\smoke_payment_api.py
-& 'D:\Anaconda\envs\mini-payment-gateway\python.exe' scripts\smoke_provider_callback_api.py
-& 'D:\Anaconda\envs\mini-payment-gateway\python.exe' scripts\smoke_refund_api.py
-& 'D:\Anaconda\envs\mini-payment-gateway\python.exe' scripts\smoke_webhook_api.py
-& 'D:\Anaconda\envs\mini-payment-gateway\python.exe' scripts\smoke_ops_reconciliation_api.py
+python scripts/smoke_payment_api.py
+python scripts/smoke_provider_callback_api.py
+python scripts/smoke_refund_api.py
+python scripts/smoke_webhook_api.py
+python scripts/smoke_ops_reconciliation_api.py
 ```
 
 ### Task 9: Add SOPs
@@ -404,29 +404,29 @@ cd backend
 
 - [ ] Run:
 
-```powershell
+```bash
 cd backend
-& 'D:\Anaconda\envs\mini-payment-gateway\python.exe' -m unittest tests.test_e2e_payment_refund_webhook -v
-& 'D:\Anaconda\envs\mini-payment-gateway\python.exe' -m unittest discover tests -v
+python -m unittest tests.test_e2e_payment_refund_webhook -v
+python -m unittest discover tests -v
 ```
 
 - [ ] Run DB smoke scripts:
 
-```powershell
+```bash
 cd backend
-& 'D:\Anaconda\envs\mini-payment-gateway\python.exe' -m alembic upgrade head
-& 'D:\Anaconda\envs\mini-payment-gateway\python.exe' scripts\smoke_payment_api.py
-& 'D:\Anaconda\envs\mini-payment-gateway\python.exe' scripts\smoke_provider_callback_api.py
-& 'D:\Anaconda\envs\mini-payment-gateway\python.exe' scripts\smoke_refund_api.py
-& 'D:\Anaconda\envs\mini-payment-gateway\python.exe' scripts\smoke_webhook_api.py
-& 'D:\Anaconda\envs\mini-payment-gateway\python.exe' scripts\smoke_ops_reconciliation_api.py
+python -m alembic upgrade head
+python scripts/smoke_payment_api.py
+python scripts/smoke_provider_callback_api.py
+python scripts/smoke_refund_api.py
+python scripts/smoke_webhook_api.py
+python scripts/smoke_ops_reconciliation_api.py
 ```
 
 - [ ] Start server:
 
-```powershell
+```bash
 cd backend
-& 'D:\Anaconda\envs\mini-payment-gateway\python.exe' -m uvicorn app.main:app --host 127.0.0.1 --port 8000
+python -m uvicorn app.main:app --host 127.0.0.1 --port 8000
 ```
 
 - [ ] Manually verify:
@@ -434,7 +434,7 @@ cd backend
   - `GET http://127.0.0.1:8000/docs`.
 - [ ] Run from repo root:
 
-```powershell
+```bash
 git diff --check
 ```
 

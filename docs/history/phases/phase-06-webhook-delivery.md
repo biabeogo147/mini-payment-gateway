@@ -239,9 +239,9 @@ Existing source that phase 06 should build on:
 
 - [ ] Run:
 
-```powershell
+```bash
 cd backend
-& 'D:\Anaconda\envs\mini-payment-gateway\python.exe' -m unittest discover tests -v
+python -m unittest discover tests -v
 ```
 
 - [ ] Expected: existing phase 0-5 tests pass before phase 06 edits.
@@ -259,9 +259,9 @@ cd backend
   - false for attempt 4.
 - [ ] Run:
 
-```powershell
+```bash
 cd backend
-& 'D:\Anaconda\envs\mini-payment-gateway\python.exe' -m unittest tests.test_webhook_retry_policy -v
+python -m unittest tests.test_webhook_retry_policy -v
 ```
 
 - [ ] Expected: FAIL before policy exists.
@@ -326,9 +326,9 @@ cd backend
 - [ ] Test stored payload includes envelope fields and relevant data fields.
 - [ ] Run:
 
-```powershell
+```bash
 cd backend
-& 'D:\Anaconda\envs\mini-payment-gateway\python.exe' -m unittest tests.test_webhook_event_factory -v
+python -m unittest tests.test_webhook_event_factory -v
 ```
 
 - [ ] Expected: FAIL before factory exists.
@@ -377,9 +377,9 @@ cd backend
   canonical string in `docs/api/webhook.md`.
 - [ ] Run:
 
-```powershell
+```bash
 cd backend
-& 'D:\Anaconda\envs\mini-payment-gateway\python.exe' -m unittest tests.test_webhook_delivery_service -v
+python -m unittest tests.test_webhook_delivery_service -v
 ```
 
 - [ ] Expected: FAIL before service exists.
@@ -496,10 +496,10 @@ cd backend
   verify retry scheduling.
 - [ ] Run:
 
-```powershell
+```bash
 cd backend
-& 'D:\Anaconda\envs\mini-payment-gateway\python.exe' -m alembic upgrade head
-& 'D:\Anaconda\envs\mini-payment-gateway\python.exe' scripts\smoke_webhook_api.py
+python -m alembic upgrade head
+python scripts/smoke_webhook_api.py
 ```
 
 - [ ] Expected: JSON output proves event creation, signed delivery, attempt
@@ -522,7 +522,7 @@ cd backend
 - [ ] Update `docs/testing/matrix.md` phase 06 rows from `Planned` to
   implemented coverage.
 - [ ] Update `docs/history/README.md` standard verification commands with
-  `scripts\smoke_webhook_api.py`.
+  `scripts/smoke_webhook_api.py`.
 - [ ] Create `docs/history/completions/phase-06.md` with:
   - completed scope;
   - tests run;
@@ -533,16 +533,16 @@ cd backend
 
 - [ ] Run:
 
-```powershell
+```bash
 cd backend
-& 'D:\Anaconda\envs\mini-payment-gateway\python.exe' -m unittest discover tests -v
+python -m unittest discover tests -v
 ```
 
 - [ ] Expected: all tests pass.
 
 - [ ] Run:
 
-```powershell
+```bash
 git diff --check
 ```
 

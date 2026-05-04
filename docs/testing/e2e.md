@@ -141,21 +141,21 @@ Not implemented yet:
 
 The route-level E2E test uses the phase 07 ops APIs instead of DB seed:
 
-```powershell
+```bash
 cd backend
-& 'D:\Anaconda\envs\mini-payment-gateway\python.exe' -m unittest tests.test_e2e_payment_refund_webhook -v
+python -m unittest tests.test_e2e_payment_refund_webhook -v
 ```
 
 The smoke scripts still provide runnable slices for payment creation, callbacks,
 refunds, webhooks, and ops reconciliation:
 
-```powershell
+```bash
 cd backend
-& 'D:\Anaconda\envs\mini-payment-gateway\python.exe' scripts\smoke_payment_api.py
-& 'D:\Anaconda\envs\mini-payment-gateway\python.exe' scripts\smoke_provider_callback_api.py
-& 'D:\Anaconda\envs\mini-payment-gateway\python.exe' scripts\smoke_refund_api.py
-& 'D:\Anaconda\envs\mini-payment-gateway\python.exe' scripts\smoke_webhook_api.py
-& 'D:\Anaconda\envs\mini-payment-gateway\python.exe' scripts\smoke_ops_reconciliation_api.py
+python scripts/smoke_payment_api.py
+python scripts/smoke_provider_callback_api.py
+python scripts/smoke_refund_api.py
+python scripts/smoke_webhook_api.py
+python scripts/smoke_ops_reconciliation_api.py
 ```
 
 See `scenarios/payment.md`, `scenarios/callback.md`, `scenarios/refund.md`, `scenarios/webhook.md`, `scenarios/merchant.md`, `scenarios/ops.md`,

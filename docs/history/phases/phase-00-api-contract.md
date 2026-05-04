@@ -16,7 +16,7 @@ Completed in `docs/api/`.
 
 Verification command used:
 
-```powershell
+```bash
 rg -n "POST /v1/payments|POST /v1/refunds|provider/callbacks|payment.succeeded|AUTH_INVALID_SIGNATURE" docs/api
 ```
 
@@ -170,7 +170,7 @@ Create API and webhook documentation that covers the MVP:
 - [x] Check that no out-of-scope endpoint was introduced.
 - [x] Run:
 
-```powershell
+```bash
 rg -n "POST /v1/payments|POST /v1/refunds|provider/callbacks|payment.succeeded|AUTH_INVALID_SIGNATURE" docs/api
 ```
 

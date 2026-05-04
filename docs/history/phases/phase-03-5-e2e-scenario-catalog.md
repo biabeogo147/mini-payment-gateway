@@ -23,8 +23,18 @@ shared scenarios are visible.
 
 Verification commands used:
 
-```powershell
-$fence = [char]96 + [char]96 + [char]96; $files = (Get-ChildItem docs\testing\scenarios -Filter *.md).FullName + @('docs\history\phases\phase-03-5-e2e-scenario-catalog.md'); foreach ($file in $files) { $count = (Select-String -Path $file -Pattern $fence).Count; if ($count % 2 -ne 0) { Write-Output "ODD $file $count" } }
+```bash
+python - <<'PY'
+from pathlib import Path
+
+files = list(Path("docs/testing/scenarios").glob("*.md")) + [
+    Path("docs/history/phases/phase-03-5-e2e-scenario-catalog.md")
+]
+for path in files:
+    count = path.read_text(encoding="utf-8").count("```")
+    if count % 2:
+        print(f"ODD {path} {count}")
+PY
 rg -n "[ \t]+$" docs\testing docs\history
 rg -n "scenarios/auth.md|scenarios/merchant.md|scenarios/payment.md|scenarios/callback.md|scenarios/refund.md|scenarios/webhook.md|scenarios/ops.md|scenarios/reconciliation.md|scenarios/happy-path.md|matrix.md|phase-03-5" docs\history docs\testing
 ```
@@ -276,9 +286,9 @@ Document these scenarios:
   - `payment_transactions`
 - [ ] Reference the real smoke script:
 
-```powershell
+```bash
 cd backend
-& 'D:\Anaconda\envs\mini-payment-gateway\python.exe' scripts\smoke_payment_api.py
+python scripts/smoke_payment_api.py
 ```
 
 ### Task 3: Document Target Merchant Onboarding And Ops Flow
@@ -378,19 +388,29 @@ cd backend
 
 - [ ] Check Markdown code fences:
 
-```powershell
-$fence = [char]96 + [char]96 + [char]96; $files = (Get-ChildItem docs\testing\scenarios -Filter *.md).FullName + @('docs\history\phases\phase-03-5-e2e-scenario-catalog.md'); foreach ($file in $files) { $count = (Select-String -Path $file -Pattern $fence).Count; if ($count % 2 -ne 0) { Write-Output "ODD $file $count" } }
+```bash
+python - <<'PY'
+from pathlib import Path
+
+files = list(Path("docs/testing/scenarios").glob("*.md")) + [
+    Path("docs/history/phases/phase-03-5-e2e-scenario-catalog.md")
+]
+for path in files:
+    count = path.read_text(encoding="utf-8").count("```")
+    if count % 2:
+        print(f"ODD {path} {count}")
+PY
 ```
 
 - [ ] Check for trailing whitespace:
 
-```powershell
+```bash
 rg -n "[ \t]+$" docs\testing docs\history
 ```
 
 - [ ] Check scenario docs are discoverable:
 
-```powershell
+```bash
 rg -n "scenarios/auth.md|scenarios/merchant.md|scenarios/payment.md|scenarios/callback.md|scenarios/refund.md|scenarios/webhook.md|scenarios/ops.md|scenarios/reconciliation.md|scenarios/happy-path.md|matrix.md|phase-03-5" docs\history docs\testing
 ```
 

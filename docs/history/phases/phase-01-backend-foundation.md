@@ -19,9 +19,9 @@ in phase 2.5.
 
 Verification commands used:
 
-```powershell
-& 'D:\Anaconda\envs\mini-payment-gateway\python.exe' -m unittest tests.test_app_foundation -v
-& 'D:\Anaconda\envs\mini-payment-gateway\python.exe' -m unittest discover tests -v
+```bash
+python -m unittest tests.test_app_foundation -v
+python -m unittest discover tests -v
 ```
 
 ## Scope
@@ -51,7 +51,7 @@ refund business behavior yet.
 - [x] Write a failing test in `backend/tests/test_app_foundation.py` that imports `app.main.app` and verifies `/health` still returns `{"status": "ok"}`.
 - [x] Run:
 
-```powershell
+```bash
 cd backend
 python -m unittest tests.test_app_foundation -v
 ```
@@ -119,7 +119,7 @@ def utc_now() -> datetime:
 - [x] Create `backend/app/controllers/__init__.py`.
 - [x] Verify imports do not break:
 
-```powershell
+```bash
 cd backend
 python -m unittest discover tests -v
 ```

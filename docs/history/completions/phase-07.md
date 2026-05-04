@@ -36,45 +36,45 @@ and optional webhook manual retry audit.
 
 Baseline before phase 07 edits:
 
-```powershell
+```bash
 cd backend
-& 'D:\Anaconda\envs\mini-payment-gateway\python.exe' -m unittest discover tests -v
+python -m unittest discover tests -v
 ```
 
 Result: 116 tests passed.
 
 Focused phase 07 checks run during implementation:
 
-```powershell
-& 'D:\Anaconda\envs\mini-payment-gateway\python.exe' -m unittest tests.test_audit_service -v
-& 'D:\Anaconda\envs\mini-payment-gateway\python.exe' -m unittest tests.test_merchant_ops_routes tests.test_merchant_ops_service -v
-& 'D:\Anaconda\envs\mini-payment-gateway\python.exe' -m unittest tests.test_reconciliation_routes tests.test_reconciliation_service -v
-& 'D:\Anaconda\envs\mini-payment-gateway\python.exe' -m unittest tests.test_webhook_delivery_service tests.test_webhook_ops_routes -v
+```bash
+python -m unittest tests.test_audit_service -v
+python -m unittest tests.test_merchant_ops_routes tests.test_merchant_ops_service -v
+python -m unittest tests.test_reconciliation_routes tests.test_reconciliation_service -v
+python -m unittest tests.test_webhook_delivery_service tests.test_webhook_ops_routes -v
 ```
 
 Full unit suite after implementation:
 
-```powershell
+```bash
 cd backend
-& 'D:\Anaconda\envs\mini-payment-gateway\python.exe' -m unittest discover tests -v
+python -m unittest discover tests -v
 ```
 
 Result: 141 tests passed.
 
 DB migration check:
 
-```powershell
+```bash
 cd backend
-& 'D:\Anaconda\envs\mini-payment-gateway\python.exe' -m alembic upgrade head
+python -m alembic upgrade head
 ```
 
 Result: Alembic reported PostgreSQL context and no pending migration failures.
 
 Phase 07 smoke:
 
-```powershell
+```bash
 cd backend
-& 'D:\Anaconda\envs\mini-payment-gateway\python.exe' scripts\smoke_ops_reconciliation_api.py
+python scripts/smoke_ops_reconciliation_api.py
 ```
 
 Output:

@@ -131,7 +131,7 @@ The provider callback smoke script starts the API, seeds an active merchant,
 creates a payment, sends a provider success callback, and verifies both
 `payment_transactions` and `bank_callback_logs` in PostgreSQL:
 
-```powershell
+```bash
 cd backend
-& 'D:\Anaconda\envs\mini-payment-gateway\python.exe' scripts\smoke_provider_callback_api.py
+python scripts/smoke_provider_callback_api.py
 ```

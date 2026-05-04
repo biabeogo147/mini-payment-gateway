@@ -7,25 +7,25 @@ backend`.
 ## Prerequisites
 
 - Docker Desktop with the `postgres` service available through `docker compose`.
-- Python environment used by this repo:
-  `D:\Anaconda\envs\mini-payment-gateway\python.exe`.
+- Python 3.13 or a compatible Python executable available as:
+  `python`.
 - Backend dependencies installed in editable mode.
 - PostgreSQL connection settings available through the existing project config.
 
 ## Setup
 
-```powershell
+```bash
 docker compose up -d postgres
 cd backend
-& 'D:\Anaconda\envs\mini-payment-gateway\python.exe' -m pip install -e .
-& 'D:\Anaconda\envs\mini-payment-gateway\python.exe' -m alembic upgrade head
+python -m pip install -e .
+python -m alembic upgrade head
 ```
 
 ## Start The API
 
-```powershell
+```bash
 cd backend
-& 'D:\Anaconda\envs\mini-payment-gateway\python.exe' -m uvicorn app.main:app --host 127.0.0.1 --port 8000
+python -m uvicorn app.main:app --host 127.0.0.1 --port 8000
 ```
 
 Health and OpenAPI checks:
@@ -35,21 +35,21 @@ Health and OpenAPI checks:
 
 ## Test Commands
 
-```powershell
+```bash
 cd backend
-& 'D:\Anaconda\envs\mini-payment-gateway\python.exe' -m unittest discover tests -v
-& 'D:\Anaconda\envs\mini-payment-gateway\python.exe' -m unittest tests.test_e2e_payment_refund_webhook -v
+python -m unittest discover tests -v
+python -m unittest tests.test_e2e_payment_refund_webhook -v
 ```
 
 ## Smoke Commands
 
-```powershell
+```bash
 cd backend
-& 'D:\Anaconda\envs\mini-payment-gateway\python.exe' scripts\smoke_payment_api.py
-& 'D:\Anaconda\envs\mini-payment-gateway\python.exe' scripts\smoke_provider_callback_api.py
-& 'D:\Anaconda\envs\mini-payment-gateway\python.exe' scripts\smoke_refund_api.py
-& 'D:\Anaconda\envs\mini-payment-gateway\python.exe' scripts\smoke_webhook_api.py
-& 'D:\Anaconda\envs\mini-payment-gateway\python.exe' scripts\smoke_ops_reconciliation_api.py
+python scripts/smoke_payment_api.py
+python scripts/smoke_provider_callback_api.py
+python scripts/smoke_refund_api.py
+python scripts/smoke_webhook_api.py
+python scripts/smoke_ops_reconciliation_api.py
 ```
 
 Use `smoke_ops_reconciliation_api.py` for the fullest API demo slice. It starts

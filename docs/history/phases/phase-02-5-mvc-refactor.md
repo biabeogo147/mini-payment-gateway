@@ -20,10 +20,10 @@ behavior.
 
 Verification commands used:
 
-```powershell
-& 'D:\Anaconda\envs\mini-payment-gateway\python.exe' -m unittest tests.test_app_foundation -v
-& 'D:\Anaconda\envs\mini-payment-gateway\python.exe' -m unittest tests.test_merchant_readiness -v
-& 'D:\Anaconda\envs\mini-payment-gateway\python.exe' -m unittest discover tests -v
+```bash
+python -m unittest tests.test_app_foundation -v
+python -m unittest tests.test_merchant_readiness -v
+python -m unittest discover tests -v
 ```
 
 API smoke result:
@@ -138,9 +138,9 @@ from app.controllers.errors import app_error_handler
 
 - [x] Run:
 
-```powershell
+```bash
 cd backend
-& 'D:\Anaconda\envs\mini-payment-gateway\python.exe' -m unittest tests.test_app_foundation -v
+python -m unittest tests.test_app_foundation -v
 ```
 
 - [x] Expected: FAIL because `app.controllers` does not exist yet.
@@ -160,9 +160,9 @@ from app.controllers.health_controller import router as health_router
 
 - [x] Run:
 
-```powershell
+```bash
 cd backend
-& 'D:\Anaconda\envs\mini-payment-gateway\python.exe' -m unittest tests.test_app_foundation -v
+python -m unittest tests.test_app_foundation -v
 ```
 
 - [x] Expected: PASS.
@@ -183,9 +183,9 @@ from app.services.merchant_readiness_service import assert_can_create_payment
 
 - [x] Run:
 
-```powershell
+```bash
 cd backend
-& 'D:\Anaconda\envs\mini-payment-gateway\python.exe' -m unittest tests.test_merchant_readiness -v
+python -m unittest tests.test_merchant_readiness -v
 ```
 
 - [x] Expected: FAIL because `merchant_readiness_service.py` does not exist yet.
@@ -197,7 +197,7 @@ cd backend
 
 - [x] Search for old imports:
 
-```powershell
+```bash
 rg -n "app\.api|api\.routes|services\.merchant_readiness" backend docs
 ```
 
@@ -209,9 +209,9 @@ rg -n "app\.api|api\.routes|services\.merchant_readiness" backend docs
 - [x] Delete old `backend/app/api/*` files after there are no imports left.
 - [x] Run:
 
-```powershell
+```bash
 cd backend
-& 'D:\Anaconda\envs\mini-payment-gateway\python.exe' -m unittest discover tests -v
+python -m unittest discover tests -v
 ```
 
 - [x] Expected: all tests pass.
@@ -225,7 +225,7 @@ cd backend
 - [x] Ensure phase 03 still keeps payment business rules in `payment_service.py`.
 - [x] Run:
 
-```powershell
+```bash
 rg -n "app/api|api/routes|app\.api" docs/history/phases/phase-03-payment-core.md
 ```
 
@@ -237,7 +237,7 @@ rg -n "app/api|api/routes|app\.api" docs/history/phases/phase-03-payment-core.md
 - [x] Confirm `docs/history/README.md` lists phase 2.5 before phase 03.
 - [x] Run:
 
-```powershell
+```bash
 rg -n "API package boundaries|app/api|api/routes|app\.api" docs/history docs/architecture/backend.md
 ```
 
@@ -247,14 +247,14 @@ rg -n "API package boundaries|app/api|api/routes|app\.api" docs/history docs/arc
 
 - [x] Start FastAPI locally:
 
-```powershell
+```bash
 cd backend
-& 'D:\Anaconda\envs\mini-payment-gateway\python.exe' -m uvicorn app.main:app --host 127.0.0.1 --port 8000
+python -m uvicorn app.main:app --host 127.0.0.1 --port 8000
 ```
 
 - [x] Call:
 
-```powershell
+```bash
 Invoke-RestMethod http://127.0.0.1:8000/health
 Invoke-RestMethod http://127.0.0.1:8000/openapi.json
 ```

@@ -286,9 +286,9 @@ Mismatch or conflict response:
 
 - [ ] Run:
 
-```powershell
+```bash
 cd backend
-& 'D:\Anaconda\envs\mini-payment-gateway\python.exe' -m unittest discover tests -v
+python -m unittest discover tests -v
 ```
 
 - [ ] Expected: existing phase 0-4 tests pass before phase 05 edits.
@@ -313,9 +313,9 @@ cd backend
   - `REFUNDED -> REFUNDED` through mutation helper.
 - [ ] Run:
 
-```powershell
+```bash
 cd backend
-& 'D:\Anaconda\envs\mini-payment-gateway\python.exe' -m unittest tests.test_refund_state_machine -v
+python -m unittest tests.test_refund_state_machine -v
 ```
 
 - [ ] Expected: FAIL before state machine exists.
@@ -408,9 +408,9 @@ cd backend
 - [ ] Test `REF-03`: query by merchant refund id returns only owned refunds.
 - [ ] Run:
 
-```powershell
+```bash
 cd backend
-& 'D:\Anaconda\envs\mini-payment-gateway\python.exe' -m unittest tests.test_refund_service -v
+python -m unittest tests.test_refund_service -v
 ```
 
 - [ ] Expected: FAIL before service exists.
@@ -543,10 +543,10 @@ cd backend
   - print compact JSON evidence.
 - [ ] Run after migrations:
 
-```powershell
+```bash
 cd backend
-& 'D:\Anaconda\envs\mini-payment-gateway\python.exe' -m alembic upgrade head
-& 'D:\Anaconda\envs\mini-payment-gateway\python.exe' scripts\smoke_refund_api.py
+python -m alembic upgrade head
+python scripts/smoke_refund_api.py
 ```
 
 - [ ] Expected: JSON output proves API responses and DB rows agree.
@@ -567,7 +567,7 @@ cd backend
 - [ ] Update `docs/testing/matrix.md` phase 05 rows from `Planned` to
   implemented coverage.
 - [ ] Update `docs/history/README.md` standard verification commands with
-  `scripts\smoke_refund_api.py`.
+  `scripts/smoke_refund_api.py`.
 - [ ] Create `docs/history/completions/phase-05.md` with:
   - completed scope;
   - tests run;
@@ -578,16 +578,16 @@ cd backend
 
 - [ ] Run:
 
-```powershell
+```bash
 cd backend
-& 'D:\Anaconda\envs\mini-payment-gateway\python.exe' -m unittest discover tests -v
+python -m unittest discover tests -v
 ```
 
 - [ ] Expected: all tests pass.
 
 - [ ] Run:
 
-```powershell
+```bash
 git diff --check
 ```
 

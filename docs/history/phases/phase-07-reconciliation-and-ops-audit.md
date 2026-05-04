@@ -214,9 +214,9 @@ Existing source that phase 07 should build on:
 
 - [ ] Run:
 
-```powershell
+```bash
 cd backend
-& 'D:\Anaconda\envs\mini-payment-gateway\python.exe' -m unittest discover tests -v
+python -m unittest discover tests -v
 ```
 
 - [ ] Expected: existing phase 0-6 tests pass before phase 07 edits.
@@ -242,9 +242,9 @@ cd backend
     `secret_key_encrypted`, the audit service masks the value before insert.
 - [ ] Run:
 
-```powershell
+```bash
 cd backend
-& 'D:\Anaconda\envs\mini-payment-gateway\python.exe' -m unittest tests.test_audit_service -v
+python -m unittest tests.test_audit_service -v
 ```
 
 - [ ] Expected: FAIL before `audit_repository` and `audit_service` exist.
@@ -264,9 +264,9 @@ cd backend
   own transaction boundaries.
 - [ ] Run:
 
-```powershell
+```bash
 cd backend
-& 'D:\Anaconda\envs\mini-payment-gateway\python.exe' -m unittest tests.test_audit_service -v
+python -m unittest tests.test_audit_service -v
 ```
 
 - [ ] Expected: PASS.
@@ -313,9 +313,9 @@ cd backend
   - records `CREDENTIAL_ROTATED` audit without plaintext secret.
 - [ ] Run:
 
-```powershell
+```bash
 cd backend
-& 'D:\Anaconda\envs\mini-payment-gateway\python.exe' -m unittest tests.test_merchant_ops_service -v
+python -m unittest tests.test_merchant_ops_service -v
 ```
 
 - [ ] Expected: FAIL before merchant ops service exists.
@@ -360,9 +360,9 @@ cd backend
   `db.commit()`.
 - [ ] Run:
 
-```powershell
+```bash
 cd backend
-& 'D:\Anaconda\envs\mini-payment-gateway\python.exe' -m unittest tests.test_merchant_ops_service -v
+python -m unittest tests.test_merchant_ops_service -v
 ```
 
 - [ ] Expected: PASS.
@@ -396,9 +396,9 @@ cd backend
   - `POST /v1/ops/merchants/{merchant_id}/disable`.
 - [ ] Run:
 
-```powershell
+```bash
 cd backend
-& 'D:\Anaconda\envs\mini-payment-gateway\python.exe' -m unittest tests.test_merchant_ops_routes -v
+python -m unittest tests.test_merchant_ops_routes -v
 ```
 
 - [ ] Expected: FAIL before controller exists.
@@ -412,9 +412,9 @@ cd backend
 - [ ] Register router in `backend/app/main.py`.
 - [ ] Run:
 
-```powershell
+```bash
 cd backend
-& 'D:\Anaconda\envs\mini-payment-gateway\python.exe' -m unittest tests.test_merchant_ops_routes tests.test_merchant_ops_service -v
+python -m unittest tests.test_merchant_ops_routes tests.test_merchant_ops_service -v
 ```
 
 - [ ] Expected: PASS.
@@ -444,9 +444,9 @@ cd backend
   - records `RECONCILIATION_RESOLVED` audit.
 - [ ] Run:
 
-```powershell
+```bash
 cd backend
-& 'D:\Anaconda\envs\mini-payment-gateway\python.exe' -m unittest tests.test_reconciliation_service -v
+python -m unittest tests.test_reconciliation_service -v
 ```
 
 - [ ] Expected: FAIL before service/repository additions exist.
@@ -469,9 +469,9 @@ cd backend
   compatibility.
 - [ ] Run:
 
-```powershell
+```bash
 cd backend
-& 'D:\Anaconda\envs\mini-payment-gateway\python.exe' -m unittest tests.test_reconciliation_service -v
+python -m unittest tests.test_reconciliation_service -v
 ```
 
 - [ ] Expected: PASS.
@@ -491,9 +491,9 @@ cd backend
     with request actor context.
 - [ ] Run:
 
-```powershell
+```bash
 cd backend
-& 'D:\Anaconda\envs\mini-payment-gateway\python.exe' -m unittest tests.test_reconciliation_routes -v
+python -m unittest tests.test_reconciliation_routes -v
 ```
 
 - [ ] Expected: FAIL before controller/schema exists.
@@ -509,9 +509,9 @@ cd backend
 - [ ] Register router in `backend/app/main.py`.
 - [ ] Run:
 
-```powershell
+```bash
 cd backend
-& 'D:\Anaconda\envs\mini-payment-gateway\python.exe' -m unittest tests.test_reconciliation_routes tests.test_reconciliation_service -v
+python -m unittest tests.test_reconciliation_routes tests.test_reconciliation_service -v
 ```
 
 - [ ] Expected: PASS.
@@ -539,9 +539,9 @@ cd backend
 - [ ] Test route still works with no request body for phase 06 compatibility.
 - [ ] Run:
 
-```powershell
+```bash
 cd backend
-& 'D:\Anaconda\envs\mini-payment-gateway\python.exe' -m unittest tests.test_webhook_delivery_service tests.test_webhook_ops_routes -v
+python -m unittest tests.test_webhook_delivery_service tests.test_webhook_ops_routes -v
 ```
 
 - [ ] Expected: FAIL before audit wiring exists.
@@ -581,10 +581,10 @@ cd backend
   - print compact JSON evidence.
 - [ ] Run:
 
-```powershell
+```bash
 cd backend
-& 'D:\Anaconda\envs\mini-payment-gateway\python.exe' -m alembic upgrade head
-& 'D:\Anaconda\envs\mini-payment-gateway\python.exe' scripts\smoke_ops_reconciliation_api.py
+python -m alembic upgrade head
+python scripts/smoke_ops_reconciliation_api.py
 ```
 
 - [ ] Expected: JSON output proves ops onboarding, credential creation,
@@ -619,16 +619,16 @@ cd backend
 
 - [ ] Run:
 
-```powershell
+```bash
 cd backend
-& 'D:\Anaconda\envs\mini-payment-gateway\python.exe' -m unittest discover tests -v
+python -m unittest discover tests -v
 ```
 
 - [ ] Expected: all tests pass.
 
 - [ ] Run:
 
-```powershell
+```bash
 git diff --check
 ```
 

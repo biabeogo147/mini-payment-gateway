@@ -182,9 +182,9 @@ status. Business ambiguity should be persisted and returned as
   - `FAILED -> SUCCESS`
 - [ ] Run:
 
-```powershell
+```bash
 cd backend
-& 'D:\Anaconda\envs\mini-payment-gateway\python.exe' -m unittest tests.test_payment_state_machine -v
+python -m unittest tests.test_payment_state_machine -v
 ```
 
 - [ ] Expected: FAIL before state machine exists.
@@ -314,9 +314,9 @@ cd backend
 
 - [ ] Run:
 
-```powershell
+```bash
 cd backend
-& 'D:\Anaconda\envs\mini-payment-gateway\python.exe' -m unittest discover tests -v
+python -m unittest discover tests -v
 ```
 
 - [ ] Expected: all tests pass.

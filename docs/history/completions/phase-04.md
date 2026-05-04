@@ -37,8 +37,8 @@ first failed because the target modules did not exist.
 
 Run from `backend/`:
 
-```powershell
-& 'D:\Anaconda\envs\mini-payment-gateway\python.exe' -m unittest discover tests -v
+```bash
+python -m unittest discover tests -v
 ```
 
 Latest result during implementation:
@@ -52,8 +52,8 @@ OK
 
 Run from `backend/` with Docker Postgres healthy:
 
-```powershell
-& 'D:\Anaconda\envs\mini-payment-gateway\python.exe' scripts\smoke_provider_callback_api.py
+```bash
+python scripts/smoke_provider_callback_api.py
 ```
 
 This script seeds an active merchant, creates a payment, sends a provider

@@ -36,8 +36,8 @@ ModuleNotFoundError: No module named 'app.services.merchant_readiness_service'
 
 Run from `backend/`:
 
-```powershell
-& 'D:\Anaconda\envs\mini-payment-gateway\python.exe' -m unittest discover tests -v
+```bash
+python -m unittest discover tests -v
 ```
 
 Result:

@@ -18,11 +18,11 @@ and route/service tests.
 
 Verification commands used:
 
-```powershell
-& 'D:\Anaconda\envs\mini-payment-gateway\python.exe' -m unittest tests.test_payment_service -v
-& 'D:\Anaconda\envs\mini-payment-gateway\python.exe' -m unittest tests.test_payment_routes -v
-& 'D:\Anaconda\envs\mini-payment-gateway\python.exe' -m unittest discover tests -v
-& 'D:\Anaconda\envs\mini-payment-gateway\python.exe' scripts\smoke_payment_api.py
+```bash
+python -m unittest tests.test_payment_service -v
+python -m unittest tests.test_payment_routes -v
+python -m unittest discover tests -v
+python scripts/smoke_payment_api.py
 ```
 
 ## Scope
@@ -123,7 +123,7 @@ MINI_GATEWAY|merchant_id={merchant_id}|transaction_id={transaction_id}|amount={a
   - query by order id works.
 - [x] Run:
 
-```powershell
+```bash
 cd backend
 python -m unittest tests.test_payment_service -v
 ```
@@ -155,7 +155,7 @@ python -m unittest tests.test_payment_service -v
 
 - [x] Run:
 
-```powershell
+```bash
 cd backend
 python -m unittest discover tests -v
 ```
@@ -163,9 +163,9 @@ python -m unittest discover tests -v
 - [x] Expected: all tests pass.
 - [x] Optional manual smoke:
 
-```powershell
+```bash
 cd backend
-& 'D:\Anaconda\envs\mini-payment-gateway\python.exe' scripts\smoke_payment_api.py
+python scripts/smoke_payment_api.py
 ```
 
 ### Task 8: Commit

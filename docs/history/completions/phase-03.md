@@ -54,8 +54,8 @@ ImportError: cannot import name 'payment_controller' from 'app.controllers'
 
 Run from `backend/`:
 
-```powershell
-& 'D:\Anaconda\envs\mini-payment-gateway\python.exe' -m unittest discover tests -v
+```bash
+python -m unittest discover tests -v
 ```
 
 Result:
@@ -69,8 +69,8 @@ OK
 
 Run from `backend/` with Docker Postgres healthy:
 
-```powershell
-& 'D:\Anaconda\envs\mini-payment-gateway\python.exe' scripts\smoke_payment_api.py
+```bash
+python scripts/smoke_payment_api.py
 ```
 
 Result:

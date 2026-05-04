@@ -27,18 +27,18 @@ operator/developer docs, sequence diagrams, SOPs, and a concise root README.
 
 Focused phase 08 E2E:
 
-```powershell
+```bash
 cd backend
-& 'D:\Anaconda\envs\mini-payment-gateway\python.exe' -m unittest tests.test_e2e_payment_refund_webhook -v
+python -m unittest tests.test_e2e_payment_refund_webhook -v
 ```
 
 Result: 5 tests passed.
 
 Full unit suite:
 
-```powershell
+```bash
 cd backend
-& 'D:\Anaconda\envs\mini-payment-gateway\python.exe' -m unittest discover tests -v
+python -m unittest discover tests -v
 ```
 
 Result: 146 tests passed. One non-blocking sqlite `ResourceWarning` was emitted
@@ -46,22 +46,22 @@ from the existing webhook delivery test suite; the suite completed with `OK`.
 
 DB migration check:
 
-```powershell
+```bash
 cd backend
-& 'D:\Anaconda\envs\mini-payment-gateway\python.exe' -m alembic upgrade head
+python -m alembic upgrade head
 ```
 
 Result: Alembic reported PostgreSQL context and no pending migration failures.
 
 Smoke scripts:
 
-```powershell
+```bash
 cd backend
-& 'D:\Anaconda\envs\mini-payment-gateway\python.exe' scripts\smoke_payment_api.py
-& 'D:\Anaconda\envs\mini-payment-gateway\python.exe' scripts\smoke_provider_callback_api.py
-& 'D:\Anaconda\envs\mini-payment-gateway\python.exe' scripts\smoke_refund_api.py
-& 'D:\Anaconda\envs\mini-payment-gateway\python.exe' scripts\smoke_webhook_api.py
-& 'D:\Anaconda\envs\mini-payment-gateway\python.exe' scripts\smoke_ops_reconciliation_api.py
+python scripts/smoke_payment_api.py
+python scripts/smoke_provider_callback_api.py
+python scripts/smoke_refund_api.py
+python scripts/smoke_webhook_api.py
+python scripts/smoke_ops_reconciliation_api.py
 ```
 
 Results:
@@ -80,16 +80,16 @@ Results:
 
 Runtime API check:
 
-```powershell
+```bash
 cd backend
-& 'D:\Anaconda\envs\mini-payment-gateway\python.exe' -m uvicorn app.main:app --host 127.0.0.1 --port <free-port>
+python -m uvicorn app.main:app --host 127.0.0.1 --port <free-port>
 ```
 
 Result: temporary server returned `health=200` and `docs=200`.
 
 Whitespace check:
 
-```powershell
+```bash
 git diff --check
 ```
 

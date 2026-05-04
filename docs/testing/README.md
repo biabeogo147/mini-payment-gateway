@@ -22,8 +22,8 @@ This folder maps business scenarios to automated checks.
 
 ## Verification Commands
 
-```powershell
+```bash
 cd backend
-& 'D:\Anaconda\envs\mini-payment-gateway\python.exe' -m unittest discover tests -v
-& 'D:\Anaconda\envs\mini-payment-gateway\python.exe' -m unittest tests.test_e2e_payment_refund_webhook -v
+python -m unittest discover tests -v
+python -m unittest tests.test_e2e_payment_refund_webhook -v
 ```

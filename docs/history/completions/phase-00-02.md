@@ -37,8 +37,8 @@ Completed on branch `codex-phase-0-2`.
 
 Run from `backend/`:
 
-```powershell
-& 'D:\Anaconda\envs\mini-payment-gateway\python.exe' -m unittest discover tests -v
+```bash
+python -m unittest discover tests -v
 ```
 
 Result:

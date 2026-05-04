@@ -40,8 +40,8 @@ functions did not exist.
 
 Run from `backend/`:
 
-```powershell
-& 'D:\Anaconda\envs\mini-payment-gateway\python.exe' -m unittest discover tests -v
+```bash
+python -m unittest discover tests -v
 ```
 
 Latest result during implementation:
@@ -55,8 +55,8 @@ OK
 
 Run from `backend/` with Docker Postgres healthy:
 
-```powershell
-& 'D:\Anaconda\envs\mini-payment-gateway\python.exe' scripts\smoke_refund_api.py
+```bash
+python scripts/smoke_refund_api.py
 ```
 
 This script seeds an active merchant, creates a payment, marks the payment

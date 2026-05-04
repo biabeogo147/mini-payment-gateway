@@ -44,9 +44,9 @@ phase 06 tests.
 
 Baseline before phase 06 implementation:
 
-```powershell
+```bash
 cd backend
-& 'D:\Anaconda\envs\mini-payment-gateway\python.exe' -m unittest discover tests -v
+python -m unittest discover tests -v
 ```
 
 Result:
@@ -58,9 +58,9 @@ OK
 
 After phase 06 implementation:
 
-```powershell
+```bash
 cd backend
-& 'D:\Anaconda\envs\mini-payment-gateway\python.exe' -m unittest discover tests -v
+python -m unittest discover tests -v
 ```
 
 Result:
@@ -72,18 +72,18 @@ OK
 
 Migration check:
 
-```powershell
+```bash
 cd backend
-& 'D:\Anaconda\envs\mini-payment-gateway\python.exe' -m alembic upgrade head
+python -m alembic upgrade head
 ```
 
 Result: Alembic reached head successfully.
 
 Webhook smoke:
 
-```powershell
+```bash
 cd backend
-& 'D:\Anaconda\envs\mini-payment-gateway\python.exe' scripts\smoke_webhook_api.py
+python scripts/smoke_webhook_api.py
 ```
 
 Observed output shape:

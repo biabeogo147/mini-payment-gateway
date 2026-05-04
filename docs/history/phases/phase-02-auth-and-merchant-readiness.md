@@ -18,10 +18,10 @@ auth dependency, and merchant readiness guards.
 
 Verification commands used:
 
-```powershell
-& 'D:\Anaconda\envs\mini-payment-gateway\python.exe' -m unittest tests.test_auth_service -v
-& 'D:\Anaconda\envs\mini-payment-gateway\python.exe' -m unittest tests.test_merchant_readiness -v
-& 'D:\Anaconda\envs\mini-payment-gateway\python.exe' -m unittest discover tests -v
+```bash
+python -m unittest tests.test_auth_service -v
+python -m unittest tests.test_merchant_readiness -v
+python -m unittest discover tests -v
 ```
 
 ## Scope
@@ -75,7 +75,7 @@ encryption does not change the auth service interface.
   - missing header fails with specific error code.
 - [x] Run:
 
-```powershell
+```bash
 cd backend
 python -m unittest tests.test_auth_service -v
 ```
@@ -120,7 +120,7 @@ python -m unittest tests.test_auth_service -v
   - `AUTH_INVALID_SIGNATURE`
 - [x] Run:
 
-```powershell
+```bash
 cd backend
 python -m unittest tests.test_auth_service -v
 ```
@@ -148,7 +148,7 @@ python -m unittest tests.test_auth_service -v
 - [x] Add tests in `backend/tests/test_merchant_readiness.py`.
 - [x] Run:
 
-```powershell
+```bash
 cd backend
 python -m unittest tests.test_merchant_readiness -v
 ```

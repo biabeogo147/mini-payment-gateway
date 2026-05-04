@@ -3,35 +3,35 @@
 ## Prerequisites
 
 - Docker Desktop.
-- Python environment:
-  `D:\Anaconda\envs\mini-payment-gateway\python.exe`.
-- Repository root: `D:\DS-AI\mini-payment-gateway`.
+- Python 3.13 or a compatible Python executable available as:
+  `python`.
+- Repository root: the directory created by `git clone`.
 
 ## Start PostgreSQL
 
-```powershell
+```bash
 docker compose up -d postgres
 ```
 
 ## Install Backend
 
-```powershell
+```bash
 cd backend
-& 'D:\Anaconda\envs\mini-payment-gateway\python.exe' -m pip install -e .
+python -m pip install -e .
 ```
 
 ## Apply Migrations
 
-```powershell
+```bash
 cd backend
-& 'D:\Anaconda\envs\mini-payment-gateway\python.exe' -m alembic upgrade head
+python -m alembic upgrade head
 ```
 
 ## Start API
 
-```powershell
+```bash
 cd backend
-& 'D:\Anaconda\envs\mini-payment-gateway\python.exe' -m uvicorn app.main:app --host 127.0.0.1 --port 8000
+python -m uvicorn app.main:app --host 127.0.0.1 --port 8000
 ```
 
 Check:
@@ -41,14 +41,14 @@ Check:
 
 ## Run Tests
 
-```powershell
+```bash
 cd backend
-& 'D:\Anaconda\envs\mini-payment-gateway\python.exe' -m unittest discover tests -v
+python -m unittest discover tests -v
 ```
 
 For the full MVP demo path:
 
-```powershell
+```bash
 cd backend
-& 'D:\Anaconda\envs\mini-payment-gateway\python.exe' -m unittest tests.test_e2e_payment_refund_webhook -v
+python -m unittest tests.test_e2e_payment_refund_webhook -v
 ```
