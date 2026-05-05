@@ -1,7 +1,8 @@
 # Core Use Case Specifications
 
-This document selects the five most important use cases for the mini payment
-gateway and describes them with the original use-case template structure.
+This document starts with one general use-case diagram for the complete mini
+payment gateway lifecycle, then selects the five most important detailed use
+cases and describes them with the original use-case template structure.
 
 Selection criteria:
 
@@ -9,7 +10,7 @@ Selection criteria:
 - the use case touches core money movement or merchant integration;
 - the use case keeps the system operable and traceable in the MVP.
 
-The five selected use cases are:
+The five selected detailed use cases are:
 
 - UC001 - Onboard and activate merchant
 - UC002 - Create dynamic QR payment
@@ -19,6 +20,63 @@ The five selected use cases are:
 
 Each use case includes a PlantUML diagram in a `plantuml` fence. Rendering
 depends on the Markdown viewer or IDE PlantUML plugin.
+
+---
+
+# General Use Case
+
+```plantuml
+@startuml general_use_case
+left to right direction
+skinparam packageStyle rectangle
+
+actor "Admin / Ops" as Admin
+actor "Merchant backend" as Merchant
+actor "Customer / Payer" as Customer
+actor "Provider simulator" as Provider
+actor "Gateway worker" as Worker
+
+rectangle "Mini Payment Gateway" {
+  usecase "Onboard and activate\nmerchant" as UC001
+  usecase "Create dynamic QR\npayment" as UC002
+  usecase "Process payment\nresult callback" as UC003
+  usecase "Create full refund and\nprocess refund result" as UC004
+  usecase "Deliver webhook with retry\nand manual recovery" as UC005
+  usecase "Review audit and\nreconciliation evidence" as UC_Audit
+}
+
+Admin --> UC001
+Admin --> UC005 : manual recovery
+Admin --> UC_Audit
+
+Merchant --> UC002
+Merchant --> UC004
+Merchant --> UC005 : receive webhook
+
+Customer --> UC002
+
+Provider --> UC003
+Provider --> UC004 : refund result
+
+Worker --> UC005
+
+UC002 ..> UC003 : payment result
+UC003 ..> UC005 : payment webhook
+UC004 ..> UC005 : refund webhook
+UC001 ..> UC_Audit : audit trail
+UC003 ..> UC_Audit : reconciliation evidence
+UC004 ..> UC_Audit : reconciliation evidence
+UC005 ..> UC_Audit : delivery evidence
+@enduml
+```
+
+| Actor                  | Vai trò                                                                                   |
+| ---------------------- | ----------------------------------------------------------------------------------------- |
+| **Admin / Ops**        | Người vận hành hệ thống, quản lý merchant, xử lý lỗi webhook, xem audit/reconciliation    |
+| **Merchant backend**   | Hệ thống backend của merchant, gọi API để tạo thanh toán, yêu cầu hoàn tiền, nhận webhook |
+| **Customer / Payer**   | Người thanh toán, quét QR và trả tiền                                                     |
+| **Provider simulator** | Mô phỏng nhà cung cấp thanh toán, gửi callback kết quả thanh toán/hoàn tiền               |
+| **Gateway worker**     | Thành phần chạy nền của gateway, xử lý webhook retry hoặc recovery                        |
 
 ---
 
