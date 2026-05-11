@@ -89,9 +89,9 @@ UC001
 ## 2. Brief Description
 
 This use case describes the interaction between `Admin/Ops` and
-`Mini Payment Gateway` when `Admin/Ops` wishes to create a merchant, submit and
-approve onboarding evidence, issue an active credential, and activate the
-merchant for payment/refund APIs.
+`Mini Payment Gateway` when `Admin/Ops` wishes to create a merchant, submit
+onboarding evidence, approve or reject the onboarding case, issue an active
+credential, and activate the merchant for payment/refund APIs.
 
 ## 3. Use case diagram
 
@@ -487,9 +487,10 @@ UC004
 
 ## 2. Brief Description
 
-This lifecycle use case keeps one traceable id (`UC004`) but models two
-actor-triggered subflows: the merchant creates a full refund, and the provider
-later reports the refund result back to the gateway.
+This use case describes the interaction between `Merchant`,
+`Bank/Provider/Simulator`, and `Mini Payment Gateway` when the merchant wishes
+to create a full refund for a successful payment and the provider later reports
+the refund result back to the gateway.
 
 ## 3. Use case diagram
 
@@ -657,8 +658,9 @@ UC005
 ## 2. Brief Description
 
 This use case describes the interaction between `Scheduler/Timer`,
-`Merchant`, and `Admin/Ops` when the gateway delivers final payment or refund
-events to the merchant webhook endpoint and recovers from delivery failure.
+`Admin/Ops`, `Merchant`, and `Mini Payment Gateway` when the gateway delivers
+final payment or refund events to the merchant webhook endpoint and recovers
+from delivery failure.
 
 ## 3. Use case diagram
 
