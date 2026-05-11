@@ -34,7 +34,7 @@ actor "Admin / Ops" as Admin
 actor "Merchant backend" as Merchant
 actor "Customer / Payer" as Customer
 actor "Provider simulator" as Provider
-actor "Gateway worker" as Worker
+actor "Scheduler / Timer" as Scheduler
 
 rectangle "Mini Payment Gateway" {
   usecase "Onboard and activate\nmerchant" as UC001
@@ -58,7 +58,7 @@ Customer --> UC002
 Provider --> UC003
 Provider --> UC004 : refund result
 
-Worker --> UC005
+Scheduler --> UC005
 
 UC002 ..> UC003 : payment result
 UC003 ..> UC005 : payment webhook
@@ -70,13 +70,13 @@ UC005 ..> UC_Audit : delivery evidence
 @enduml
 ```
 
-| Actor                  | Vai trò                                                                                   |
-| ---------------------- | ----------------------------------------------------------------------------------------- |
-| **Admin / Ops**        | Người vận hành hệ thống, quản lý merchant, xử lý lỗi webhook, xem audit/reconciliation    |
-| **Merchant backend**   | Hệ thống backend của merchant, gọi API để tạo thanh toán, yêu cầu hoàn tiền, nhận webhook |
-| **Customer / Payer**   | Người thanh toán, quét QR và trả tiền                                                     |
-| **Provider simulator** | Mô phỏng nhà cung cấp thanh toán, gửi callback kết quả thanh toán/hoàn tiền               |
-| **Gateway worker**     | Thành phần chạy nền của gateway, xử lý webhook retry hoặc recovery                        |
+| Actor | Role |
+| ----- | ---- |
+| **Admin / Ops** | Internal operator who manages merchants, handles webhook recovery, and reviews audit or reconciliation evidence. |
+| **Merchant backend** | Merchant-owned backend that calls gateway APIs to create payments, request refunds, and receive webhooks. |
+| **Customer / Payer** | End user who scans the QR code and pays through a banking application. |
+| **Provider simulator** | Simulated payment provider that sends payment and refund result callbacks. |
+| **Scheduler / Timer** | External trigger for automatic webhook delivery and retry selection. |
 
 ---
 
@@ -106,30 +106,18 @@ rectangle "Mini Payment Gateway" {
   usecase "Onboard and activate\nmerchant" as UC001
   usecase "Create merchant\nprofile" as UC_CreateMerchant
   usecase "Submit onboarding\nevidence" as UC_SubmitEvidence
-  usecase "Approve onboarding\ncase" as UC_ApproveOnboarding
-  usecase "Reject onboarding\ncase" as UC_RejectOnboarding
+  usecase "Make onboarding\ndecision" as UC_DecideOnboarding
   usecase "Issue active\ncredential" as UC_IssueCredential
   usecase "Activate merchant" as UC_ActivateMerchant
-  usecase "Validate readiness\nfor activation" as UC_ValidateReadiness
-  usecase "Write audit log" as UC_WriteAudit
 }
 
 Admin --> UC001
 
 UC001 ..> UC_CreateMerchant : <<include>>
 UC001 ..> UC_SubmitEvidence : <<include>>
-UC001 ..> UC_ApproveOnboarding : <<include>>
+UC001 ..> UC_DecideOnboarding : <<include>>
 UC001 ..> UC_IssueCredential : <<include>>
 UC001 ..> UC_ActivateMerchant : <<include>>
-
-UC_ActivateMerchant ..> UC_ValidateReadiness : <<include>>
-UC_RejectOnboarding ..> UC001 : <<extend>>
-
-UC_CreateMerchant ..> UC_WriteAudit : <<include>>
-UC_ApproveOnboarding ..> UC_WriteAudit : <<include>>
-UC_RejectOnboarding ..> UC_WriteAudit : <<include>>
-UC_IssueCredential ..> UC_WriteAudit : <<include>>
-UC_ActivateMerchant ..> UC_WriteAudit : <<include>>
 @enduml
 ```
 
@@ -233,9 +221,9 @@ UC002
 
 ## 2. Brief Description
 
-This use case describes the interaction between `Merchant`,
-`Customer/Payer`, and `Mini Payment Gateway` when the merchant wishes to create a
-dynamic QR payment and let the customer pay through a banking application.
+This use case describes the interaction between `Merchant` and
+`Mini Payment Gateway` when the merchant wishes to create a dynamic QR payment
+for a customer to pay later through a banking application.
 
 ## 3. Use case diagram
 
@@ -245,8 +233,6 @@ left to right direction
 skinparam packageStyle rectangle
 
 actor "Merchant" as Merchant
-actor "Customer / Payer" as Payer
-
 rectangle "Mini Payment Gateway" {
   usecase "Create dynamic QR\npayment" as UC002
   usecase "Authenticate merchant\nrequest" as UC_Authenticate
@@ -255,12 +241,9 @@ rectangle "Mini Payment Gateway" {
   usecase "Create or reuse\norder reference" as UC_Order
   usecase "Create pending\npayment transaction" as UC_CreatePending
   usecase "Generate dynamic\nQR content" as UC_GenerateQr
-  usecase "Return existing\npending payment" as UC_ReturnExisting
-  usecase "Reject duplicate or\nfinalized order" as UC_RejectOrder
 }
 
 Merchant --> UC002
-Payer --> UC_GenerateQr : scans QR
 
 UC002 ..> UC_Authenticate : <<include>>
 UC002 ..> UC_ValidateRequest : <<include>>
@@ -268,9 +251,6 @@ UC002 ..> UC_Idempotency : <<include>>
 UC002 ..> UC_Order : <<include>>
 UC002 ..> UC_CreatePending : <<include>>
 UC002 ..> UC_GenerateQr : <<include>>
-
-UC_ReturnExisting ..> UC002 : <<extend>>
-UC_RejectOrder ..> UC002 : <<extend>>
 @enduml
 ```
 
@@ -280,9 +260,10 @@ UC_RejectOrder ..> UC002 : <<extend>>
 
 Merchant-owned system that calls gateway APIs with HMAC authentication.
 
-### 4.2 Customer/Payer
+### 4.2 Customer/Payer (secondary)
 
-End user who scans the generated QR code and pays outside the gateway.
+End user who scans the generated QR code and pays outside the gateway after the
+merchant receives it from the API response.
 
 ## 5. Preconditions
 
@@ -368,10 +349,10 @@ UC003
 
 ## 2. Brief Description
 
-This use case describes the interaction between `Bank/Provider/Simulator`,
-`Mini Payment Gateway`, and `Merchant` when the provider reports a
-payment result and the gateway must finalize payment state, store evidence, and
-queue merchant notification.
+This use case describes the interaction between `Bank/Provider/Simulator` and
+`Mini Payment Gateway` when the provider reports a payment result and the
+gateway must finalize payment state, store evidence, and queue merchant
+notification through UC005.
 
 ## 3. Use case diagram
 
@@ -381,7 +362,6 @@ left to right direction
 skinparam packageStyle rectangle
 
 actor "Bank / Provider /\nSimulator" as Provider
-actor "Merchant" as Merchant
 actor "Admin / Ops" as Admin
 
 rectangle "Mini Payment Gateway" {
@@ -396,11 +376,9 @@ rectangle "Mini Payment Gateway" {
   usecase "Deliver webhook\nwith retry" as UC005
   usecase "Create reconciliation\nrecord" as UC_Reconcile
   usecase "Review reconciliation\nevidence" as UC_ReviewReconciliation
-  usecase "Ignore duplicate\nsame-state callback" as UC_IgnoreDuplicate
 }
 
 Provider --> UC003
-Merchant --> UC005 : receives final status
 Admin --> UC_ReviewReconciliation
 
 UC003 ..> UC_ValidateCallback : <<include>>
@@ -413,7 +391,6 @@ UC003 ..> UC_CreateWebhook : <<include>>
 
 UC_CreateWebhook ..> UC005 : <<include>>
 UC_Reconcile ..> UC003 : <<extend>>
-UC_IgnoreDuplicate ..> UC003 : <<extend>>
 UC_Reconcile ..> UC_ReviewReconciliation : <<include>>
 @enduml
 ```
@@ -424,12 +401,7 @@ UC_Reconcile ..> UC_ReviewReconciliation : <<include>>
 
 External or simulated provider that sends payment result evidence.
 
-### 4.2 Merchant
-
-Merchant system that later receives the payment webhook and can query payment
-status.
-
-### 4.3 Admin/Ops
+### 4.2 Admin/Ops
 
 Internal operator who later reviews reconciliation records for ambiguous
 callbacks.
@@ -515,9 +487,9 @@ UC004
 
 ## 2. Brief Description
 
-This use case describes the interaction between `Merchant`,
-`Bank/Provider/Simulator`, and `Mini Payment Gateway` when the merchant wishes to
-refund a successful payment and later receive the provider refund result.
+This lifecycle use case keeps one traceable id (`UC004`) but models two
+actor-triggered subflows: the merchant creates a full refund, and the provider
+later reports the refund result back to the gateway.
 
 ## 3. Use case diagram
 
@@ -531,7 +503,6 @@ actor "Bank / Provider /\nSimulator" as Provider
 actor "Admin / Ops" as Admin
 
 rectangle "Mini Payment Gateway" {
-  usecase "Create full refund and\nprocess refund result" as UC004
   usecase "Create full refund" as UC_CreateRefund
   usecase "Authenticate merchant\nrequest" as UC_Authenticate
   usecase "Resolve original\npayment" as UC_ResolvePayment
@@ -553,8 +524,7 @@ Provider --> UC_ProcessCallback
 Merchant --> UC005 : receives final status
 Admin --> UC_ReviewReconciliation
 
-UC004 ..> UC_CreateRefund : <<include>>
-UC004 ..> UC_ProcessCallback : <<include>>
+UC_CreateRefund ..> UC_ProcessCallback : refund result later
 
 UC_CreateRefund ..> UC_Authenticate : <<include>>
 UC_CreateRefund ..> UC_ResolvePayment : <<include>>
@@ -589,12 +559,20 @@ Internal operator who later reviews refund reconciliation evidence when needed.
 
 ## 5. Preconditions
 
-- Merchant is `ACTIVE`.
-- Merchant request contains valid HMAC headers.
-- Original payment is owned by the merchant.
-- Original payment is `SUCCESS` and has `paid_at`.
-- Refund is within 7 days from `paid_at`.
-- Refund amount equals the original payment amount.
+- For the refund creation subflow, Merchant is `ACTIVE`.
+- For the refund creation subflow, the merchant request contains valid HMAC
+  headers.
+- For the refund creation subflow, the original payment is owned by the
+  merchant.
+- For the refund creation subflow, the original payment is `SUCCESS` and has
+  `paid_at`.
+- For the refund creation subflow, the refund is within 7 days from `paid_at`.
+- For the refund creation subflow, the refund amount equals the original
+  payment amount.
+- For the refund callback subflow, a refund transaction may exist with the
+  supplied `refund_transaction_id`.
+- For the refund callback subflow, the callback payload includes normalized
+  status and amount evidence.
 
 ## 6. Basic Flow of Events
 
@@ -678,10 +656,9 @@ UC005
 
 ## 2. Brief Description
 
-This use case describes the interaction between `Mini Payment Gateway`,
-`Merchant`, and `Admin/Ops` when the gateway delivers final payment or
-refund events to the merchant webhook endpoint and recovers from delivery
-failure.
+This use case describes the interaction between `Scheduler/Timer`,
+`Merchant`, and `Admin/Ops` when the gateway delivers final payment or refund
+events to the merchant webhook endpoint and recovers from delivery failure.
 
 ## 3. Use case diagram
 
@@ -690,7 +667,7 @@ failure.
 left to right direction
 skinparam packageStyle rectangle
 
-actor "Mini Payment Gateway\nScheduler/Worker" as Worker
+actor "Scheduler / Timer" as Scheduler
 actor "Merchant" as Merchant
 actor "Admin / Ops" as Admin
 
@@ -709,7 +686,7 @@ rectangle "Mini Payment Gateway" {
   usecase "Write manual retry\naudit log" as UC_WriteAudit
 }
 
-Worker --> UC005
+Scheduler --> UC005
 Admin --> UC_ManualRetry
 Merchant --> UC_SendWebhook : receives POST
 
@@ -720,7 +697,7 @@ UC005 ..> UC_SendWebhook : <<include>>
 UC005 ..> UC_RecordAttempt : <<include>>
 UC005 ..> UC_MarkDelivered : <<include>>
 
-UC_ManualRetry ..> UC005 : <<include>>
+UC_ManualRetry ..> UC005 : <<extend>>
 UC_ManualRetry ..> UC_WriteAudit : <<include>>
 
 UC_ScheduleRetry ..> UC005 : <<extend>>
@@ -731,10 +708,10 @@ UC_RejectManualRetry ..> UC_ManualRetry : <<extend>>
 
 ## 4. Actors
 
-### 4.1 Mini Payment Gateway
+### 4.1 Scheduler/Timer
 
-System actor that selects due webhook events, signs payloads, sends HTTP
-requests, and records attempts.
+External trigger that wakes the automatic webhook delivery cycle for due
+events.
 
 ### 4.2 Merchant
 
@@ -755,8 +732,8 @@ evidence.
 
 ## 6. Basic Flow of Events
 
-1. The software selects a due `PENDING` webhook event or Admin/Ops selects a
-   `FAILED` event for manual retry.
+1. `Scheduler/Timer` triggers selection of a due `PENDING` webhook event, or
+   Admin/Ops selects a `FAILED` event for manual retry.
 2. The software loads merchant configuration and active credential.
 3. The software serializes the stored webhook payload.
 4. The software builds signing headers using timestamp, event id, and body hash.
