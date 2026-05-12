@@ -12,14 +12,16 @@ historical phase files.
 
 ## For Operators And Demo Runs
 
-- `operations/sandbox-bootstrap.md` - sandbox host preparation and manual
+- `infrastructure/sandbox-bootstrap.md` - sandbox host preparation and manual
   bring-up record before CI/CD exists.
-- `operations/sandbox-deployment.md` - sandbox CI/CD runner and deployment
+- `infrastructure/sandbox-deployment.md` - sandbox CI/CD runner and deployment
   runbook.
 - `getting-started/runbook.md` - smoke scripts and full demo flow.
-- `operations/merchant-onboarding-sop.md` - merchant lifecycle workflow.
-- `operations/webhook-retry-sop.md` - failed webhook handling.
-- `operations/reconciliation-sop.md` - reconciliation review and resolution.
+- `service-operations/merchant-onboarding-sop.md` - merchant lifecycle
+  workflow.
+- `service-operations/webhook-retry-sop.md` - failed webhook handling.
+- `service-operations/reconciliation-sop.md` - reconciliation review and
+  resolution.
 
 ## For Product Context
 
@@ -41,5 +43,7 @@ historical phase files.
 - Current API behavior: `api/`
 - Current architecture: `architecture/`
 - Current verification map: `testing/`
-- Current operations: `operations/` and `getting-started/runbook.md`
+- Current infrastructure operations: `infrastructure/`
+- Current service operations: `service-operations/`
+- Demo runbook: `getting-started/runbook.md`
 - Why a phase happened: `history/`

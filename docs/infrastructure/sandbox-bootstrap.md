@@ -3,6 +3,11 @@
 This document records the manual sandbox host preparation completed on
 May 12, 2026 before phase 09 CI/CD implementation.
 
+Phase 09 CI/CD was later completed on May 13, 2026. Use
+[sandbox-deployment.md](sandbox-deployment.md) for the live runner/deploy
+workflow and [phase-09 completion](../history/completions/phase-09.md) for the
+verified handoff record.
+
 Scope of this document:
 
 - what was prepared on the internal sandbox host;
@@ -149,9 +154,10 @@ cd /opt/mini-payment-gateway
 docker compose down
 ```
 
-## What Is Still Not Done
+## What Was Still Not Done At Bootstrap Time
 
-The following items were intentionally left for phase 09 implementation:
+The following items were intentionally left for phase 09 implementation at the
+time this bootstrap record was written:
 
 - registering the GitHub self-hosted runner with repository labels
 - creating `.github/workflows/sandbox-deploy.yml`
@@ -160,8 +166,8 @@ The following items were intentionally left for phase 09 implementation:
 - creating `.env.sandbox.example`
 - creating the final sandbox deployment runbook
 
-Current status should be read as:
+This historical bootstrap status should be read as:
 
 - the host is prepared;
 - the app can run manually on the host;
-- CI/CD automation for sandbox deploy is not implemented yet.
+- CI/CD automation for sandbox deploy had not been implemented yet.

@@ -10,10 +10,11 @@ point.
 - Product docs: `../product/`
 - Architecture: `../architecture/`
 - API contract: `../api/`
-- Operations: `../operations/`
+- Infrastructure: `../infrastructure/`
+- Service operations: `../service-operations/`
 - Testing and scenarios: `../testing/`
-- Sandbox bootstrap: `../operations/sandbox-bootstrap.md`
-- Sandbox deployment: `../operations/sandbox-deployment.md`
+- Sandbox bootstrap: `../infrastructure/sandbox-bootstrap.md`
+- Sandbox deployment: `../infrastructure/sandbox-deployment.md`
 
 ## Phase Plans
 
@@ -41,3 +42,4 @@ point.
 - `completions/phase-06.md`
 - `completions/phase-07.md`
 - `completions/phase-08.md`
+- `completions/phase-09.md`

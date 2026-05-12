@@ -6,6 +6,23 @@ Use this document for the ongoing deployment flow after host bootstrap.
 Use [sandbox-bootstrap.md](sandbox-bootstrap.md) for the initial machine setup
 record on `192.168.1.199`.
 
+## Live Status
+
+Phase 09 is live as of May 13, 2026 (Asia/Saigon).
+
+- Host: `192.168.1.199` (`ubuntu24`)
+- App checkout: `/opt/mini-payment-gateway`
+- Runner name: `sandbox-runner-01`
+- Runner labels: `self-hosted`, `linux`, `sandbox`, `deploy`
+- Runner version during first live deploy: `2.334.0`
+- systemd unit:
+  `actions.runner.biabeogo147-mini-payment-gateway.sandbox-runner-01.service`
+- First successful workflow run:
+  [Sandbox Deploy #25751189003](https://github.com/biabeogo147/mini-payment-gateway/actions/runs/25751189003)
+- Successful deploy job id: `75635343180`
+- First live deployed commit: `e9e04f8`
+- Health result after deploy: `{"status":"ok"}`
+
 ## Deployment Model
 
 - GitHub-hosted Actions run backend verification on pushes to `main`.
@@ -92,6 +109,12 @@ Expected result:
 - the service survives reboot;
 - the runner user remains non-root.
 
+Implemented state on `192.168.1.199`:
+
+- the runner is registered directly on the sandbox host;
+- the runner service is enabled with systemd;
+- the runner connects outbound to GitHub and accepts deploy jobs.
+
 ## Prepare Server Checkout
 
 If the host is not already prepared:
@@ -160,6 +183,12 @@ Expected result:
 - `backend` is up;
 - `/health` returns `{"status":"ok"}`.
 
+Observed after the first successful live deploy on May 13, 2026:
+
+- `docker compose -f docker-compose.sandbox.yml ps` showed `postgres` healthy
+  and `backend` up on `127.0.0.1`;
+- `curl -fsS http://127.0.0.1:8000/health` returned `{"status":"ok"}`.
+
 ## Troubleshooting
 
 If deploy fails:
@@ -171,6 +200,24 @@ If deploy fails:
 - inspect database logs with
   `docker compose -f docker-compose.sandbox.yml logs --tail 100 postgres`;
 - rerun the deploy script manually to reproduce on-host.
+
+If the very first workflow deploy fails with:
+
+```text
+The following untracked working tree files would be overwritten by merge
+```
+
+that usually means phase 09 files were copied onto the server before they were
+tracked in Git. Remove the untracked copies once, then rerun the job:
+
+```bash
+cd /opt/mini-payment-gateway
+rm -f .env.sandbox.example docker-compose.sandbox.yml deploy/sandbox_deploy.sh
+git status --short
+```
+
+This was the exact remediation used before the successful rerun of workflow run
+`25751189003`.
 
 If GitHub queues the job but the host does not pick it up:
 

@@ -152,9 +152,10 @@ Route-level E2E tests exercise the existing controllers and services together:
 
 The E2E module lives in
 `backend/tests/test_e2e_payment_refund_webhook.py`. Operator-facing readiness
-docs live in `docs/getting-started/runbook.md`, `docs/operations/merchant-onboarding-sop.md`,
-`docs/operations/webhook-retry-sop.md`, and
-`docs/operations/reconciliation-sop.md`. Flow diagrams live under
+docs live in `docs/getting-started/runbook.md`,
+`docs/service-operations/merchant-onboarding-sop.md`,
+`docs/service-operations/webhook-retry-sop.md`, and
+`docs/service-operations/reconciliation-sop.md`. Flow diagrams live under
 `docs/architecture/diagrams/`.
 
 ### Models

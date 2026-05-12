@@ -177,12 +177,12 @@ python scripts/smoke_ops_reconciliation_api.py
 | --- | --- |
 | Run the project locally | [docs/getting-started/local-setup.md](docs/getting-started/local-setup.md) |
 | Demo the full MVP | [docs/getting-started/runbook.md](docs/getting-started/runbook.md) |
-| Bootstrap the internal sandbox host | [docs/operations/sandbox-bootstrap.md](docs/operations/sandbox-bootstrap.md) |
-| Deploy to the sandbox host | [docs/operations/sandbox-deployment.md](docs/operations/sandbox-deployment.md) |
+| Bootstrap the internal sandbox host | [docs/infrastructure/sandbox-bootstrap.md](docs/infrastructure/sandbox-bootstrap.md) |
+| Deploy to the sandbox host | [docs/infrastructure/sandbox-deployment.md](docs/infrastructure/sandbox-deployment.md) |
 | Understand backend design | [docs/architecture/backend.md](docs/architecture/backend.md) |
 | Review API contracts | [docs/api/README.md](docs/api/README.md) |
 | Understand scenarios and coverage | [docs/testing/README.md](docs/testing/README.md) |
-| Operate merchant onboarding/webhook/reconciliation flows | [docs/operations/README.md](docs/operations/README.md) |
+| Operate merchant onboarding/webhook/reconciliation flows | [docs/service-operations/README.md](docs/service-operations/README.md) |
 | Read product and business context | [docs/product/README.md](docs/product/README.md) |
 | Inspect implementation history | [docs/history/README.md](docs/history/README.md) |
 

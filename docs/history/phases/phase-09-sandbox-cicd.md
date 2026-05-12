@@ -20,13 +20,17 @@ Docker Engine, Docker Compose v2, FastAPI, PostgreSQL 16, Alembic, Bash, Python
 
 ## Implementation Status
 
-Planning only. Do not create CI/CD workflow files, Docker Compose sandbox files,
-deploy scripts, or sandbox runbooks until the user explicitly asks to implement
-phase 09.
+Completed. The chosen deployment model is **internal pull via self-hosted
+runner**, not external SSH into the sandbox.
 
-The chosen deployment model is **internal pull via self-hosted runner**, not
-external SSH into the sandbox. Do not mark phase 09 complete until the workflow
-has successfully deployed to the real sandbox host at least once.
+Phase 09 first deployed successfully to the real sandbox host on May 13, 2026
+(Asia/Saigon) through workflow run `25751189003`, deploy job `75635343180`, on
+runner `sandbox-runner-01`. See `docs/history/completions/phase-09.md` for
+verification evidence and the final live handoff notes.
+
+The original plan references `docs/operations/` because that was the active
+docs layout when the phase was drafted. Current runtime docs now live under
+`docs/infrastructure/` after the later docs split.
 
 ## Scope
 

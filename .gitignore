@@ -1,4 +1,6 @@
 .env
+.env*.local
+.secrets/
 *.pyc
 *.pyo
 *.pyd

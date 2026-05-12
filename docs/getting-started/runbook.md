@@ -92,6 +92,6 @@ Request/response details live in `docs/api/`.
 - `docs/architecture/diagrams/refund-flow.puml`
 - `docs/architecture/diagrams/webhook-retry-flow.puml`
 - `docs/architecture/diagrams/reconciliation-flow.puml`
-- `docs/operations/merchant-onboarding-sop.md`
-- `docs/operations/webhook-retry-sop.md`
-- `docs/operations/reconciliation-sop.md`
+- `docs/service-operations/merchant-onboarding-sop.md`
+- `docs/service-operations/webhook-retry-sop.md`
+- `docs/service-operations/reconciliation-sop.md`
