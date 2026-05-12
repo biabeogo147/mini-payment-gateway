@@ -31,8 +31,7 @@ left to right direction
 skinparam packageStyle rectangle
 
 actor "Admin / Ops" as Admin
-actor "Merchant backend" as Merchant
-actor "Customer / Payer" as Customer
+actor "Merchant" as Merchant
 actor "Provider simulator" as Provider
 actor "Scheduler / Timer" as Scheduler
 
@@ -53,8 +52,6 @@ Merchant --> UC002
 Merchant --> UC004
 Merchant --> UC005 : receive webhook
 
-Customer --> UC002
-
 Provider --> UC003
 Provider --> UC004 : refund result
 
@@ -73,8 +70,7 @@ UC005 ..> UC_Audit : delivery evidence
 | Actor | Role |
 | ----- | ---- |
 | **Admin / Ops** | Internal operator who manages merchants, handles webhook recovery, and reviews audit or reconciliation evidence. |
-| **Merchant backend** | Merchant-owned backend that calls gateway APIs to create payments, request refunds, and receive webhooks. |
-| **Customer / Payer** | End user who scans the QR code and pays through a banking application. |
+| **Merchant** | Merchant that calls gateway APIs to create payments, request refunds, and receive webhooks. |
 | **Provider simulator** | Simulated payment provider that sends payment and refund result callbacks. |
 | **Scheduler / Timer** | External trigger for automatic webhook delivery and retry selection. |
 
