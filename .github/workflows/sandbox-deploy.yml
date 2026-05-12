@@ -1,0 +1,92 @@
+name: Sandbox Deploy
+
+on:
+  push:
+    branches:
+      - main
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: sandbox-deploy
+  cancel-in-progress: false
+
+jobs:
+  backend-tests:
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_DB: mini_payment_gateway
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U postgres -d mini_payment_gateway"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+    defaults:
+      run:
+        working-directory: backend
+    env:
+      APP_ENV: ci
+      DATABASE_URL: postgresql+psycopg2://postgres:postgres@127.0.0.1:5432/mini_payment_gateway
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+          cache-dependency-path: backend/pyproject.toml
+
+      - name: Install backend dependencies
+        run: |
+          python -m pip install --upgrade pip
+          python -m pip install -e .
+
+      - name: Apply migrations
+        run: python -m alembic upgrade head
+
+      - name: Run backend tests
+        run: python -m unittest discover tests -v
+
+  deploy-sandbox:
+    if: github.event_name == 'workflow_dispatch' || github.ref == 'refs/heads/main'
+    runs-on:
+      - self-hosted
+      - linux
+      - sandbox
+      - deploy
+    needs: backend-tests
+    environment: sandbox
+    steps:
+      - name: Deploy on sandbox host
+        shell: bash
+        env:
+          SANDBOX_APP_DIR: ${{ vars.SANDBOX_APP_DIR }}
+          SANDBOX_COMPOSE_FILE: ${{ vars.SANDBOX_COMPOSE_FILE }}
+          SANDBOX_HEALTH_URL: ${{ vars.SANDBOX_HEALTH_URL }}
+        run: |
+          set -euo pipefail
+
+          APP_DIR="${SANDBOX_APP_DIR:-/opt/mini-payment-gateway}"
+          COMPOSE_FILE="${SANDBOX_COMPOSE_FILE:-docker-compose.sandbox.yml}"
+          HEALTH_URL="${SANDBOX_HEALTH_URL:-http://127.0.0.1:8000/health}"
+
+          cd "$APP_DIR"
+          git fetch --prune origin main
+          git checkout main
+          git pull --ff-only origin main
+
+          APP_DIR="$APP_DIR" \
+          COMPOSE_FILE="$COMPOSE_FILE" \
+          HEALTH_URL="$HEALTH_URL" \
+          bash deploy/sandbox_deploy.sh
