@@ -12,6 +12,8 @@ point.
 - API contract: `../api/`
 - Operations: `../operations/`
 - Testing and scenarios: `../testing/`
+- Sandbox bootstrap: `../operations/sandbox-bootstrap.md`
+- Sandbox deployment: `../operations/sandbox-deployment.md`
 
 ## Phase Plans
 
