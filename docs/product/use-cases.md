@@ -25,6 +25,11 @@ depends on the Markdown viewer or IDE PlantUML plugin.
 
 # General Use Case
 
+This overview diagram shows the primary actor-to-use-case relationships plus
+only the few cross-use-case dependencies that are essential to the end-to-end
+lifecycle. More detailed dependencies are described in the specific use cases
+below.
+
 ```plantuml
 @startuml general_use_case
 left to right direction
@@ -50,20 +55,15 @@ Admin --> UC_Audit
 
 Merchant --> UC002
 Merchant --> UC004
-Merchant --> UC005 : receive webhook
+UC005 --> Merchant : deliver webhook
 
 Provider --> UC003
 Provider --> UC004 : refund result
 
 Scheduler --> UC005
 
-UC002 ..> UC003 : payment result
-UC003 ..> UC005 : payment webhook
-UC004 ..> UC005 : refund webhook
-UC001 ..> UC_Audit : audit trail
-UC003 ..> UC_Audit : reconciliation evidence
-UC004 ..> UC_Audit : reconciliation evidence
-UC005 ..> UC_Audit : delivery evidence
+UC003 ..> UC005 : notify payment result
+UC004 ..> UC005 : notify refund result
 @enduml
 ```
 
