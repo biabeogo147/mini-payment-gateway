@@ -177,6 +177,7 @@ python scripts/smoke_ops_reconciliation_api.py
 | --- | --- |
 | Run the project locally | [docs/getting-started/local-setup.md](docs/getting-started/local-setup.md) |
 | Demo the full MVP | [docs/getting-started/runbook.md](docs/getting-started/runbook.md) |
+| Bootstrap the internal sandbox host | [docs/operations/sandbox-bootstrap.md](docs/operations/sandbox-bootstrap.md) |
 | Understand backend design | [docs/architecture/backend.md](docs/architecture/backend.md) |
 | Review API contracts | [docs/api/README.md](docs/api/README.md) |
 | Understand scenarios and coverage | [docs/testing/README.md](docs/testing/README.md) |
