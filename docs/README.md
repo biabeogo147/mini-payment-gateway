@@ -14,6 +14,8 @@ historical phase files.
 
 - `operations/sandbox-bootstrap.md` - sandbox host preparation and manual
   bring-up record before CI/CD exists.
+- `operations/sandbox-deployment.md` - sandbox CI/CD runner and deployment
+  runbook.
 - `getting-started/runbook.md` - smoke scripts and full demo flow.
 - `operations/merchant-onboarding-sop.md` - merchant lifecycle workflow.
 - `operations/webhook-retry-sop.md` - failed webhook handling.
