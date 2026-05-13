@@ -45,3 +45,4 @@ point.
 - `completions/phase-07.md`
 - `completions/phase-08.md`
 - `completions/phase-09.md`
+- `completions/phase-10.md`

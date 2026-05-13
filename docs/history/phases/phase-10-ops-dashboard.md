@@ -19,8 +19,14 @@ Query, and a lightweight charting library for operational metrics.
 
 ## Implementation Status
 
-Planning only. Do not implement this phase until the user explicitly requests
-it.
+Completed. Phase 10 now ships the internal Ops dashboard, internal session
+auth, RBAC, read/search/stat APIs, and sandbox runtime integration for the
+dashboard container.
+
+First live application deployment for this phase was verified on May 13, 2026
+(Asia/Saigon) against sandbox host `192.168.1.199`. See
+`docs/history/completions/phase-10.md` for the rollout evidence, verification,
+and remaining notes.
 
 This plan assumes:
 
@@ -31,8 +37,9 @@ This plan assumes:
 - merchant-facing dashboard work will move to phase 11;
 - worker/scheduler automation will move to a later dedicated phase.
 
-Use the current repository checkout directly. Do not create a branch or worktree
-unless the user asks for one. Commit only when requested.
+This phase was implemented directly in the main repository checkout without a
+separate branch or worktree, matching the explicit operator instruction at the
+time of rollout.
 
 ## Scope
 

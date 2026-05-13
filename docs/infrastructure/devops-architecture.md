@@ -1,7 +1,7 @@
 # DevOps Architecture
 
 This document describes the current internal DevOps architecture for the
-mini-payment-gateway sandbox environment after phase 09.
+mini-payment-gateway sandbox environment after phase 10.
 
 Use this document when you need to understand:
 
@@ -18,7 +18,8 @@ Related documents:
 
 - `sandbox-setup-from-zero.md` - repeatable server setup from a fresh host
 - `sandbox-deployment.md` - deploy and recovery runbook
-- `docs/history/completions/phase-09.md` - rollout evidence
+- `docs/history/completions/phase-09.md` - phase 09 CI/CD rollout evidence
+- `docs/history/completions/phase-10.md` - Ops dashboard rollout evidence
 
 ## Architecture Summary
 
@@ -28,7 +29,10 @@ The current design uses a split pipeline:
 - A self-hosted GitHub Actions runner runs directly on the sandbox Ubuntu host.
 - The sandbox host pulls `main` itself and deploys locally with Docker Compose.
 - Database migrations run on-host before backend restart.
-- Deployment is accepted only if the local `/health` endpoint passes.
+- The sandbox runtime now includes both the FastAPI backend and the internal
+  Ops dashboard.
+- Deployment is accepted only if the local backend `/health` endpoint and the
+  Ops dashboard root both pass.
 
 The key architectural choice is **internal pull deployment**:
 
@@ -80,6 +84,7 @@ flowchart LR
         Compose["docker-compose.sandbox.yml"]
         DB["postgres container"]
         API["backend container"]
+        UI["ops-dashboard container\nnginx + static assets"]
         Env["/opt/mini-payment-gateway/.env"]
     end
 
@@ -93,6 +98,7 @@ flowchart LR
     Env --> Compose
     Compose --> DB
     Compose --> API
+    Compose --> UI
 ```
 
 ### Component Roles
@@ -107,6 +113,7 @@ flowchart LR
 | `/opt/mini-payment-gateway/.env` | Holds server-local runtime configuration and secrets |
 | `postgres` container | Sandbox database runtime |
 | `backend` container | FastAPI application runtime |
+| `ops-dashboard` container | Internal browser UI served by nginx and proxying `/api` to the backend |
 
 ## Trust Boundaries And Secret Flow
 
@@ -152,7 +159,9 @@ The deployment pipeline is intentionally short and linear:
 4. the self-hosted runner picks up the deploy job;
 5. the host fast-forwards its local checkout to `origin/main`;
 6. the host rebuilds and restarts the sandbox stack;
-7. the deploy is accepted only if `/health` succeeds.
+7. the deploy verifies backend health;
+8. the deploy verifies the internal Ops dashboard root;
+9. the deploy is accepted only if both checks succeed.
 
 ### Pipeline Diagram
 
@@ -165,6 +174,7 @@ sequenceDiagram
     participant Repo as /opt/mini-payment-gateway
     participant DC as Docker Compose
     participant API as backend /health
+    participant UI as ops dashboard /
 
     Dev->>GH: Push commit to main
     GH->>CI: Start backend-tests
@@ -174,17 +184,24 @@ sequenceDiagram
     else backend-tests passed
         GH->>SR: Queue deploy-sandbox
         SR->>Repo: git fetch + checkout main + pull --ff-only
-        SR->>DC: build backend
+        SR->>DC: build backend + ops-dashboard
         SR->>DC: up -d postgres
         SR->>DC: run alembic upgrade head
-        SR->>DC: up -d backend
+        SR->>DC: up -d backend + ops-dashboard
         SR->>API: GET /health
         alt health failed
             API-->>SR: non-200 or connection failure
             SR-->>GH: Job failed with logs
         else health passed
             API-->>SR: {"status":"ok"}
-            SR-->>GH: Job succeeded
+            SR->>UI: GET /
+            alt UI failed
+                UI-->>SR: non-200 or invalid response
+                SR-->>GH: Job failed with logs
+            else UI passed
+                UI-->>SR: HTML shell returned
+                SR-->>GH: Job succeeded
+            end
         end
     end
 ```
@@ -200,6 +217,8 @@ The sandbox host is both the deploy target and the self-hosted runner node.
   .env
   .env.sandbox.example
   docker-compose.sandbox.yml
+  apps/
+    ops-dashboard/
   deploy/
     sandbox_deploy.sh
   backend/
@@ -248,11 +267,12 @@ bash deploy/sandbox_deploy.sh
 The deploy script then performs:
 
 ```bash
-docker compose -f docker-compose.sandbox.yml build backend
+docker compose -f docker-compose.sandbox.yml build backend ops-dashboard
 docker compose -f docker-compose.sandbox.yml up -d postgres
 docker compose -f docker-compose.sandbox.yml run --rm backend python -m alembic upgrade head
-docker compose -f docker-compose.sandbox.yml up -d backend
+docker compose -f docker-compose.sandbox.yml up -d backend ops-dashboard
 curl -fsS http://127.0.0.1:8000/health
+curl -fsS http://127.0.0.1:4173/
 ```
 
 ### Why Build On Host
@@ -284,9 +304,9 @@ The pipeline has three important control points.
 ### Gate 3: Runtime Health Gate
 
 - even if image build and migrations succeed, deploy is still considered failed
-  until `/health` returns successfully.
-- On failure, the deploy script prints compose status and recent backend and
-  postgres logs.
+  until `/health` returns successfully and the Ops dashboard root responds.
+- On failure, the deploy script prints compose status and recent backend,
+  ops-dashboard, and postgres logs.
 
 ## Operational Model
 
@@ -324,6 +344,8 @@ docker compose -f docker-compose.sandbox.yml ps
 docker compose -f docker-compose.sandbox.yml logs --tail 100 backend
 docker compose -f docker-compose.sandbox.yml logs --tail 100 postgres
 curl -fsS http://127.0.0.1:8000/health
+curl -fsS http://127.0.0.1:4173/
+curl -fsS http://127.0.0.1:8000/v1/internal/auth/bootstrap-status
 ```
 
 ### Current Rollback Model

@@ -13,11 +13,11 @@ historical phase files.
 ## For Operators And Demo Runs
 
 - `infrastructure/devops-architecture.md` - internal DevOps topology and
-  pipeline design.
+  pipeline design for backend plus Ops dashboard runtime.
 - `infrastructure/sandbox-setup-from-zero.md` - detailed setup guide from a
   fresh server to a live sandbox CI/CD host.
 - `infrastructure/sandbox-deployment.md` - sandbox CI/CD runner and deployment
-  runbook.
+  runbook, including dashboard and internal-auth verification.
 - `getting-started/runbook.md` - smoke scripts and full demo flow.
 - `service-operations/merchant-onboarding-sop.md` - merchant lifecycle
   workflow.

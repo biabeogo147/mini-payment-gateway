@@ -16,6 +16,7 @@ Historical rollout evidence and one-time notes still live in:
 - `archive/sandbox-bootstrap.md`
 - `sandbox-deployment.md`
 - `docs/history/completions/phase-09.md`
+- `docs/history/completions/phase-10.md`
 
 ## What You Will End Up With
 
@@ -29,7 +30,10 @@ When this guide is complete, the server will have:
 - a registered GitHub self-hosted runner running as a systemd service;
 - a working CI/CD pipeline where GitHub tests first and then deploys to the
   sandbox host;
-- a healthy backend and postgres stack reachable locally on the host.
+- a healthy backend, postgres stack, and Ops dashboard reachable locally on the
+  host;
+- internal auth configuration ready so the first `ADMIN` user can be
+  bootstrapped from the browser.
 
 ## Setup Flow
 
@@ -57,11 +61,13 @@ This guide assumes:
 - you can SSH into the machine;
 - your SSH user has `sudo` access;
 - the server can reach GitHub over outbound HTTPS;
-- the repository already contains phase 09 files:
+- the repository already contains the phase 09 and phase 10 deploy/runtime
+  files:
   - `.github/workflows/sandbox-deploy.yml`
   - `deploy/sandbox_deploy.sh`
   - `docker-compose.sandbox.yml`
   - `.env.sandbox.example`
+  - `apps/ops-dashboard/`
 - you have GitHub access to register a self-hosted runner for the repository.
 
 ## Information You Need Before Starting
@@ -86,6 +92,12 @@ Minimum sandbox runtime values:
 - `APP_ENV`
 - `BACKEND_BIND_ADDR`
 - `BACKEND_PORT`
+- `INTERNAL_AUTH_SECRET`
+- `INTERNAL_AUTH_COOKIE_NAME`
+- `INTERNAL_AUTH_TTL_SECONDS`
+- `INTERNAL_AUTH_COOKIE_SECURE`
+- `OPS_DASHBOARD_BIND_ADDR`
+- `OPS_DASHBOARD_PORT`
 - optionally `POSTGRES_BIND_ADDR` and `POSTGRES_PORT`
 
 ## Step 0: Verify The Starting Conditions
@@ -285,12 +297,23 @@ POSTGRES_BIND_ADDR=127.0.0.1
 POSTGRES_PORT=5432
 BACKEND_BIND_ADDR=127.0.0.1
 BACKEND_PORT=8000
+INTERNAL_AUTH_SECRET=replace-with-a-long-random-secret
+INTERNAL_AUTH_COOKIE_NAME=mini_payment_gateway_internal_session
+INTERNAL_AUTH_TTL_SECONDS=43200
+INTERNAL_AUTH_COOKIE_SECURE=false
+OPS_DASHBOARD_BIND_ADDR=127.0.0.1
+OPS_DASHBOARD_PORT=4173
 ```
 
 ### Important Notes
 
 - Keep `DATABASE_URL` pointed at the Docker service host `postgres`, not
   `localhost`.
+- `INTERNAL_AUTH_SECRET` should be a long random value and must stay
+  server-only.
+- `INTERNAL_AUTH_COOKIE_SECURE=false` is acceptable for the current internal
+  sandbox because the dashboard is served on plain local HTTP. Revisit this if
+  TLS is introduced later.
 - Keep the real `.env` only on the server.
 - Do not commit `.env` to Git.
 
@@ -347,24 +370,30 @@ The script:
 
 1. checks for `git`, `docker`, and `curl`
 2. fast-forwards the local checkout to `origin/main`
-3. builds the backend image
+3. builds the backend and Ops dashboard images
 4. starts PostgreSQL
 5. runs Alembic migrations
-6. starts the backend
+6. starts the backend and Ops dashboard
 7. polls `/health`
+8. verifies the dashboard root returns HTML
 
 ### Verify
 
 ```bash
 sudo -u github-runner bash -lc 'cd /opt/mini-payment-gateway && docker compose -f docker-compose.sandbox.yml ps'
 curl -fsS http://127.0.0.1:8000/health
+curl -fsS http://127.0.0.1:4173/
+curl -fsS http://127.0.0.1:8000/v1/internal/auth/bootstrap-status
 ```
 
 Expected:
 
 - `postgres` is healthy
 - `backend` is up
+- `ops-dashboard` is up
 - health returns `{"status":"ok"}`
+- the dashboard root returns HTML
+- bootstrap status returns JSON such as `{"bootstrap_required":true}`
 
 ## Step 9: Install The GitHub Actions Runner
 
@@ -468,6 +497,7 @@ Recommended environment variables:
 | `SANDBOX_APP_DIR` | `/opt/mini-payment-gateway` |
 | `SANDBOX_COMPOSE_FILE` | `docker-compose.sandbox.yml` |
 | `SANDBOX_HEALTH_URL` | `http://127.0.0.1:8000/health` |
+| `SANDBOX_DASHBOARD_URL` | `http://127.0.0.1:4173/` |
 
 ### Important Note
 
@@ -500,6 +530,7 @@ Use one of these methods:
 3. the self-hosted runner picks up `deploy-sandbox`
 4. the host runs `deploy/sandbox_deploy.sh`
 5. `/health` passes
+6. the Ops dashboard root responds successfully
 
 ### Verify
 
@@ -514,6 +545,8 @@ On the server:
 sudo -u github-runner bash -lc 'cd /opt/mini-payment-gateway && git rev-parse --short HEAD'
 sudo -u github-runner bash -lc 'cd /opt/mini-payment-gateway && docker compose -f docker-compose.sandbox.yml ps'
 curl -fsS http://127.0.0.1:8000/health
+curl -fsS http://127.0.0.1:4173/
+curl -fsS http://127.0.0.1:8000/v1/internal/auth/bootstrap-status
 ```
 
 Expected:
@@ -521,14 +554,17 @@ Expected:
 - host checkout matches the deployed commit from `main`
 - `postgres` is healthy
 - `backend` is healthy or up
+- `ops-dashboard` is healthy or up
 - health returns `{"status":"ok"}`
+- the dashboard root returns HTML
+- bootstrap status responds successfully
 
 ## Step 12: Confirm The Host Matches The Architecture
 
 ### Why This Step Exists
 
-The goal is not just "app runs". The goal is "the server now matches the phase
-09 DevOps design".
+The goal is not just "app runs". The goal is "the server now matches the
+current sandbox DevOps design with internal auth and the Ops dashboard".
 
 ### Acceptance Checklist
 
@@ -544,6 +580,8 @@ You are done when all of these are true:
 - the runner service survives reboot
 - a full workflow deploy succeeds
 - `/health` returns `{"status":"ok"}`
+- the Ops dashboard is reachable on its configured local port
+- `/v1/internal/auth/bootstrap-status` responds successfully
 
 At that point, the host should match the model documented in
 `devops-architecture.md`.
@@ -579,6 +617,7 @@ Inspect:
 sudo -u github-runner bash -lc 'cd /opt/mini-payment-gateway && docker compose -f docker-compose.sandbox.yml ps'
 sudo -u github-runner bash -lc 'cd /opt/mini-payment-gateway && docker compose -f docker-compose.sandbox.yml logs --tail 100 backend'
 sudo -u github-runner bash -lc 'cd /opt/mini-payment-gateway && docker compose -f docker-compose.sandbox.yml logs --tail 100 postgres'
+sudo -u github-runner bash -lc 'cd /opt/mini-payment-gateway && docker compose -f docker-compose.sandbox.yml logs --tail 100 ops-dashboard'
 ```
 
 ### Runner Service Fails

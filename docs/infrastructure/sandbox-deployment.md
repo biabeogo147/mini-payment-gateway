@@ -20,7 +20,11 @@ bootstrap.
 
 ## Current Live Context
 
-Current verified live state as of May 13, 2026 (Asia/Saigon):
+Phase 10 rollout was verified on May 13, 2026 (Asia/Saigon). Use the commands
+in this runbook to confirm the current live SHA instead of relying on this
+document for the latest host revision.
+
+Known-good deployment context for the phase 10 rollout:
 
 - Host: `192.168.1.199` (`ubuntu24`)
 - App checkout: `/opt/mini-payment-gateway`
@@ -28,12 +32,12 @@ Current verified live state as of May 13, 2026 (Asia/Saigon):
 - Runner labels: `self-hosted`, `linux`, `sandbox`, `deploy`
 - Runner service:
   `actions.runner.biabeogo147-mini-payment-gateway.sandbox-runner-01.service`
-- Latest verified successful workflow run:
-  [Sandbox Deploy #25753873664](https://github.com/biabeogo147/mini-payment-gateway/actions/runs/25753873664)
-- Successful backend test job id: `75637063276`
-- Successful deploy job id: `75637179632`
-- Verified deployed commit on host: `0e95aa7`
-- Verified health result: `{"status":"ok"}`
+- First verified phase 10 application deploy commit: `6d0b0bc`
+- Verified backend health result: `{"status":"ok"}`
+- Verified Ops dashboard root response: HTML shell served on
+  `http://127.0.0.1:4173/`
+- Verified internal auth bootstrap status:
+  `{"bootstrap_required":true}`
 
 ## Operational Invariants
 
@@ -46,7 +50,8 @@ These points should stay true during normal operations:
 - The app checkout path is `/opt/mini-payment-gateway`.
 - Runtime configuration is loaded from `/opt/mini-payment-gateway/.env`.
 - Runtime orchestration uses `docker-compose.sandbox.yml`.
-- A deploy is only considered successful if `/health` passes.
+- A deploy is only considered successful if backend `/health` and the Ops
+  dashboard root both pass.
 
 If one of these assumptions changes, update this runbook and
 `devops-architecture.md` together.
@@ -191,13 +196,14 @@ sudo -u github-runner bash -lc 'cd /opt/mini-payment-gateway && docker compose -
 Success means:
 
 - `postgres` is `Up` and healthy;
-- `backend` is `Up` and preferably healthy.
+- `backend` is `Up` and healthy;
+- `ops-dashboard` is `Up` and healthy.
 
-### Step 7: Verify Application Health
+### Step 7: Verify Backend Health
 
 Why:
 
-- this is the final application-level acceptance check.
+- this is the primary application-level acceptance check.
 
 Command:
 
@@ -208,6 +214,24 @@ curl -fsS http://127.0.0.1:8000/health
 Success means:
 
 - the endpoint returns `{"status":"ok"}` and exits successfully.
+
+### Step 8: Verify Ops Dashboard Reachability
+
+Why:
+
+- the deploy now includes a separate internal UI container and proxy layer.
+
+Command:
+
+```bash
+curl -fsS http://127.0.0.1:4173/
+curl -fsS http://127.0.0.1:8000/v1/internal/auth/bootstrap-status
+```
+
+Success means:
+
+- the dashboard root returns HTML successfully;
+- the auth bootstrap-status route responds successfully through the backend.
 
 ## Manual Recovery Deploy Procedure
 
@@ -251,11 +275,14 @@ Run:
 sudo -u github-runner bash -lc 'cd /opt/mini-payment-gateway && git rev-parse --short HEAD'
 sudo -u github-runner bash -lc 'cd /opt/mini-payment-gateway && docker compose -f docker-compose.sandbox.yml ps'
 curl -fsS http://127.0.0.1:8000/health
+curl -fsS http://127.0.0.1:4173/
+curl -fsS http://127.0.0.1:8000/v1/internal/auth/bootstrap-status
 ```
 
 Success means:
 
-- commit, container state, and health all match the expected deploy target.
+- commit, container state, backend health, and dashboard reachability all match
+  the expected deploy target.
 
 ## Post-Deploy Verification Checklist
 
@@ -271,10 +298,13 @@ After every deploy, verify all three layers:
 - app checkout on host is the expected commit
 - `postgres` is healthy
 - `backend` is up
+- `ops-dashboard` is up
 
 ### Layer 3: Application
 
 - `GET /health` returns `{"status":"ok"}`
+- `GET /` on port `4173` returns the dashboard HTML shell
+- `GET /v1/internal/auth/bootstrap-status` responds successfully
 
 A deploy should not be treated as complete until all three layers are true.
 

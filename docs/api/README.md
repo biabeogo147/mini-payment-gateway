@@ -18,7 +18,8 @@ explicitly changes the behavior.
 - Provider callback endpoints are accepted from the bank/provider/simulator side.
   For the MVP simulator, transport trust can be environment-local until provider
   signing is introduced.
-- Ops endpoints are internal-only and are not part of the merchant-facing API.
+- Ops endpoints are internal-only, authenticated with internal session cookies
+  in phase 10, and are not part of the merchant-facing API.
 
 ## Versioning
 
