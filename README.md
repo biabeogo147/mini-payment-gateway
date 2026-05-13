@@ -117,6 +117,22 @@ backend/app/
 
 Read more in [docs/architecture/backend.md](docs/architecture/backend.md).
 
+## Frontend Workspace
+
+Phase 10 preparation adds a frontend workspace scaffold for the internal Ops
+dashboard at `apps/ops-dashboard/`.
+
+Use it like this once you are ready to start the dashboard implementation:
+
+```bash
+npm install
+npm run ops-dashboard:dev
+```
+
+This scaffold is intentionally route-first only. Internal auth, RBAC, API
+integration, tables, filters, and live charts still belong to phase 10
+implementation work.
+
 ## Quick Start
 
 Prerequisites:

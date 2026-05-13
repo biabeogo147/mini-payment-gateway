@@ -29,6 +29,9 @@ point.
 - `phases/phase-07-reconciliation-and-ops-audit.md`
 - `phases/phase-08-readiness-docs-and-e2e.md`
 - `phases/phase-09-sandbox-cicd.md`
+- `phases/phase-10-ops-dashboard.md`
+- `phases/phase-11-merchant-dashboard.md`
+- `phases/phase-12-worker-scheduler.md`
 
 ## Completion Records
 

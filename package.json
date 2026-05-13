@@ -1,0 +1,14 @@
+{
+  "name": "mini-payment-gateway",
+  "private": true,
+  "packageManager": "npm@10.9.2",
+  "workspaces": [
+    "apps/*"
+  ],
+  "scripts": {
+    "ops-dashboard:dev": "npm --workspace @mini-payment-gateway/ops-dashboard run dev",
+    "ops-dashboard:build": "npm --workspace @mini-payment-gateway/ops-dashboard run build",
+    "ops-dashboard:typecheck": "npm --workspace @mini-payment-gateway/ops-dashboard run typecheck",
+    "ops-dashboard:preview": "npm --workspace @mini-payment-gateway/ops-dashboard run preview"
+  }
+}
