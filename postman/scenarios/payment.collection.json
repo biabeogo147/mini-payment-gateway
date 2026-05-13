@@ -1,0 +1,954 @@
+{
+  "info": {
+    "_postman_id": "81b50200-19cf-4022-923e-d1cbaa248ffd",
+    "name": "Mini Payment Gateway - Payment Scenarios",
+    "description": "Companion for docs/testing/scenarios/payment.md.",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "event": [
+    {
+      "listen": "prerequest",
+      "script": {
+        "type": "text/javascript",
+        "exec": [
+          "function suffix() {",
+          "  return Math.random().toString(16).slice(2, 10);",
+          "}",
+          "",
+          "function ensure(name, value) {",
+          "  if (!pm.environment.get(name)) {",
+          "    pm.environment.set(name, value);",
+          "  }",
+          "}",
+          "",
+          "ensure('baseUrl', 'http://127.0.0.1:8000');",
+          "ensure('merchant_id', `m_pm_${suffix()}`);",
+          "ensure('merchant_name', 'QA Demo Merchant');",
+          "ensure('legal_name', 'QA Demo Merchant LLC');",
+          "ensure('contact_name', 'QA Ops');",
+          "ensure('contact_email', `qa_${suffix()}@example.com`);",
+          "ensure('contact_phone', '+84000000000');",
+          "ensure('webhook_url', 'https://example.com/webhooks/payment-gateway');",
+          "ensure('settlement_account_name', 'QA Demo Merchant LLC');",
+          "ensure('settlement_account_number', '123456789');",
+          "ensure('settlement_bank_code', 'DEMO');",
+          "ensure('access_key', `ak_pm_${suffix()}`);",
+          "ensure('merchant_secret', `pm-secret-${suffix()}-${suffix()}`);",
+          "ensure('rotated_access_key', `ak_rotated_${suffix()}`);",
+          "ensure('rotated_merchant_secret', `pm-rotated-secret-${suffix()}-${suffix()}`);",
+          "ensure('order_id', `ORDER-PM-${Date.now()}`);",
+          "ensure('refund_id', `REF-PM-${Date.now()}`);",
+          "ensure('reconciliation_order_id', `ORDER-REC-${Date.now()}`);",
+          "ensure('payment_amount', '12345.00');",
+          "ensure('payment_description', 'QA Postman payment');",
+          "ensure('payment_ttl_seconds', '900');",
+          "ensure('refund_amount', pm.environment.get('payment_amount') || '12345.00');",
+          "ensure('refund_reason', 'QA Postman refund');",
+          "ensure('reconciliation_mismatch_amount', '99999.00');",
+          "ensure('provider_source_type', 'SIMULATOR');",
+          "ensure('ops_reason', 'QA via Postman');",
+          "ensure('lock_idempotency_key', 'false');",
+          "",
+          "pm.environment.set('now_iso', new Date().toISOString());",
+          "",
+          "if (pm.environment.get('lock_idempotency_key') !== 'true') {",
+          "  pm.environment.set('idempotency_key', `idem-${Date.now()}-${suffix()}`);",
+          "}",
+          "",
+          "const path = '/' + pm.variables.replaceIn(pm.request.url.getPath()).replace(/^\\/+/, '');",
+          "const requiresMerchantAuth = path.startsWith('/v1/payments') || path.startsWith('/v1/refunds');",
+          "",
+          "if (requiresMerchantAuth) {",
+          "  const method = pm.request.method.toUpperCase();",
+          "  const timestamp = new Date().toISOString();",
+          "  let rawBody = '';",
+          "  if (pm.request.body && pm.request.body.mode === 'raw') {",
+          "    rawBody = pm.variables.replaceIn(pm.request.body.raw || '');",
+          "  }",
+          "  const bodyHash = CryptoJS.SHA256(CryptoJS.enc.Utf8.parse(rawBody)).toString(CryptoJS.enc.Hex);",
+          "  const signingString = `${timestamp}.${method}.${path}.${bodyHash}`;",
+          "  const secret = pm.environment.get('merchant_secret') || '';",
+          "  const signature = CryptoJS.HmacSHA256(signingString, secret).toString(CryptoJS.enc.Hex);",
+          "",
+          "  pm.environment.set('merchant_timestamp', timestamp);",
+          "  pm.environment.set('merchant_body_sha256_hex', bodyHash);",
+          "  pm.environment.set('merchant_signing_string', signingString);",
+          "  pm.environment.set('merchant_signature', signature);",
+          "",
+          "  pm.request.headers.upsert({ key: 'X-Merchant-Id', value: pm.environment.get('merchant_id') || '' });",
+          "  pm.request.headers.upsert({ key: 'X-Access-Key', value: pm.environment.get('access_key') || '' });",
+          "  pm.request.headers.upsert({ key: 'X-Timestamp', value: timestamp });",
+          "  pm.request.headers.upsert({ key: 'X-Signature', value: signature });",
+          "  pm.request.headers.upsert({ key: 'X-Idempotency-Key', value: pm.environment.get('idempotency_key') || '' });",
+          "}"
+        ]
+      }
+    }
+  ],
+  "item": [
+    {
+      "name": "Health",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('Health returns 200', function () { pm.response.to.have.status(200); });",
+              "const data = pm.response.json();",
+              "pm.test('Health body is ok', function () { pm.expect(data.status).to.eql('ok'); });"
+            ]
+          }
+        }
+      ],
+      "request": {
+        "method": "GET",
+        "description": "Basic service liveness check.",
+        "url": "{{baseUrl}}/health"
+      }
+    },
+    {
+      "name": "Setup Active Merchant",
+      "item": [
+        {
+          "name": "Create Merchant",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Create merchant returns 200', function () { pm.response.to.have.status(200); });",
+                  "const data = pm.response.json();",
+                  "if (data.merchant_id) { pm.environment.set('merchant_id', data.merchant_id); }"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "description": "Scenario ONB-01. Creates a merchant in PENDING_REVIEW state.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\"actor\":{\"actor_type\":\"OPS\",\"actor_id\":null,\"reason\":\"{{ops_reason}}\"},\"merchant_id\":\"{{merchant_id}}\",\"merchant_name\":\"{{merchant_name}}\",\"legal_name\":\"{{legal_name}}\",\"contact_name\":\"{{contact_name}}\",\"contact_email\":\"{{contact_email}}\",\"contact_phone\":\"{{contact_phone}}\",\"webhook_url\":\"{{webhook_url}}\",\"settlement_account_name\":\"{{settlement_account_name}}\",\"settlement_account_number\":\"{{settlement_account_number}}\",\"settlement_bank_code\":\"{{settlement_bank_code}}\"}"
+            },
+            "url": "{{baseUrl}}/v1/ops/merchants"
+          }
+        },
+        {
+          "name": "Submit Onboarding Case",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Submit onboarding returns 200', function () { pm.response.to.have.status(200); });"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "description": "Scenario ONB-02. Creates or updates the merchant onboarding case.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\"actor\":{\"actor_type\":\"OPS\",\"actor_id\":null,\"reason\":\"{{ops_reason}}\"},\"domain_or_app_name\":\"QA Demo Shop\",\"submitted_profile_json\":{\"business_type\":\"online_shop\"},\"documents_json\":{\"business_license\":\"qa-license.pdf\"},\"review_checks_json\":{\"risk_level\":\"LOW\"}}"
+            },
+            "url": "{{baseUrl}}/v1/ops/merchants/{{merchant_id}}/onboarding-case"
+          }
+        },
+        {
+          "name": "Approve Onboarding Case",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Approve onboarding returns 200', function () { pm.response.to.have.status(200); });"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "description": "Scenario ONB-03. Approves the current onboarding case.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\"actor\":{\"actor_type\":\"OPS\",\"actor_id\":null,\"reason\":\"{{ops_reason}}\"},\"reviewed_by\":null,\"decision_note\":\"Approved via Postman QA flow.\"}"
+            },
+            "url": "{{baseUrl}}/v1/ops/merchants/{{merchant_id}}/onboarding-case/approve"
+          }
+        },
+        {
+          "name": "Create Credential",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Create credential returns 200', function () { pm.response.to.have.status(200); });",
+                  "const data = pm.response.json();",
+                  "if (data.access_key) { pm.environment.set('access_key', data.access_key); }"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "description": "Creates the first active merchant credential. The secret is taken from the environment variable merchant_secret.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\"actor\":{\"actor_type\":\"OPS\",\"actor_id\":null,\"reason\":\"{{ops_reason}}\"},\"access_key\":\"{{access_key}}\",\"secret_key\":\"{{merchant_secret}}\"}"
+            },
+            "url": "{{baseUrl}}/v1/ops/merchants/{{merchant_id}}/credentials"
+          }
+        },
+        {
+          "name": "Activate Merchant",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Activate merchant returns 200', function () { pm.response.to.have.status(200); });"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "description": "Activates the approved merchant after a credential exists.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\"actor\":{\"actor_type\":\"OPS\",\"actor_id\":null,\"reason\":\"{{ops_reason}}\"}}"
+            },
+            "url": "{{baseUrl}}/v1/ops/merchants/{{merchant_id}}/activate"
+          }
+        }
+      ]
+    },
+    {
+      "name": "PAY-01 PAY-02 PAY-03 Core Payment Flow",
+      "item": [
+        {
+          "name": "Create Payment",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Create payment returns 200', function () { pm.response.to.have.status(200); });",
+                  "const data = pm.response.json();",
+                  "if (data.transaction_id) { pm.environment.set('payment_transaction_id', data.transaction_id); }",
+                  "if (data.order_id) { pm.environment.set('order_id', data.order_id); }"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "description": "Scenario PAY-01. Creates a merchant-authenticated payment request. Merchant HMAC headers are added automatically.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\"order_id\":\"{{order_id}}\",\"amount\":\"{{payment_amount}}\",\"description\":\"{{payment_description}}\",\"ttl_seconds\":{{payment_ttl_seconds}},\"metadata\":{\"customer_ref\":\"CUST-POSTMAN-1\"}}"
+            },
+            "url": "{{baseUrl}}/v1/payments"
+          }
+        },
+        {
+          "name": "Get Payment By Transaction",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Get payment by transaction returns 200', function () { pm.response.to.have.status(200); });"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "description": "Scenario PAY-02. Reads the latest payment by transaction id.",
+            "url": "{{baseUrl}}/v1/payments/{{payment_transaction_id}}"
+          }
+        },
+        {
+          "name": "Get Payment By Order",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Get payment by order returns 200', function () { pm.response.to.have.status(200); });"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "description": "Scenario PAY-03. Reads the latest payment attempt by order id.",
+            "url": "{{baseUrl}}/v1/payments/by-order/{{order_id}}"
+          }
+        }
+      ]
+    },
+    {
+      "name": "PAY-04 PAY-05 Duplicate Pending Paths",
+      "item": [
+        {
+          "name": "PAY-04 Duplicate Pending Payment With Identical Request",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Create payment returns 200', function () { pm.response.to.have.status(200); });",
+                  "const data = pm.response.json();",
+                  "if (data.transaction_id) { pm.environment.set('payment_transaction_id', data.transaction_id); }",
+                  "if (data.order_id) { pm.environment.set('order_id', data.order_id); }"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "description": "Scenario PAY-01. Creates a merchant-authenticated payment request. Merchant HMAC headers are added automatically.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\"order_id\":\"{{order_id}}\",\"amount\":\"{{payment_amount}}\",\"description\":\"{{payment_description}}\",\"ttl_seconds\":{{payment_ttl_seconds}},\"metadata\":{\"customer_ref\":\"CUST-POSTMAN-1\"}}"
+            },
+            "url": "{{baseUrl}}/v1/payments"
+          }
+        },
+        {
+          "name": "PAY-05 Duplicate Pending Payment With Different Amount",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status is 409', function () { pm.response.to.have.status(409); });",
+                  "const data = pm.response.json();",
+                  "pm.test('Error code is PAYMENT_PENDING_EXISTS', function () { pm.expect(data.error_code).to.eql('PAYMENT_PENDING_EXISTS'); });"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "description": "Scenario PAY-01. Creates a merchant-authenticated payment request. Merchant HMAC headers are added automatically.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\"order_id\": \"{{order_id}}\", \"amount\": \"99999.00\", \"description\": \"{{payment_description}}\", \"ttl_seconds\": \"{{payment_ttl_seconds}}\", \"metadata\": {\"customer_ref\": \"CUST-1\"}}"
+            },
+            "url": "{{baseUrl}}/v1/payments"
+          }
+        }
+      ]
+    },
+    {
+      "name": "PAY-06 Previous Failed Payment Allows New Attempt",
+      "item": [
+        {
+          "name": "PAY-06 Create Payment For Failed Retry",
+          "request": {
+            "method": "POST",
+            "description": "PAY-06 setup.",
+            "url": "{{baseUrl}}/v1/payments",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\"order_id\": \"{{order_id}}\", \"amount\": \"{{payment_amount}}\", \"description\": \"{{payment_description}}\", \"ttl_seconds\": \"{{payment_ttl_seconds}}\", \"metadata\": {\"customer_ref\": \"CUST-1\"}}"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Payment create returns 200', function () { pm.response.to.have.status(200); });",
+                  "const data = pm.response.json();",
+                  "if (data.transaction_id) { pm.environment.set('payment_transaction_id', data.transaction_id); }",
+                  "if (data.order_id) { pm.environment.set('order_id', data.order_id); }"
+                ]
+              }
+            },
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.environment.set('order_id', `ORDER-PAY-FAIL-${Date.now()}`);"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "PAY-06 Provider Callback Failed",
+          "request": {
+            "method": "POST",
+            "description": "PAY-06 setup. Moves the payment to FAILED.",
+            "url": "{{baseUrl}}/v1/provider/callbacks/payment",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\"external_reference\": \"bank-fail-{{now_iso}}\", \"transaction_reference\": \"{{payment_transaction_id}}\", \"status\": \"FAILED\", \"amount\": \"{{payment_amount}}\", \"failed_reason_code\": \"BANK_DECLINED\", \"failed_reason_message\": \"Simulated bank decline\", \"raw_payload\": {\"provider\": \"SIMULATOR\", \"trace_id\": \"trace-fail-{{now_iso}}\"}, \"source_type\": \"{{provider_source_type}}\"}"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Failed callback returns 200', function () { pm.response.to.have.status(200); });",
+                  "const data = pm.response.json();",
+                  "pm.test('Payment is failed', function () { pm.expect(data.status).to.eql('FAILED'); });"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "PAY-06 Retry Same Order After Failed Payment",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Create payment returns 200', function () { pm.response.to.have.status(200); });",
+                  "const data = pm.response.json();",
+                  "if (data.transaction_id) { pm.environment.set('payment_transaction_id', data.transaction_id); }",
+                  "if (data.order_id) { pm.environment.set('order_id', data.order_id); }"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "description": "Scenario PAY-01. Creates a merchant-authenticated payment request. Merchant HMAC headers are added automatically.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\"order_id\":\"{{order_id}}\",\"amount\":\"{{payment_amount}}\",\"description\":\"{{payment_description}}\",\"ttl_seconds\":{{payment_ttl_seconds}},\"metadata\":{\"customer_ref\":\"CUST-POSTMAN-1\"}}"
+            },
+            "url": "{{baseUrl}}/v1/payments"
+          }
+        }
+      ]
+    },
+    {
+      "name": "PAY-07 Previous Expired Payment Allows New Attempt",
+      "item": [
+        {
+          "name": "PAY-07 Create Short-TTL Payment",
+          "request": {
+            "method": "POST",
+            "description": "PAY-07 setup.",
+            "url": "{{baseUrl}}/v1/payments",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\"order_id\": \"{{order_id}}\", \"amount\": \"{{payment_amount}}\", \"description\": \"{{payment_description}}\", \"ttl_seconds\": \"1\", \"metadata\": {\"customer_ref\": \"CUST-1\"}}"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Payment create returns 200', function () { pm.response.to.have.status(200); });",
+                  "const data = pm.response.json();",
+                  "if (data.transaction_id) { pm.environment.set('payment_transaction_id', data.transaction_id); }",
+                  "if (data.order_id) { pm.environment.set('order_id', data.order_id); }"
+                ]
+              }
+            },
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.environment.set('order_id', `ORDER-PAY-EXP-${Date.now()}`);"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "PAY-07 Retry Same Order After Expiration (Template)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Create payment returns 200', function () { pm.response.to.have.status(200); });",
+                  "const data = pm.response.json();",
+                  "if (data.transaction_id) { pm.environment.set('payment_transaction_id', data.transaction_id); }",
+                  "if (data.order_id) { pm.environment.set('order_id', data.order_id); }"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "description": "PAY-07 template. Run only after the payment has been expired by the internal worker.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\"order_id\":\"{{order_id}}\",\"amount\":\"{{payment_amount}}\",\"description\":\"{{payment_description}}\",\"ttl_seconds\":{{payment_ttl_seconds}},\"metadata\":{\"customer_ref\":\"CUST-POSTMAN-1\"}}"
+            },
+            "url": "{{baseUrl}}/v1/payments"
+          }
+        }
+      ]
+    },
+    {
+      "name": "PAY-08 Previous Successful Payment Rejects New Attempt",
+      "item": [
+        {
+          "name": "PAY-08 Create Payment For Success Lock",
+          "request": {
+            "method": "POST",
+            "description": "PAY-08 setup.",
+            "url": "{{baseUrl}}/v1/payments",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\"order_id\": \"{{order_id}}\", \"amount\": \"{{payment_amount}}\", \"description\": \"{{payment_description}}\", \"ttl_seconds\": \"{{payment_ttl_seconds}}\", \"metadata\": {\"customer_ref\": \"CUST-1\"}}"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Payment create returns 200', function () { pm.response.to.have.status(200); });",
+                  "const data = pm.response.json();",
+                  "if (data.transaction_id) { pm.environment.set('payment_transaction_id', data.transaction_id); }",
+                  "if (data.order_id) { pm.environment.set('order_id', data.order_id); }"
+                ]
+              }
+            },
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.environment.set('order_id', `ORDER-PAY-SUCCESS-${Date.now()}`);"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "PAY-08 Provider Callback Success",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Payment callback success returns 200', function () { pm.response.to.have.status(200); });"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "description": "Scenario CB-01. Simulates a successful provider payment callback for the current payment_transaction_id.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\"external_reference\":\"bank-{{payment_transaction_id}}\",\"transaction_reference\":\"{{payment_transaction_id}}\",\"status\":\"SUCCESS\",\"amount\":\"{{payment_amount}}\",\"paid_at\":\"{{now_iso}}\",\"source_type\":\"{{provider_source_type}}\",\"raw_payload\":{\"provider_status\":\"00\",\"trace_id\":\"trace-{{payment_transaction_id}}\"}}"
+            },
+            "url": "{{baseUrl}}/v1/provider/callbacks/payment"
+          }
+        },
+        {
+          "name": "PAY-08 Retry Same Order After Success",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status is 409', function () { pm.response.to.have.status(409); });",
+                  "const data = pm.response.json();",
+                  "pm.test('Error code is PAYMENT_ALREADY_SUCCESS', function () { pm.expect(data.error_code).to.eql('PAYMENT_ALREADY_SUCCESS'); });"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "description": "Scenario PAY-01. Creates a merchant-authenticated payment request. Merchant HMAC headers are added automatically.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\"order_id\":\"{{order_id}}\",\"amount\":\"{{payment_amount}}\",\"description\":\"{{payment_description}}\",\"ttl_seconds\":{{payment_ttl_seconds}},\"metadata\":{\"customer_ref\":\"CUST-POSTMAN-1\"}}"
+            },
+            "url": "{{baseUrl}}/v1/payments"
+          }
+        }
+      ]
+    },
+    {
+      "name": "PAY-09 Query Another Merchant Payment And PAY-10 Non-Active Merchant",
+      "item": [
+        {
+          "name": "Create Second Merchant For PAY-09/PAY-10",
+          "request": {
+            "method": "POST",
+            "description": "Setup second merchant.",
+            "url": "{{baseUrl}}/v1/ops/merchants",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\"actor\": {\"actor_type\": \"OPS\", \"actor_id\": null, \"reason\": \"{{ops_reason}}\"}, \"merchant_id\": \"{{other_merchant_id}}\", \"merchant_name\": \"QA Other Merchant\", \"legal_name\": \"QA Other Merchant LLC\", \"contact_name\": \"QA Other Ops\", \"contact_email\": \"other_{{now_iso}}@example.com\", \"contact_phone\": \"+84000000001\", \"webhook_url\": \"{{webhook_url}}\", \"settlement_account_name\": \"QA Other Merchant LLC\", \"settlement_account_number\": \"987654321\", \"settlement_bank_code\": \"DEMO\"}"
+            }
+          },
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "if (!pm.environment.get('other_merchant_id')) { pm.environment.set('other_merchant_id', `m_other_${Date.now()}`); }",
+                  "if (!pm.environment.get('other_access_key')) { pm.environment.set('other_access_key', `ak_other_${Date.now()}`); }",
+                  "if (!pm.environment.get('other_merchant_secret')) { pm.environment.set('other_merchant_secret', `other-secret-${Date.now()}`); }"
+                ]
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Second merchant created', function () { pm.response.to.have.status(200); });"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Submit Second Merchant Onboarding",
+          "request": {
+            "method": "PUT",
+            "description": "Submit second merchant onboarding.",
+            "url": "{{baseUrl}}/v1/ops/merchants/{{other_merchant_id}}/onboarding-case",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\"actor\": {\"actor_type\": \"OPS\", \"actor_id\": null, \"reason\": \"{{ops_reason}}\"}, \"domain_or_app_name\": \"Other Demo Shop\", \"submitted_profile_json\": {\"business_type\": \"online_shop\"}, \"documents_json\": {\"business_license\": \"other-license.pdf\"}, \"review_checks_json\": {\"risk_level\": \"LOW\"}}"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Second onboarding submitted', function () { pm.response.to.have.status(200); });"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Approve Second Merchant Onboarding",
+          "request": {
+            "method": "POST",
+            "description": "Approve second merchant onboarding.",
+            "url": "{{baseUrl}}/v1/ops/merchants/{{other_merchant_id}}/onboarding-case/approve",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\"actor\": {\"actor_type\": \"OPS\", \"actor_id\": null, \"reason\": \"{{ops_reason}}\"}, \"reviewed_by\": null, \"decision_note\": \"Approved for cross-merchant query scenario.\"}"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Second onboarding approved', function () { pm.response.to.have.status(200); });"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Create Second Merchant Credential",
+          "request": {
+            "method": "POST",
+            "description": "Create second merchant credential.",
+            "url": "{{baseUrl}}/v1/ops/merchants/{{other_merchant_id}}/credentials",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\"actor\": {\"actor_type\": \"OPS\", \"actor_id\": null, \"reason\": \"{{ops_reason}}\"}, \"access_key\": \"{{other_access_key}}\", \"secret_key\": \"{{other_merchant_secret}}\"}"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Second credential created', function () { pm.response.to.have.status(200); });"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "PAY-10 Pending Second Merchant Cannot Create Payment",
+          "request": {
+            "method": "POST",
+            "description": "PAY-10.",
+            "url": "{{baseUrl}}/v1/payments",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\"order_id\": \"ORDER-PAY-BLOCK-{{now_iso}}\", \"amount\": \"{{payment_amount}}\", \"description\": \"{{payment_description}}\", \"ttl_seconds\": \"{{payment_ttl_seconds}}\", \"metadata\": {\"customer_ref\": \"CUST-1\"}}"
+            }
+          },
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const path = '/' + pm.variables.replaceIn(pm.request.url.getPath()).replace(/^\\/+/, '');",
+                  "const method = pm.request.method.toUpperCase();",
+                  "let rawBody = '';",
+                  "if (pm.request.body && pm.request.body.mode === 'raw') { rawBody = pm.variables.replaceIn(pm.request.body.raw || ''); }",
+                  "const bodyHash = CryptoJS.SHA256(CryptoJS.enc.Utf8.parse(rawBody)).toString(CryptoJS.enc.Hex);",
+                  "const timestamp = new Date().toISOString();",
+                  "const signingString = `${timestamp}.${method}.${path}.${bodyHash}`;",
+                  "const signature = CryptoJS.HmacSHA256(signingString, pm.environment.get('other_merchant_secret') || '').toString(CryptoJS.enc.Hex);",
+                  "pm.request.headers.upsert({ key: 'X-Merchant-Id', value: pm.environment.get('other_merchant_id') || '' });",
+                  "pm.request.headers.upsert({ key: 'X-Access-Key', value: pm.environment.get('other_access_key') || '' });",
+                  "pm.request.headers.upsert({ key: 'X-Timestamp', value: timestamp });",
+                  "pm.request.headers.upsert({ key: 'X-Signature', value: signature });"
+                ]
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status is 403', function () { pm.response.to.have.status(403); });",
+                  "const data = pm.response.json();",
+                  "pm.test('Error code is MERCHANT_NOT_ACTIVE', function () { pm.expect(data.error_code).to.eql('MERCHANT_NOT_ACTIVE'); });"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Activate Second Merchant",
+          "request": {
+            "method": "POST",
+            "description": "Activate second merchant.",
+            "url": "{{baseUrl}}/v1/ops/merchants/{{other_merchant_id}}/activate",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\"actor\": {\"actor_type\": \"OPS\", \"actor_id\": null, \"reason\": \"{{ops_reason}}\"}}"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Second merchant activated', function () { pm.response.to.have.status(200); });"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "PAY-09 Query First Merchant Payment As Second Merchant",
+          "request": {
+            "method": "GET",
+            "description": "PAY-09.",
+            "url": "{{baseUrl}}/v1/payments/{{payment_transaction_id}}"
+          },
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const path = '/' + pm.variables.replaceIn(pm.request.url.getPath()).replace(/^\\/+/, '');",
+                  "const method = pm.request.method.toUpperCase();",
+                  "let rawBody = '';",
+                  "if (pm.request.body && pm.request.body.mode === 'raw') { rawBody = pm.variables.replaceIn(pm.request.body.raw || ''); }",
+                  "const bodyHash = CryptoJS.SHA256(CryptoJS.enc.Utf8.parse(rawBody)).toString(CryptoJS.enc.Hex);",
+                  "const timestamp = new Date().toISOString();",
+                  "const signingString = `${timestamp}.${method}.${path}.${bodyHash}`;",
+                  "const signature = CryptoJS.HmacSHA256(signingString, pm.environment.get('other_merchant_secret') || '').toString(CryptoJS.enc.Hex);",
+                  "pm.request.headers.upsert({ key: 'X-Merchant-Id', value: pm.environment.get('other_merchant_id') || '' });",
+                  "pm.request.headers.upsert({ key: 'X-Access-Key', value: pm.environment.get('other_access_key') || '' });",
+                  "pm.request.headers.upsert({ key: 'X-Timestamp', value: timestamp });",
+                  "pm.request.headers.upsert({ key: 'X-Signature', value: signature });"
+                ]
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status is 404', function () { pm.response.to.have.status(404); });",
+                  "const data = pm.response.json();",
+                  "pm.test('Error code is PAYMENT_NOT_FOUND', function () { pm.expect(data.error_code).to.eql('PAYMENT_NOT_FOUND'); });"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

@@ -1,0 +1,602 @@
+{
+  "info": {
+    "_postman_id": "06c842d2-c56b-417c-9156-da91313584a4",
+    "name": "Mini Payment Gateway - Auth Scenarios",
+    "description": "Companion for docs/testing/scenarios/auth.md.",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "event": [
+    {
+      "listen": "prerequest",
+      "script": {
+        "type": "text/javascript",
+        "exec": [
+          "function suffix() {",
+          "  return Math.random().toString(16).slice(2, 10);",
+          "}",
+          "",
+          "function ensure(name, value) {",
+          "  if (!pm.environment.get(name)) {",
+          "    pm.environment.set(name, value);",
+          "  }",
+          "}",
+          "",
+          "ensure('baseUrl', 'http://127.0.0.1:8000');",
+          "ensure('merchant_id', `m_pm_${suffix()}`);",
+          "ensure('merchant_name', 'QA Demo Merchant');",
+          "ensure('legal_name', 'QA Demo Merchant LLC');",
+          "ensure('contact_name', 'QA Ops');",
+          "ensure('contact_email', `qa_${suffix()}@example.com`);",
+          "ensure('contact_phone', '+84000000000');",
+          "ensure('webhook_url', 'https://example.com/webhooks/payment-gateway');",
+          "ensure('settlement_account_name', 'QA Demo Merchant LLC');",
+          "ensure('settlement_account_number', '123456789');",
+          "ensure('settlement_bank_code', 'DEMO');",
+          "ensure('access_key', `ak_pm_${suffix()}`);",
+          "ensure('merchant_secret', `pm-secret-${suffix()}-${suffix()}`);",
+          "ensure('rotated_access_key', `ak_rotated_${suffix()}`);",
+          "ensure('rotated_merchant_secret', `pm-rotated-secret-${suffix()}-${suffix()}`);",
+          "ensure('order_id', `ORDER-PM-${Date.now()}`);",
+          "ensure('refund_id', `REF-PM-${Date.now()}`);",
+          "ensure('reconciliation_order_id', `ORDER-REC-${Date.now()}`);",
+          "ensure('payment_amount', '12345.00');",
+          "ensure('payment_description', 'QA Postman payment');",
+          "ensure('payment_ttl_seconds', '900');",
+          "ensure('refund_amount', pm.environment.get('payment_amount') || '12345.00');",
+          "ensure('refund_reason', 'QA Postman refund');",
+          "ensure('reconciliation_mismatch_amount', '99999.00');",
+          "ensure('provider_source_type', 'SIMULATOR');",
+          "ensure('ops_reason', 'QA via Postman');",
+          "ensure('lock_idempotency_key', 'false');",
+          "",
+          "pm.environment.set('now_iso', new Date().toISOString());",
+          "",
+          "if (pm.environment.get('lock_idempotency_key') !== 'true') {",
+          "  pm.environment.set('idempotency_key', `idem-${Date.now()}-${suffix()}`);",
+          "}",
+          "",
+          "const path = '/' + pm.variables.replaceIn(pm.request.url.getPath()).replace(/^\\/+/, '');",
+          "const requiresMerchantAuth = path.startsWith('/v1/payments') || path.startsWith('/v1/refunds');",
+          "",
+          "if (requiresMerchantAuth) {",
+          "  const method = pm.request.method.toUpperCase();",
+          "  const timestamp = new Date().toISOString();",
+          "  let rawBody = '';",
+          "  if (pm.request.body && pm.request.body.mode === 'raw') {",
+          "    rawBody = pm.variables.replaceIn(pm.request.body.raw || '');",
+          "  }",
+          "  const bodyHash = CryptoJS.SHA256(CryptoJS.enc.Utf8.parse(rawBody)).toString(CryptoJS.enc.Hex);",
+          "  const signingString = `${timestamp}.${method}.${path}.${bodyHash}`;",
+          "  const secret = pm.environment.get('merchant_secret') || '';",
+          "  const signature = CryptoJS.HmacSHA256(signingString, secret).toString(CryptoJS.enc.Hex);",
+          "",
+          "  pm.environment.set('merchant_timestamp', timestamp);",
+          "  pm.environment.set('merchant_body_sha256_hex', bodyHash);",
+          "  pm.environment.set('merchant_signing_string', signingString);",
+          "  pm.environment.set('merchant_signature', signature);",
+          "",
+          "  pm.request.headers.upsert({ key: 'X-Merchant-Id', value: pm.environment.get('merchant_id') || '' });",
+          "  pm.request.headers.upsert({ key: 'X-Access-Key', value: pm.environment.get('access_key') || '' });",
+          "  pm.request.headers.upsert({ key: 'X-Timestamp', value: timestamp });",
+          "  pm.request.headers.upsert({ key: 'X-Signature', value: signature });",
+          "  pm.request.headers.upsert({ key: 'X-Idempotency-Key', value: pm.environment.get('idempotency_key') || '' });",
+          "}"
+        ]
+      }
+    }
+  ],
+  "item": [
+    {
+      "name": "Health",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('Health returns 200', function () { pm.response.to.have.status(200); });",
+              "const data = pm.response.json();",
+              "pm.test('Health body is ok', function () { pm.expect(data.status).to.eql('ok'); });"
+            ]
+          }
+        }
+      ],
+      "request": {
+        "method": "GET",
+        "description": "Basic service liveness check.",
+        "url": "{{baseUrl}}/health"
+      }
+    },
+    {
+      "name": "Setup Active Merchant",
+      "item": [
+        {
+          "name": "Create Merchant",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Create merchant returns 200', function () { pm.response.to.have.status(200); });",
+                  "const data = pm.response.json();",
+                  "if (data.merchant_id) { pm.environment.set('merchant_id', data.merchant_id); }"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "description": "Scenario ONB-01. Creates a merchant in PENDING_REVIEW state.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\"actor\":{\"actor_type\":\"OPS\",\"actor_id\":null,\"reason\":\"{{ops_reason}}\"},\"merchant_id\":\"{{merchant_id}}\",\"merchant_name\":\"{{merchant_name}}\",\"legal_name\":\"{{legal_name}}\",\"contact_name\":\"{{contact_name}}\",\"contact_email\":\"{{contact_email}}\",\"contact_phone\":\"{{contact_phone}}\",\"webhook_url\":\"{{webhook_url}}\",\"settlement_account_name\":\"{{settlement_account_name}}\",\"settlement_account_number\":\"{{settlement_account_number}}\",\"settlement_bank_code\":\"{{settlement_bank_code}}\"}"
+            },
+            "url": "{{baseUrl}}/v1/ops/merchants"
+          }
+        },
+        {
+          "name": "Submit Onboarding Case",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Submit onboarding returns 200', function () { pm.response.to.have.status(200); });"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "description": "Scenario ONB-02. Creates or updates the merchant onboarding case.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\"actor\":{\"actor_type\":\"OPS\",\"actor_id\":null,\"reason\":\"{{ops_reason}}\"},\"domain_or_app_name\":\"QA Demo Shop\",\"submitted_profile_json\":{\"business_type\":\"online_shop\"},\"documents_json\":{\"business_license\":\"qa-license.pdf\"},\"review_checks_json\":{\"risk_level\":\"LOW\"}}"
+            },
+            "url": "{{baseUrl}}/v1/ops/merchants/{{merchant_id}}/onboarding-case"
+          }
+        },
+        {
+          "name": "Approve Onboarding Case",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Approve onboarding returns 200', function () { pm.response.to.have.status(200); });"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "description": "Scenario ONB-03. Approves the current onboarding case.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\"actor\":{\"actor_type\":\"OPS\",\"actor_id\":null,\"reason\":\"{{ops_reason}}\"},\"reviewed_by\":null,\"decision_note\":\"Approved via Postman QA flow.\"}"
+            },
+            "url": "{{baseUrl}}/v1/ops/merchants/{{merchant_id}}/onboarding-case/approve"
+          }
+        },
+        {
+          "name": "Create Credential",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Create credential returns 200', function () { pm.response.to.have.status(200); });",
+                  "const data = pm.response.json();",
+                  "if (data.access_key) { pm.environment.set('access_key', data.access_key); }"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "description": "Creates the first active merchant credential. The secret is taken from the environment variable merchant_secret.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\"actor\":{\"actor_type\":\"OPS\",\"actor_id\":null,\"reason\":\"{{ops_reason}}\"},\"access_key\":\"{{access_key}}\",\"secret_key\":\"{{merchant_secret}}\"}"
+            },
+            "url": "{{baseUrl}}/v1/ops/merchants/{{merchant_id}}/credentials"
+          }
+        },
+        {
+          "name": "Activate Merchant",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Activate merchant returns 200', function () { pm.response.to.have.status(200); });"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "description": "Activates the approved merchant after a credential exists.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\"actor\":{\"actor_type\":\"OPS\",\"actor_id\":null,\"reason\":\"{{ops_reason}}\"}}"
+            },
+            "url": "{{baseUrl}}/v1/ops/merchants/{{merchant_id}}/activate"
+          }
+        }
+      ]
+    },
+    {
+      "name": "Baseline",
+      "item": [
+        {
+          "name": "Baseline Valid Merchant Payment",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Create payment returns 200', function () { pm.response.to.have.status(200); });",
+                  "const data = pm.response.json();",
+                  "if (data.transaction_id) { pm.environment.set('payment_transaction_id', data.transaction_id); }",
+                  "if (data.order_id) { pm.environment.set('order_id', data.order_id); }"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "description": "Scenario PAY-01. Creates a merchant-authenticated payment request. Merchant HMAC headers are added automatically.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\"order_id\":\"{{order_id}}\",\"amount\":\"{{payment_amount}}\",\"description\":\"{{payment_description}}\",\"ttl_seconds\":{{payment_ttl_seconds}},\"metadata\":{\"customer_ref\":\"CUST-POSTMAN-1\"}}"
+            },
+            "url": "{{baseUrl}}/v1/payments"
+          }
+        }
+      ]
+    },
+    {
+      "name": "AUTH-01 Missing Auth Header Fails",
+      "item": [
+        {
+          "name": "AUTH-01 Missing Signature Header",
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.request.headers.remove('X-Signature');"
+                ]
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status is 4xx', function () { pm.expect(pm.response.code).to.be.within(400, 499); });",
+                  "const data = pm.response.json();",
+                  "pm.test('Error code is AUTH_MISSING_HEADER', function () { pm.expect(data.error_code).to.eql('AUTH_MISSING_HEADER'); });"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "description": "AUTH-01. Removes X-Signature after the collection-level HMAC helper runs.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\"order_id\":\"{{order_id}}\",\"amount\":\"{{payment_amount}}\",\"description\":\"{{payment_description}}\",\"ttl_seconds\":{{payment_ttl_seconds}},\"metadata\":{\"customer_ref\":\"CUST-POSTMAN-1\"}}"
+            },
+            "url": "{{baseUrl}}/v1/payments"
+          }
+        }
+      ]
+    },
+    {
+      "name": "AUTH-02 Invalid HMAC Signature Fails",
+      "item": [
+        {
+          "name": "AUTH-02 Invalid HMAC Signature",
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.request.headers.upsert({ key: 'X-Signature', value: 'tampered-signature' });"
+                ]
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status is 4xx', function () { pm.expect(pm.response.code).to.be.within(400, 499); });",
+                  "const data = pm.response.json();",
+                  "pm.test('Error code is AUTH_INVALID_SIGNATURE', function () { pm.expect(data.error_code).to.eql('AUTH_INVALID_SIGNATURE'); });"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "description": "AUTH-02. Replaces the computed signature with a tampered value.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\"order_id\":\"{{order_id}}\",\"amount\":\"{{payment_amount}}\",\"description\":\"{{payment_description}}\",\"ttl_seconds\":{{payment_ttl_seconds}},\"metadata\":{\"customer_ref\":\"CUST-POSTMAN-1\"}}"
+            },
+            "url": "{{baseUrl}}/v1/payments"
+          }
+        }
+      ]
+    },
+    {
+      "name": "AUTH-03 Expired Timestamp Fails",
+      "item": [
+        {
+          "name": "AUTH-03 Expired Timestamp",
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const path = '/' + pm.variables.replaceIn(pm.request.url.getPath()).replace(/^\\/+/, '');",
+                  "const method = pm.request.method.toUpperCase();",
+                  "let rawBody = '';",
+                  "if (pm.request.body && pm.request.body.mode === 'raw') { rawBody = pm.variables.replaceIn(pm.request.body.raw || ''); }",
+                  "const bodyHash = CryptoJS.SHA256(CryptoJS.enc.Utf8.parse(rawBody)).toString(CryptoJS.enc.Hex);",
+                  "const timestamp = new Date(Date.now() - 20 * 60 * 1000).toISOString();",
+                  "const signingString = `${timestamp}.${method}.${path}.${bodyHash}`;",
+                  "const signature = CryptoJS.HmacSHA256(signingString, pm.environment.get('merchant_secret') || '').toString(CryptoJS.enc.Hex);",
+                  "pm.request.headers.upsert({ key: 'X-Merchant-Id', value: pm.environment.get('merchant_id') || '' });",
+                  "pm.request.headers.upsert({ key: 'X-Access-Key', value: pm.environment.get('access_key') || '' });",
+                  "pm.request.headers.upsert({ key: 'X-Timestamp', value: timestamp });",
+                  "pm.request.headers.upsert({ key: 'X-Signature', value: signature });"
+                ]
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status is 4xx', function () { pm.expect(pm.response.code).to.be.within(400, 499); });",
+                  "const data = pm.response.json();",
+                  "pm.test('Error code is AUTH_TIMESTAMP_EXPIRED', function () { pm.expect(data.error_code).to.eql('AUTH_TIMESTAMP_EXPIRED'); });"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "description": "AUTH-03. Re-signs the request with an expired timestamp.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\"order_id\":\"{{order_id}}\",\"amount\":\"{{payment_amount}}\",\"description\":\"{{payment_description}}\",\"ttl_seconds\":{{payment_ttl_seconds}},\"metadata\":{\"customer_ref\":\"CUST-POSTMAN-1\"}}"
+            },
+            "url": "{{baseUrl}}/v1/payments"
+          }
+        }
+      ]
+    },
+    {
+      "name": "AUTH-04 Unknown Merchant Fails",
+      "item": [
+        {
+          "name": "AUTH-04 Unknown Merchant",
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.environment.set('unknown_merchant_id', `m_unknown_${Date.now()}`);",
+                  "const path = '/' + pm.variables.replaceIn(pm.request.url.getPath()).replace(/^\\/+/, '');",
+                  "const method = pm.request.method.toUpperCase();",
+                  "let rawBody = '';",
+                  "if (pm.request.body && pm.request.body.mode === 'raw') { rawBody = pm.variables.replaceIn(pm.request.body.raw || ''); }",
+                  "const bodyHash = CryptoJS.SHA256(CryptoJS.enc.Utf8.parse(rawBody)).toString(CryptoJS.enc.Hex);",
+                  "const timestamp = new Date().toISOString();",
+                  "const signingString = `${timestamp}.${method}.${path}.${bodyHash}`;",
+                  "const signature = CryptoJS.HmacSHA256(signingString, pm.environment.get('merchant_secret') || '').toString(CryptoJS.enc.Hex);",
+                  "pm.request.headers.upsert({ key: 'X-Merchant-Id', value: pm.environment.get('unknown_merchant_id') || '' });",
+                  "pm.request.headers.upsert({ key: 'X-Access-Key', value: pm.environment.get('access_key') || '' });",
+                  "pm.request.headers.upsert({ key: 'X-Timestamp', value: timestamp });",
+                  "pm.request.headers.upsert({ key: 'X-Signature', value: signature });"
+                ]
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status is 4xx', function () { pm.expect(pm.response.code).to.be.within(400, 499); });",
+                  "const data = pm.response.json();",
+                  "pm.test('Error code is AUTH_INVALID_SIGNATURE', function () { pm.expect(data.error_code).to.eql('AUTH_INVALID_SIGNATURE'); });"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "description": "AUTH-04. Uses an unknown merchant id and expects the same opaque auth failure.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\"order_id\":\"{{order_id}}\",\"amount\":\"{{payment_amount}}\",\"description\":\"{{payment_description}}\",\"ttl_seconds\":{{payment_ttl_seconds}},\"metadata\":{\"customer_ref\":\"CUST-POSTMAN-1\"}}"
+            },
+            "url": "{{baseUrl}}/v1/payments"
+          }
+        }
+      ]
+    },
+    {
+      "name": "AUTH-05 Inactive Credential Fails",
+      "item": [
+        {
+          "name": "Prepare Inactive Credential Via Rotation",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Rotate credential returns 200', function () { pm.response.to.have.status(200); });",
+                  "pm.environment.set('access_key', pm.environment.get('rotated_access_key'));",
+                  "pm.environment.set('merchant_secret', pm.environment.get('rotated_merchant_secret'));"
+                ]
+              }
+            },
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.environment.set('inactive_access_key', pm.environment.get('access_key') || '');",
+                  "pm.environment.set('inactive_merchant_secret', pm.environment.get('merchant_secret') || '');"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "description": "AUTH-05 setup. Rotates the active credential and preserves the previous values.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\"actor\":{\"actor_type\":\"OPS\",\"actor_id\":null,\"reason\":\"{{ops_reason}}\"},\"access_key\":\"{{rotated_access_key}}\",\"secret_key\":\"{{rotated_merchant_secret}}\"}"
+            },
+            "url": "{{baseUrl}}/v1/ops/merchants/{{merchant_id}}/credentials/rotate"
+          }
+        },
+        {
+          "name": "AUTH-05 Rotated Credential Fails",
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const path = '/' + pm.variables.replaceIn(pm.request.url.getPath()).replace(/^\\/+/, '');",
+                  "const method = pm.request.method.toUpperCase();",
+                  "let rawBody = '';",
+                  "if (pm.request.body && pm.request.body.mode === 'raw') { rawBody = pm.variables.replaceIn(pm.request.body.raw || ''); }",
+                  "const bodyHash = CryptoJS.SHA256(CryptoJS.enc.Utf8.parse(rawBody)).toString(CryptoJS.enc.Hex);",
+                  "const timestamp = new Date().toISOString();",
+                  "const signingString = `${timestamp}.${method}.${path}.${bodyHash}`;",
+                  "const signature = CryptoJS.HmacSHA256(signingString, pm.environment.get('inactive_merchant_secret') || '').toString(CryptoJS.enc.Hex);",
+                  "pm.request.headers.upsert({ key: 'X-Merchant-Id', value: pm.environment.get('merchant_id') || '' });",
+                  "pm.request.headers.upsert({ key: 'X-Access-Key', value: pm.environment.get('inactive_access_key') || '' });",
+                  "pm.request.headers.upsert({ key: 'X-Timestamp', value: timestamp });",
+                  "pm.request.headers.upsert({ key: 'X-Signature', value: signature });"
+                ]
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status is 4xx', function () { pm.expect(pm.response.code).to.be.within(400, 499); });",
+                  "const data = pm.response.json();",
+                  "pm.test('Error code is AUTH_INVALID_SIGNATURE', function () { pm.expect(data.error_code).to.eql('AUTH_INVALID_SIGNATURE'); });"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "description": "AUTH-05. Uses the rotated-out credential after rotation.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\"order_id\":\"{{order_id}}\",\"amount\":\"{{payment_amount}}\",\"description\":\"{{payment_description}}\",\"ttl_seconds\":{{payment_ttl_seconds}},\"metadata\":{\"customer_ref\":\"CUST-POSTMAN-1\"}}"
+            },
+            "url": "{{baseUrl}}/v1/payments"
+          }
+        }
+      ]
+    }
+  ]
+}

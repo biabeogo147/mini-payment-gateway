@@ -6,6 +6,7 @@ This folder maps business scenarios to automated checks.
 
 - `e2e.md` - scenario index and current capability snapshot.
 - `matrix.md` - compact QA matrix from scenario ID to automated coverage.
+- `postman.md` - Postman import and execution guide for QA/QC, including one collection per file under `scenarios/`.
 - `scenarios/` - detailed behavior by business area.
 
 ## Scenario Files

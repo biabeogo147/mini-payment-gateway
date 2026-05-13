@@ -1,0 +1,759 @@
+{
+  "info": {
+    "_postman_id": "f9534991-8b2e-4421-8936-9441959db478",
+    "name": "Mini Payment Gateway - Reconciliation Scenarios",
+    "description": "Companion for docs/testing/scenarios/reconciliation.md.",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "event": [
+    {
+      "listen": "prerequest",
+      "script": {
+        "type": "text/javascript",
+        "exec": [
+          "function suffix() {",
+          "  return Math.random().toString(16).slice(2, 10);",
+          "}",
+          "",
+          "function ensure(name, value) {",
+          "  if (!pm.environment.get(name)) {",
+          "    pm.environment.set(name, value);",
+          "  }",
+          "}",
+          "",
+          "ensure('baseUrl', 'http://127.0.0.1:8000');",
+          "ensure('merchant_id', `m_pm_${suffix()}`);",
+          "ensure('merchant_name', 'QA Demo Merchant');",
+          "ensure('legal_name', 'QA Demo Merchant LLC');",
+          "ensure('contact_name', 'QA Ops');",
+          "ensure('contact_email', `qa_${suffix()}@example.com`);",
+          "ensure('contact_phone', '+84000000000');",
+          "ensure('webhook_url', 'https://example.com/webhooks/payment-gateway');",
+          "ensure('settlement_account_name', 'QA Demo Merchant LLC');",
+          "ensure('settlement_account_number', '123456789');",
+          "ensure('settlement_bank_code', 'DEMO');",
+          "ensure('access_key', `ak_pm_${suffix()}`);",
+          "ensure('merchant_secret', `pm-secret-${suffix()}-${suffix()}`);",
+          "ensure('rotated_access_key', `ak_rotated_${suffix()}`);",
+          "ensure('rotated_merchant_secret', `pm-rotated-secret-${suffix()}-${suffix()}`);",
+          "ensure('order_id', `ORDER-PM-${Date.now()}`);",
+          "ensure('refund_id', `REF-PM-${Date.now()}`);",
+          "ensure('reconciliation_order_id', `ORDER-REC-${Date.now()}`);",
+          "ensure('payment_amount', '12345.00');",
+          "ensure('payment_description', 'QA Postman payment');",
+          "ensure('payment_ttl_seconds', '900');",
+          "ensure('refund_amount', pm.environment.get('payment_amount') || '12345.00');",
+          "ensure('refund_reason', 'QA Postman refund');",
+          "ensure('reconciliation_mismatch_amount', '99999.00');",
+          "ensure('provider_source_type', 'SIMULATOR');",
+          "ensure('ops_reason', 'QA via Postman');",
+          "ensure('lock_idempotency_key', 'false');",
+          "",
+          "pm.environment.set('now_iso', new Date().toISOString());",
+          "",
+          "if (pm.environment.get('lock_idempotency_key') !== 'true') {",
+          "  pm.environment.set('idempotency_key', `idem-${Date.now()}-${suffix()}`);",
+          "}",
+          "",
+          "const path = '/' + pm.variables.replaceIn(pm.request.url.getPath()).replace(/^\\/+/, '');",
+          "const requiresMerchantAuth = path.startsWith('/v1/payments') || path.startsWith('/v1/refunds');",
+          "",
+          "if (requiresMerchantAuth) {",
+          "  const method = pm.request.method.toUpperCase();",
+          "  const timestamp = new Date().toISOString();",
+          "  let rawBody = '';",
+          "  if (pm.request.body && pm.request.body.mode === 'raw') {",
+          "    rawBody = pm.variables.replaceIn(pm.request.body.raw || '');",
+          "  }",
+          "  const bodyHash = CryptoJS.SHA256(CryptoJS.enc.Utf8.parse(rawBody)).toString(CryptoJS.enc.Hex);",
+          "  const signingString = `${timestamp}.${method}.${path}.${bodyHash}`;",
+          "  const secret = pm.environment.get('merchant_secret') || '';",
+          "  const signature = CryptoJS.HmacSHA256(signingString, secret).toString(CryptoJS.enc.Hex);",
+          "",
+          "  pm.environment.set('merchant_timestamp', timestamp);",
+          "  pm.environment.set('merchant_body_sha256_hex', bodyHash);",
+          "  pm.environment.set('merchant_signing_string', signingString);",
+          "  pm.environment.set('merchant_signature', signature);",
+          "",
+          "  pm.request.headers.upsert({ key: 'X-Merchant-Id', value: pm.environment.get('merchant_id') || '' });",
+          "  pm.request.headers.upsert({ key: 'X-Access-Key', value: pm.environment.get('access_key') || '' });",
+          "  pm.request.headers.upsert({ key: 'X-Timestamp', value: timestamp });",
+          "  pm.request.headers.upsert({ key: 'X-Signature', value: signature });",
+          "  pm.request.headers.upsert({ key: 'X-Idempotency-Key', value: pm.environment.get('idempotency_key') || '' });",
+          "}"
+        ]
+      }
+    }
+  ],
+  "item": [
+    {
+      "name": "Health",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('Health returns 200', function () { pm.response.to.have.status(200); });",
+              "const data = pm.response.json();",
+              "pm.test('Health body is ok', function () { pm.expect(data.status).to.eql('ok'); });"
+            ]
+          }
+        }
+      ],
+      "request": {
+        "method": "GET",
+        "description": "Basic service liveness check.",
+        "url": "{{baseUrl}}/health"
+      }
+    },
+    {
+      "name": "Setup Active Merchant",
+      "item": [
+        {
+          "name": "Create Merchant",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Create merchant returns 200', function () { pm.response.to.have.status(200); });",
+                  "const data = pm.response.json();",
+                  "if (data.merchant_id) { pm.environment.set('merchant_id', data.merchant_id); }"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "description": "Scenario ONB-01. Creates a merchant in PENDING_REVIEW state.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\"actor\":{\"actor_type\":\"OPS\",\"actor_id\":null,\"reason\":\"{{ops_reason}}\"},\"merchant_id\":\"{{merchant_id}}\",\"merchant_name\":\"{{merchant_name}}\",\"legal_name\":\"{{legal_name}}\",\"contact_name\":\"{{contact_name}}\",\"contact_email\":\"{{contact_email}}\",\"contact_phone\":\"{{contact_phone}}\",\"webhook_url\":\"{{webhook_url}}\",\"settlement_account_name\":\"{{settlement_account_name}}\",\"settlement_account_number\":\"{{settlement_account_number}}\",\"settlement_bank_code\":\"{{settlement_bank_code}}\"}"
+            },
+            "url": "{{baseUrl}}/v1/ops/merchants"
+          }
+        },
+        {
+          "name": "Submit Onboarding Case",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Submit onboarding returns 200', function () { pm.response.to.have.status(200); });"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "description": "Scenario ONB-02. Creates or updates the merchant onboarding case.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\"actor\":{\"actor_type\":\"OPS\",\"actor_id\":null,\"reason\":\"{{ops_reason}}\"},\"domain_or_app_name\":\"QA Demo Shop\",\"submitted_profile_json\":{\"business_type\":\"online_shop\"},\"documents_json\":{\"business_license\":\"qa-license.pdf\"},\"review_checks_json\":{\"risk_level\":\"LOW\"}}"
+            },
+            "url": "{{baseUrl}}/v1/ops/merchants/{{merchant_id}}/onboarding-case"
+          }
+        },
+        {
+          "name": "Approve Onboarding Case",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Approve onboarding returns 200', function () { pm.response.to.have.status(200); });"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "description": "Scenario ONB-03. Approves the current onboarding case.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\"actor\":{\"actor_type\":\"OPS\",\"actor_id\":null,\"reason\":\"{{ops_reason}}\"},\"reviewed_by\":null,\"decision_note\":\"Approved via Postman QA flow.\"}"
+            },
+            "url": "{{baseUrl}}/v1/ops/merchants/{{merchant_id}}/onboarding-case/approve"
+          }
+        },
+        {
+          "name": "Create Credential",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Create credential returns 200', function () { pm.response.to.have.status(200); });",
+                  "const data = pm.response.json();",
+                  "if (data.access_key) { pm.environment.set('access_key', data.access_key); }"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "description": "Creates the first active merchant credential. The secret is taken from the environment variable merchant_secret.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\"actor\":{\"actor_type\":\"OPS\",\"actor_id\":null,\"reason\":\"{{ops_reason}}\"},\"access_key\":\"{{access_key}}\",\"secret_key\":\"{{merchant_secret}}\"}"
+            },
+            "url": "{{baseUrl}}/v1/ops/merchants/{{merchant_id}}/credentials"
+          }
+        },
+        {
+          "name": "Activate Merchant",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Activate merchant returns 200', function () { pm.response.to.have.status(200); });"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "description": "Activates the approved merchant after a credential exists.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\"actor\":{\"actor_type\":\"OPS\",\"actor_id\":null,\"reason\":\"{{ops_reason}}\"}}"
+            },
+            "url": "{{baseUrl}}/v1/ops/merchants/{{merchant_id}}/activate"
+          }
+        }
+      ]
+    },
+    {
+      "name": "REC-02 Payment Callback Amount Mismatch",
+      "item": [
+        {
+          "name": "REC-02 Create Payment For Amount Mismatch",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Create reconciliation payment returns 200', function () { pm.response.to.have.status(200); });",
+                  "const data = pm.response.json();",
+                  "if (data.transaction_id) { pm.environment.set('reconciliation_payment_transaction_id', data.transaction_id); }",
+                  "if (data.order_id) { pm.environment.set('reconciliation_order_id', data.order_id); }"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "description": "Creates a separate payment used only for mismatch/reconciliation testing.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\"order_id\":\"{{reconciliation_order_id}}\",\"amount\":\"{{payment_amount}}\",\"description\":\"Reconciliation scenario payment\",\"ttl_seconds\":{{payment_ttl_seconds}},\"metadata\":{\"customer_ref\":\"CUST-RECON-1\"}}"
+            },
+            "url": "{{baseUrl}}/v1/payments"
+          }
+        },
+        {
+          "name": "REC-02 Payment Callback Amount Mismatch",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Payment callback mismatch returns 200', function () { pm.response.to.have.status(200); });",
+                  "const data = pm.response.json();",
+                  "if (data.reconciliation_record_id) { pm.environment.set('reconciliation_record_id', data.reconciliation_record_id); }"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "description": "Scenario REC-xx. Sends a mismatched amount callback to create reconciliation evidence.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\"external_reference\":\"bank-{{reconciliation_payment_transaction_id}}\",\"transaction_reference\":\"{{reconciliation_payment_transaction_id}}\",\"status\":\"SUCCESS\",\"amount\":\"{{reconciliation_mismatch_amount}}\",\"paid_at\":\"{{now_iso}}\",\"source_type\":\"{{provider_source_type}}\",\"raw_payload\":{\"provider_status\":\"00\",\"trace_id\":\"mismatch-{{reconciliation_payment_transaction_id}}\"}}"
+            },
+            "url": "{{baseUrl}}/v1/provider/callbacks/payment"
+          }
+        },
+        {
+          "name": "REC-02 List Reconciliation Records",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('List reconciliation returns 200', function () { pm.response.to.have.status(200); });",
+                  "const data = pm.response.json();",
+                  "if (data.records && data.records.length > 0 && data.records[0].record_id) {",
+                  "  pm.environment.set('reconciliation_record_id', data.records[0].record_id);",
+                  "}"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "description": "Lists mismatched payment reconciliation records and stores the first record id into reconciliation_record_id.",
+            "url": "{{baseUrl}}/v1/ops/reconciliation?match_result=MISMATCHED&entity_type=PAYMENT&limit=25"
+          }
+        },
+        {
+          "name": "REC-02 Get Reconciliation Record",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Get reconciliation record returns 200', function () { pm.response.to.have.status(200); });"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "description": "Reads the reconciliation record captured from the mismatch callback or list response.",
+            "url": "{{baseUrl}}/v1/ops/reconciliation/{{reconciliation_record_id}}"
+          }
+        },
+        {
+          "name": "REC-05 Resolve Reconciliation Record",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Resolve reconciliation returns 200', function () { pm.response.to.have.status(200); });"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "description": "Resolves the reconciliation record created during the mismatch scenario.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\"actor\":{\"actor_type\":\"OPS\",\"actor_id\":null,\"reason\":\"{{ops_reason}}\"},\"reviewed_by\":null,\"review_note\":\"Provider evidence reviewed in Postman QA flow.\"}"
+            },
+            "url": "{{baseUrl}}/v1/ops/reconciliation/{{reconciliation_record_id}}/resolve"
+          }
+        }
+      ]
+    },
+    {
+      "name": "REC-02R Refund Callback Amount Mismatch",
+      "item": [
+        {
+          "name": "REC-02R Create Payment For Refund Mismatch",
+          "request": {
+            "method": "POST",
+            "description": "REC-02R setup.",
+            "url": "{{baseUrl}}/v1/payments",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\"order_id\": \"{{order_id}}\", \"amount\": \"{{payment_amount}}\", \"description\": \"{{payment_description}}\", \"ttl_seconds\": \"{{payment_ttl_seconds}}\", \"metadata\": {\"customer_ref\": \"CUST-1\"}}"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Payment create returns 200', function () { pm.response.to.have.status(200); });",
+                  "const data = pm.response.json();",
+                  "if (data.transaction_id) { pm.environment.set('payment_transaction_id', data.transaction_id); }",
+                  "if (data.order_id) { pm.environment.set('order_id', data.order_id); }"
+                ]
+              }
+            },
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.environment.set('order_id', `ORDER-REC-REFUND-${Date.now()}`);"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "REC-02R Finalize Payment Success",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Payment callback success returns 200', function () { pm.response.to.have.status(200); });"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "description": "Scenario CB-01. Simulates a successful provider payment callback for the current payment_transaction_id.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\"external_reference\":\"bank-{{payment_transaction_id}}\",\"transaction_reference\":\"{{payment_transaction_id}}\",\"status\":\"SUCCESS\",\"amount\":\"{{payment_amount}}\",\"paid_at\":\"{{now_iso}}\",\"source_type\":\"{{provider_source_type}}\",\"raw_payload\":{\"provider_status\":\"00\",\"trace_id\":\"trace-{{payment_transaction_id}}\"}}"
+            },
+            "url": "{{baseUrl}}/v1/provider/callbacks/payment"
+          }
+        },
+        {
+          "name": "REC-02R Create Refund",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Create refund returns 200', function () { pm.response.to.have.status(200); });",
+                  "const data = pm.response.json();",
+                  "if (data.refund_transaction_id) { pm.environment.set('refund_transaction_id', data.refund_transaction_id); }",
+                  "if (data.refund_id) { pm.environment.set('refund_id', data.refund_id); }"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "description": "Scenario REF-01. Creates a full refund for the successful payment_transaction_id.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\"original_transaction_id\":\"{{payment_transaction_id}}\",\"refund_id\":\"{{refund_id}}\",\"refund_amount\":\"{{refund_amount}}\",\"reason\":\"{{refund_reason}}\"}"
+            },
+            "url": "{{baseUrl}}/v1/refunds"
+          }
+        },
+        {
+          "name": "REC-02R Refund Callback Amount Mismatch",
+          "request": {
+            "method": "POST",
+            "description": "REC-02R.",
+            "url": "{{baseUrl}}/v1/provider/callbacks/refund",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\"external_reference\": \"bank-refund-rec-{{now_iso}}\", \"refund_transaction_id\": \"{{refund_transaction_id}}\", \"status\": \"SUCCESS\", \"amount\": \"{{reconciliation_mismatch_amount}}\", \"processed_at\": \"{{now_iso}}\", \"raw_payload\": {\"provider\": \"SIMULATOR\", \"trace_id\": \"refund-rec-{{now_iso}}\"}, \"source_type\": \"{{provider_source_type}}\"}"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Refund mismatch callback returns 200', function () { pm.response.to.have.status(200); });",
+                  "const data = pm.response.json();",
+                  "if (data.reconciliation_record_id) { pm.environment.set('reconciliation_record_id', data.reconciliation_record_id); }"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "REC-02R List Reconciliation Records",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('List reconciliation returns 200', function () { pm.response.to.have.status(200); });",
+                  "const data = pm.response.json();",
+                  "if (data.records && data.records.length > 0 && data.records[0].record_id) {",
+                  "  pm.environment.set('reconciliation_record_id', data.records[0].record_id);",
+                  "}"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "description": "Lists mismatched payment reconciliation records and stores the first record id into reconciliation_record_id.",
+            "url": "{{baseUrl}}/v1/ops/reconciliation?match_result=MISMATCHED&entity_type=PAYMENT&limit=25"
+          }
+        },
+        {
+          "name": "REC-02R Get Reconciliation Record",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Get reconciliation record returns 200', function () { pm.response.to.have.status(200); });"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "description": "Reads the reconciliation record captured from the mismatch callback or list response.",
+            "url": "{{baseUrl}}/v1/ops/reconciliation/{{reconciliation_record_id}}"
+          }
+        },
+        {
+          "name": "REC-02R Resolve Reconciliation Record",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Resolve reconciliation returns 200', function () { pm.response.to.have.status(200); });"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "description": "Resolves the reconciliation record created during the mismatch scenario.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\"actor\":{\"actor_type\":\"OPS\",\"actor_id\":null,\"reason\":\"{{ops_reason}}\"},\"reviewed_by\":null,\"review_note\":\"Provider evidence reviewed in Postman QA flow.\"}"
+            },
+            "url": "{{baseUrl}}/v1/ops/reconciliation/{{reconciliation_record_id}}/resolve"
+          }
+        }
+      ]
+    },
+    {
+      "name": "REC-01 Late Success Callback After Expiration",
+      "item": [
+        {
+          "name": "REC-01 Create Short-TTL Payment",
+          "request": {
+            "method": "POST",
+            "description": "REC-01 setup.",
+            "url": "{{baseUrl}}/v1/payments",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\"order_id\": \"{{order_id}}\", \"amount\": \"{{payment_amount}}\", \"description\": \"{{payment_description}}\", \"ttl_seconds\": \"1\", \"metadata\": {\"customer_ref\": \"CUST-1\"}}"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Payment create returns 200', function () { pm.response.to.have.status(200); });",
+                  "const data = pm.response.json();",
+                  "if (data.transaction_id) { pm.environment.set('payment_transaction_id', data.transaction_id); }",
+                  "if (data.order_id) { pm.environment.set('order_id', data.order_id); }"
+                ]
+              }
+            },
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.environment.set('order_id', `ORDER-REC-LATE-${Date.now()}`);"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "REC-01 Late Success Callback After Expiration (Template)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Payment callback success returns 200', function () { pm.response.to.have.status(200); });"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "description": "REC-01 template. Run after the payment is already EXPIRED.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\"external_reference\":\"bank-{{payment_transaction_id}}\",\"transaction_reference\":\"{{payment_transaction_id}}\",\"status\":\"SUCCESS\",\"amount\":\"{{payment_amount}}\",\"paid_at\":\"{{now_iso}}\",\"source_type\":\"{{provider_source_type}}\",\"raw_payload\":{\"provider_status\":\"00\",\"trace_id\":\"trace-{{payment_transaction_id}}\"}}"
+            },
+            "url": "{{baseUrl}}/v1/provider/callbacks/payment"
+          }
+        },
+        {
+          "name": "REC-01 List Reconciliation Records",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('List reconciliation returns 200', function () { pm.response.to.have.status(200); });",
+                  "const data = pm.response.json();",
+                  "if (data.records && data.records.length > 0 && data.records[0].record_id) {",
+                  "  pm.environment.set('reconciliation_record_id', data.records[0].record_id);",
+                  "}"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "description": "Lists mismatched payment reconciliation records and stores the first record id into reconciliation_record_id.",
+            "url": "{{baseUrl}}/v1/ops/reconciliation?match_result=MISMATCHED&entity_type=PAYMENT&limit=25"
+          }
+        },
+        {
+          "name": "REC-01 Get Reconciliation Record",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Get reconciliation record returns 200', function () { pm.response.to.have.status(200); });"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "description": "Reads the reconciliation record captured from the mismatch callback or list response.",
+            "url": "{{baseUrl}}/v1/ops/reconciliation/{{reconciliation_record_id}}"
+          }
+        },
+        {
+          "name": "REC-01 Resolve Reconciliation Record",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Resolve reconciliation returns 200', function () { pm.response.to.have.status(200); });"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "description": "Resolves the reconciliation record created during the mismatch scenario.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\"actor\":{\"actor_type\":\"OPS\",\"actor_id\":null,\"reason\":\"{{ops_reason}}\"},\"reviewed_by\":null,\"review_note\":\"Provider evidence reviewed in Postman QA flow.\"}"
+            },
+            "url": "{{baseUrl}}/v1/ops/reconciliation/{{reconciliation_record_id}}/resolve"
+          }
+        }
+      ]
+    }
+  ]
+}

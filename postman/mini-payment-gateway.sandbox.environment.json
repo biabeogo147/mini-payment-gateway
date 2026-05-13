@@ -1,0 +1,273 @@
+{
+  "id": "f17bbaf3-87ab-45c0-9a42-6a6399870001",
+  "name": "Mini Payment Gateway Sandbox",
+  "values": [
+    {
+      "key": "baseUrl",
+      "value": "http://127.0.0.1:8000",
+      "type": "default",
+      "enabled": true
+    },
+    {
+      "key": "merchant_id",
+      "value": "",
+      "type": "default",
+      "enabled": true
+    },
+    {
+      "key": "merchant_name",
+      "value": "QA Demo Merchant",
+      "type": "default",
+      "enabled": true
+    },
+    {
+      "key": "legal_name",
+      "value": "QA Demo Merchant LLC",
+      "type": "default",
+      "enabled": true
+    },
+    {
+      "key": "contact_name",
+      "value": "QA Ops",
+      "type": "default",
+      "enabled": true
+    },
+    {
+      "key": "contact_email",
+      "value": "qa@example.com",
+      "type": "default",
+      "enabled": true
+    },
+    {
+      "key": "contact_phone",
+      "value": "+84000000000",
+      "type": "default",
+      "enabled": true
+    },
+    {
+      "key": "webhook_url",
+      "value": "https://example.com/webhooks/payment-gateway",
+      "type": "default",
+      "enabled": true
+    },
+    {
+      "key": "settlement_account_name",
+      "value": "QA Demo Merchant LLC",
+      "type": "default",
+      "enabled": true
+    },
+    {
+      "key": "settlement_account_number",
+      "value": "123456789",
+      "type": "default",
+      "enabled": true
+    },
+    {
+      "key": "settlement_bank_code",
+      "value": "DEMO",
+      "type": "default",
+      "enabled": true
+    },
+    {
+      "key": "access_key",
+      "value": "",
+      "type": "default",
+      "enabled": true
+    },
+    {
+      "key": "merchant_secret",
+      "value": "",
+      "type": "secret",
+      "enabled": true
+    },
+    {
+      "key": "rotated_access_key",
+      "value": "",
+      "type": "default",
+      "enabled": true
+    },
+    {
+      "key": "rotated_merchant_secret",
+      "value": "",
+      "type": "secret",
+      "enabled": true
+    },
+    {
+      "key": "payment_amount",
+      "value": "12345.00",
+      "type": "default",
+      "enabled": true
+    },
+    {
+      "key": "payment_description",
+      "value": "QA Postman payment",
+      "type": "default",
+      "enabled": true
+    },
+    {
+      "key": "payment_ttl_seconds",
+      "value": "900",
+      "type": "default",
+      "enabled": true
+    },
+    {
+      "key": "order_id",
+      "value": "",
+      "type": "default",
+      "enabled": true
+    },
+    {
+      "key": "payment_transaction_id",
+      "value": "",
+      "type": "default",
+      "enabled": true
+    },
+    {
+      "key": "refund_id",
+      "value": "",
+      "type": "default",
+      "enabled": true
+    },
+    {
+      "key": "refund_reason",
+      "value": "QA Postman refund",
+      "type": "default",
+      "enabled": true
+    },
+    {
+      "key": "refund_amount",
+      "value": "12345.00",
+      "type": "default",
+      "enabled": true
+    },
+    {
+      "key": "refund_transaction_id",
+      "value": "",
+      "type": "default",
+      "enabled": true
+    },
+    {
+      "key": "reconciliation_order_id",
+      "value": "",
+      "type": "default",
+      "enabled": true
+    },
+    {
+      "key": "reconciliation_payment_transaction_id",
+      "value": "",
+      "type": "default",
+      "enabled": true
+    },
+    {
+      "key": "reconciliation_mismatch_amount",
+      "value": "99999.00",
+      "type": "default",
+      "enabled": true
+    },
+    {
+      "key": "reconciliation_record_id",
+      "value": "",
+      "type": "default",
+      "enabled": true
+    },
+    {
+      "key": "webhook_event_id",
+      "value": "",
+      "type": "default",
+      "enabled": true
+    },
+    {
+      "key": "provider_source_type",
+      "value": "SIMULATOR",
+      "type": "default",
+      "enabled": true
+    },
+    {
+      "key": "ops_reason",
+      "value": "QA via Postman",
+      "type": "default",
+      "enabled": true
+    },
+    {
+      "key": "now_iso",
+      "value": "",
+      "type": "default",
+      "enabled": true
+    },
+    {
+      "key": "idempotency_key",
+      "value": "",
+      "type": "default",
+      "enabled": true
+    },
+    {
+      "key": "lock_idempotency_key",
+      "value": "false",
+      "type": "default",
+      "enabled": true
+    },
+    {
+      "key": "merchant_timestamp",
+      "value": "",
+      "type": "default",
+      "enabled": true
+    },
+    {
+      "key": "merchant_body_sha256_hex",
+      "value": "",
+      "type": "default",
+      "enabled": true
+    },
+    {
+      "key": "merchant_signing_string",
+      "value": "",
+      "type": "default",
+      "enabled": true
+    },
+    {
+      "key": "merchant_signature",
+      "value": "",
+      "type": "default",
+      "enabled": true
+    },
+    {
+      "key": "inactive_access_key",
+      "value": "",
+      "type": "default",
+      "enabled": true
+    },
+    {
+      "key": "inactive_merchant_secret",
+      "value": "",
+      "type": "secret",
+      "enabled": true
+    },
+    {
+      "key": "other_merchant_id",
+      "value": "",
+      "type": "default",
+      "enabled": true
+    },
+    {
+      "key": "other_access_key",
+      "value": "",
+      "type": "default",
+      "enabled": true
+    },
+    {
+      "key": "other_merchant_secret",
+      "value": "",
+      "type": "secret",
+      "enabled": true
+    },
+    {
+      "key": "unknown_merchant_id",
+      "value": "",
+      "type": "default",
+      "enabled": true
+    }
+  ],
+  "_postman_variable_scope": "environment",
+  "_postman_exported_at": "2026-05-13T00:00:00.000Z",
+  "_postman_exported_using": "OpenAI Codex"
+}
