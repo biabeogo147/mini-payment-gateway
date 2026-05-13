@@ -13,7 +13,6 @@ point.
 - Infrastructure: `../infrastructure/`
 - Service operations: `../service-operations/`
 - Testing and scenarios: `../testing/`
-- Sandbox bootstrap: `../infrastructure/sandbox-bootstrap.md`
 - Sandbox deployment: `../infrastructure/sandbox-deployment.md`
 
 ## Phase Plans

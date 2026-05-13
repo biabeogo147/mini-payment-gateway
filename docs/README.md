@@ -14,8 +14,8 @@ historical phase files.
 
 - `infrastructure/devops-architecture.md` - internal DevOps topology and
   pipeline design.
-- `infrastructure/sandbox-bootstrap.md` - sandbox host preparation and manual
-  bring-up record before CI/CD exists.
+- `infrastructure/sandbox-setup-from-zero.md` - detailed setup guide from a
+  fresh server to a live sandbox CI/CD host.
 - `infrastructure/sandbox-deployment.md` - sandbox CI/CD runner and deployment
   runbook.
 - `getting-started/runbook.md` - smoke scripts and full demo flow.

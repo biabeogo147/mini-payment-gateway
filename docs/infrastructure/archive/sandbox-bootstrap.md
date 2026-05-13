@@ -1,12 +1,13 @@
-# Sandbox Host Bootstrap
+# Sandbox Host Bootstrap Archive
 
 This document records the manual sandbox host preparation completed on
 May 12, 2026 before phase 09 CI/CD implementation.
 
-Phase 09 CI/CD was later completed on May 13, 2026. Use
-[sandbox-deployment.md](sandbox-deployment.md) for the live runner/deploy
-workflow and [phase-09 completion](../history/completions/phase-09.md) for the
-verified handoff record.
+This file is archived because active operators should now use:
+
+- `sandbox-setup-from-zero.md` for repeatable provisioning from a fresh host
+- `sandbox-deployment.md` for day-2 deploy, verification, and troubleshooting
+- `docs/history/completions/phase-09.md` for the verified rollout record
 
 Scope of this document:
 
@@ -15,7 +16,8 @@ Scope of this document:
 - how the app was brought up manually with the current repo state;
 - what is still intentionally not done until phase 09 starts.
 
-This is a host bootstrap record, not the final sandbox deployment runbook.
+This is a historical first-host bootstrap record, not the active deployment
+runbook.
 
 ## Host Snapshot
 

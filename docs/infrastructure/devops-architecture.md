@@ -16,9 +16,9 @@ specification.
 
 Related documents:
 
-- [sandbox-bootstrap.md](sandbox-bootstrap.md) - machine preparation history
-- [sandbox-deployment.md](sandbox-deployment.md) - deploy and recovery runbook
-- [phase-09 completion](../history/completions/phase-09.md) - rollout evidence
+- `sandbox-setup-from-zero.md` - repeatable server setup from a fresh host
+- `sandbox-deployment.md` - deploy and recovery runbook
+- `docs/history/completions/phase-09.md` - rollout evidence
 
 ## Architecture Summary
 
