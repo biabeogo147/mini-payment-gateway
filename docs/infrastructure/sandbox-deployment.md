@@ -5,6 +5,8 @@ This runbook describes the phase 09 sandbox CI/CD path.
 Use this document for the ongoing deployment flow after host bootstrap.
 Use [sandbox-bootstrap.md](sandbox-bootstrap.md) for the initial machine setup
 record on `192.168.1.199`.
+Use [devops-architecture.md](devops-architecture.md) for the full internal
+architecture, trust boundary, and pipeline design rationale.
 
 ## Live Status
 

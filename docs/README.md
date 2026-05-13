@@ -12,6 +12,8 @@ historical phase files.
 
 ## For Operators And Demo Runs
 
+- `infrastructure/devops-architecture.md` - internal DevOps topology and
+  pipeline design.
 - `infrastructure/sandbox-bootstrap.md` - sandbox host preparation and manual
   bring-up record before CI/CD exists.
 - `infrastructure/sandbox-deployment.md` - sandbox CI/CD runner and deployment
