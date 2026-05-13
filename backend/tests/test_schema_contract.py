@@ -44,6 +44,13 @@ class SchemaContractTest(unittest.TestCase):
 
         self.assertIn("MERCHANT_CREDENTIAL", values)
         self.assertIn("ONBOARDING_CASE", values)
+        self.assertIn("INTERNAL_USER", values)
+
+    def test_internal_users_table_includes_phase_10_auth_columns(self) -> None:
+        internal_user_columns = Base.metadata.tables["internal_users"].c
+
+        self.assertIn("password_hash", internal_user_columns)
+        self.assertIn("last_login_at", internal_user_columns)
 
     def test_merchant_credentials_has_partial_unique_active_constraint(self) -> None:
         indexes = Base.metadata.tables["merchant_credentials"].indexes

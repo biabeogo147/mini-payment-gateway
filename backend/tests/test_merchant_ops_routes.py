@@ -5,8 +5,9 @@ from uuid import uuid4
 
 from fastapi.testclient import TestClient
 
-from app.models.enums import CredentialStatus, MerchantStatus, OnboardingCaseStatus
+from app.models.enums import CredentialStatus, InternalUserRole, MerchantStatus, OnboardingCaseStatus
 from app.schemas.ops import CredentialOpsResponse, MerchantOpsResponse, OnboardingCaseResponse
+from tests.internal_auth_test_utils import make_internal_user, override_current_internal_user
 
 
 class MerchantOpsRouteTest(unittest.TestCase):
@@ -16,6 +17,7 @@ class MerchantOpsRouteTest(unittest.TestCase):
 
         db = object()
         self._override_db(app, db)
+        override_current_internal_user(app, make_internal_user())
         response_body = MerchantOpsResponse(
             merchant_id="m_demo",
             merchant_name="Demo Merchant",
@@ -47,6 +49,7 @@ class MerchantOpsRouteTest(unittest.TestCase):
         db = object()
         case_id = uuid4()
         self._override_db(app, db)
+        override_current_internal_user(app, make_internal_user())
 
         route_cases = (
             (
@@ -123,13 +126,26 @@ class MerchantOpsRouteTest(unittest.TestCase):
         )
 
         route_cases = (
-            ("/v1/ops/merchants/m_demo/credentials", "create_credential", _credential_json("ak_new")),
-            ("/v1/ops/merchants/m_demo/credentials/rotate", "rotate_credential", _credential_json("ak_rotated")),
+            (
+                "/v1/ops/merchants/m_demo/credentials",
+                "create_credential",
+                _credential_json("ak_new"),
+                make_internal_user(),
+                200,
+            ),
+            (
+                "/v1/ops/merchants/m_demo/credentials/rotate",
+                "rotate_credential",
+                _credential_json("ak_rotated"),
+                make_internal_user(role=InternalUserRole.ADMIN),
+                200,
+            ),
         )
 
         try:
-            for path, service_name, body in route_cases:
+            for path, service_name, body, current_user, expected_status_code in route_cases:
                 with self.subTest(path=path):
+                    override_current_internal_user(app, current_user)
                     with patch.object(
                         ops_merchant_controller.merchant_ops_service,
                         service_name,
@@ -137,7 +153,7 @@ class MerchantOpsRouteTest(unittest.TestCase):
                     ) as service:
                         response = TestClient(app).post(path, json=body)
 
-                    self.assertEqual(response.status_code, 200)
+                    self.assertEqual(response.status_code, expected_status_code)
                     self.assertEqual(response.json()["access_key"], "ak_new")
                     self.assertNotIn("secret_key", response.json())
                     kwargs = service.call_args.kwargs
@@ -154,14 +170,33 @@ class MerchantOpsRouteTest(unittest.TestCase):
         db = object()
         self._override_db(app, db)
         route_cases = (
-            ("/v1/ops/merchants/m_demo/activate", "activate_merchant", MerchantStatus.ACTIVE),
-            ("/v1/ops/merchants/m_demo/suspend", "suspend_merchant", MerchantStatus.SUSPENDED),
-            ("/v1/ops/merchants/m_demo/disable", "disable_merchant", MerchantStatus.DISABLED),
+            (
+                "/v1/ops/merchants/m_demo/activate",
+                "activate_merchant",
+                MerchantStatus.ACTIVE,
+                make_internal_user(),
+                200,
+            ),
+            (
+                "/v1/ops/merchants/m_demo/suspend",
+                "suspend_merchant",
+                MerchantStatus.SUSPENDED,
+                make_internal_user(),
+                200,
+            ),
+            (
+                "/v1/ops/merchants/m_demo/disable",
+                "disable_merchant",
+                MerchantStatus.DISABLED,
+                make_internal_user(role=InternalUserRole.ADMIN),
+                200,
+            ),
         )
 
         try:
-            for path, service_name, expected_status in route_cases:
+            for path, service_name, expected_status, current_user, expected_status_code in route_cases:
                 with self.subTest(path=path):
+                    override_current_internal_user(app, current_user)
                     response_body = MerchantOpsResponse(
                         merchant_id="m_demo",
                         merchant_name="Demo Merchant",
@@ -174,12 +209,13 @@ class MerchantOpsRouteTest(unittest.TestCase):
                     ) as service:
                         response = TestClient(app).post(path, json=_reason_json())
 
-                    self.assertEqual(response.status_code, 200)
+                    self.assertEqual(response.status_code, expected_status_code)
                     self.assertEqual(response.json()["status"], expected_status.value)
                     kwargs = service.call_args.kwargs
                     self.assertIs(kwargs["db"], db)
                     self.assertEqual(kwargs["merchant_id"], "m_demo")
-                    self.assertEqual(kwargs["actor"].actor_type.value, "OPS")
+                    expected_actor_type = "ADMIN" if current_user.role.value == "ADMIN" else "OPS"
+                    self.assertEqual(kwargs["actor"].actor_type.value, expected_actor_type)
         finally:
             app.dependency_overrides.clear()
 

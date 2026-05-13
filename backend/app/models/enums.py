@@ -92,6 +92,7 @@ class EntityType(str, enum.Enum):
     ONBOARDING_CASE = "ONBOARDING_CASE"
     WEBHOOK_EVENT = "WEBHOOK_EVENT"
     RECONCILIATION = "RECONCILIATION"
+    INTERNAL_USER = "INTERNAL_USER"
 
 
 class ActorType(str, enum.Enum):

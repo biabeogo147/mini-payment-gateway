@@ -7,6 +7,7 @@ from fastapi.testclient import TestClient
 
 from app.models.enums import EntityType, ReconciliationStatus
 from app.schemas.reconciliation import ReconciliationRecordResponse
+from tests.internal_auth_test_utils import make_internal_user, override_current_internal_user
 
 
 class ReconciliationRouteTest(unittest.TestCase):
@@ -18,6 +19,7 @@ class ReconciliationRouteTest(unittest.TestCase):
         entity_id = uuid4()
         record = _response(entity_id=entity_id, match_result=ReconciliationStatus.MISMATCHED)
         self._override_db(app, db)
+        override_current_internal_user(app, make_internal_user())
 
         try:
             with patch.object(
@@ -53,6 +55,7 @@ class ReconciliationRouteTest(unittest.TestCase):
         db = object()
         record_id = uuid4()
         self._override_db(app, db)
+        override_current_internal_user(app, make_internal_user())
 
         try:
             with patch.object(
@@ -77,6 +80,7 @@ class ReconciliationRouteTest(unittest.TestCase):
         db = object()
         record_id = uuid4()
         self._override_db(app, db)
+        override_current_internal_user(app, make_internal_user())
 
         try:
             with patch.object(

@@ -1,11 +1,46 @@
 # Ops API
 
-Ops APIs are internal-only. They are used by Admin/Ops users and are not exposed
-as merchant-facing endpoints in the MVP. Phase 07 keeps internal authentication
-out of scope, so mutating ops endpoints accept a lightweight actor context in
-the request body for audit rows.
+Ops APIs are internal-only. They are used by `ADMIN` and `OPS` users and are
+not exposed as merchant-facing endpoints.
 
-Merchant and reconciliation ops bodies use a nested actor object:
+Phase 10 adds internal authentication, session cookies, RBAC, and read/search
+APIs for the Ops dashboard.
+
+## Internal Auth And RBAC
+
+Internal users authenticate through `/v1/internal/auth/*`.
+
+Available auth routes:
+
+- `GET /v1/internal/auth/bootstrap-status`
+- `POST /v1/internal/auth/bootstrap`
+- `POST /v1/internal/auth/login`
+- `POST /v1/internal/auth/logout`
+- `GET /v1/internal/auth/me`
+- `POST /v1/internal/auth/change-password`
+
+Internal user administration is `ADMIN`-only:
+
+- `GET /v1/internal/users`
+- `POST /v1/internal/users`
+- `PATCH /v1/internal/users/{user_id}`
+- `POST /v1/internal/users/{user_id}/reset-password`
+
+Role model:
+
+- `ADMIN`: full access, including internal user management, merchant disable,
+  and credential rotation.
+- `OPS`: standard operating access for onboarding, payment/refund/webhook
+  support, reconciliation resolution, and merchant lifecycle actions short of
+  the admin-only actions above.
+
+Ops write routes still require an `actor` object in the request body because
+the user-supplied `reason` remains part of the audit trail. `actor_type` and
+`actor_id` are normalized from the authenticated internal session on the
+server, not trusted from the request body.
+
+Merchant and reconciliation ops bodies therefore still use a nested actor
+object:
 
 ```json
 {
@@ -17,8 +52,47 @@ Merchant and reconciliation ops bodies use a nested actor object:
 }
 ```
 
-`actor_type` is one of `SYSTEM`, `ADMIN`, or `OPS`. `actor_id` is optional; if
-supplied in a real DB run it must reference `internal_users.id`.
+`actor_type` is one of `SYSTEM`, `ADMIN`, or `OPS`. `actor_id` is optional in
+the request body and is ignored by the phase 10 controller layer for
+authenticated Ops/Admin actions.
+
+## Dashboard Read APIs
+
+Phase 10 adds read/search/stat routes that back the Ops dashboard.
+
+Dashboard summary and charts:
+
+- `GET /v1/ops/dashboard/summary`
+- `GET /v1/ops/dashboard/charts`
+
+Merchant read APIs:
+
+- `GET /v1/ops/merchants`
+- `GET /v1/ops/merchants/{merchant_id}`
+- `GET /v1/ops/merchants/{merchant_id}/onboarding-case`
+- `GET /v1/ops/merchants/{merchant_id}/credentials`
+
+Payment read APIs:
+
+- `GET /v1/ops/payments`
+- `GET /v1/ops/payments/{transaction_id}`
+
+Refund read APIs:
+
+- `GET /v1/ops/refunds`
+- `GET /v1/ops/refunds/{refund_transaction_id}`
+
+Webhook read APIs:
+
+- `GET /v1/ops/webhooks`
+- `GET /v1/ops/webhooks/{event_id}`
+- `GET /v1/ops/webhooks/{event_id}/attempts`
+
+Audit and reconciliation:
+
+- `GET /v1/ops/audit-logs`
+- `GET /v1/ops/reconciliation`
+- `GET /v1/ops/reconciliation/{record_id}`
 
 ## Merchant Management
 
@@ -194,8 +268,8 @@ Errors:
 
 Both routes accept `OpsReasonRequest` with an `actor` object. Suspended and
 disabled merchants remain inspectable but cannot create new payments or refunds
-because merchant readiness accepts only `ACTIVE`. Disable does not revoke
-credentials in phase 07.
+because merchant readiness accepts only `ACTIVE`. `disable` is `ADMIN`-only in
+phase 10. Disable does not revoke credentials automatically.
 
 Audit events:
 
@@ -252,7 +326,7 @@ Errors:
 
 Marks the prior active credential `ROTATED`, sets `rotated_at` and
 `expired_at`, creates a new active credential, and writes
-`CREDENTIAL_ROTATED`.
+`CREDENTIAL_ROTATED`. This route is `ADMIN`-only in phase 10.
 
 Request and response shape match credential creation.
 
@@ -337,8 +411,9 @@ Errors:
 `POST /v1/ops/webhooks/{event_id}/retry`
 
 Manual retry remains internal-only and only accepts webhook events with
-`status=FAILED`. Phase 07 adds optional audit metadata while keeping the phase
-06 no-body request compatible.
+`status=FAILED`. Phase 10 requires an authenticated internal session and still
+accepts optional audit metadata so the operator can record why the retry was
+triggered.
 
 Optional audit body:
 

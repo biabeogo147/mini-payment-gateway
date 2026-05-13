@@ -3,8 +3,9 @@ from uuid import UUID
 from fastapi import APIRouter, Depends, Query
 from sqlalchemy.orm import Session
 
-from app.controllers.deps import get_db
+from app.controllers.deps import build_ops_actor, get_db, require_ops_user
 from app.models.enums import EntityType, ReconciliationStatus
+from app.models.internal_user import InternalUser
 from app.schemas.reconciliation import (
     ReconciliationListResponse,
     ReconciliationRecordResponse,
@@ -22,6 +23,7 @@ def list_reconciliation_records(
     entity_id: UUID | None = None,
     limit: int = Query(default=100, gt=0, le=500),
     db: Session = Depends(get_db),
+    current_user: InternalUser = Depends(require_ops_user),
 ) -> ReconciliationListResponse:
     records = reconciliation_service.list_records(
         db=db,
@@ -37,6 +39,7 @@ def list_reconciliation_records(
 def get_reconciliation_record(
     record_id: UUID,
     db: Session = Depends(get_db),
+    current_user: InternalUser = Depends(require_ops_user),
 ) -> ReconciliationRecordResponse:
     return reconciliation_service.get_record(db=db, record_id=record_id)
 
@@ -46,10 +49,11 @@ def resolve_reconciliation_record(
     record_id: UUID,
     request: ResolveReconciliationRequest,
     db: Session = Depends(get_db),
+    current_user: InternalUser = Depends(require_ops_user),
 ) -> ReconciliationRecordResponse:
     return reconciliation_service.resolve_record(
         db=db,
         record_id=record_id,
         request=request,
-        actor=request.actor,
+        actor=build_ops_actor(current_user, request.actor),
     )

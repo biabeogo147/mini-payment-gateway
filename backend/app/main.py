@@ -2,6 +2,9 @@ from fastapi import FastAPI
 
 from app.controllers.errors import app_error_handler
 from app.controllers.health_controller import router as health_router
+from app.controllers.internal_auth_controller import router as internal_auth_router
+from app.controllers.internal_user_controller import router as internal_user_router
+from app.controllers.ops_dashboard_controller import router as ops_dashboard_router
 from app.controllers.ops_merchant_controller import router as ops_merchant_router
 from app.controllers.ops_reconciliation_controller import router as ops_reconciliation_router
 from app.controllers.payment_controller import router as payment_router
@@ -14,6 +17,9 @@ app = FastAPI(title="Mini Payment Gateway", version="0.1.0")
 
 app.add_exception_handler(AppError, app_error_handler)
 app.include_router(health_router)
+app.include_router(internal_auth_router)
+app.include_router(internal_user_router)
+app.include_router(ops_dashboard_router)
 app.include_router(payment_router)
 app.include_router(refund_router)
 app.include_router(provider_callback_router)

@@ -8,6 +8,7 @@ from fastapi.testclient import TestClient
 from sqlalchemy import delete, or_, select, update
 
 from app.core.security import sha256_hex, sign_hmac_sha256
+from app.core.internal_auth import hash_password
 from app.db.session import SessionLocal
 from app.main import app
 from app.models.audit_log import AuditLog
@@ -248,18 +249,27 @@ class PaymentRefundWebhookE2ETests(unittest.TestCase):
 
             db.commit()
 
-    def _create_ops_user(self, suffix: str):
+    def _create_ops_user(self, suffix: str) -> dict:
+        password = f"E2E-pass-{suffix}"
         with SessionLocal() as db:
             user = InternalUser(
                 email=f"e2e-{suffix}@example.com",
                 full_name="E2E Ops",
                 role=InternalUserRole.OPS,
                 status=InternalUserStatus.ACTIVE,
+                password_hash=hash_password(password),
             )
             db.add(user)
             db.commit()
             db.refresh(user)
-            return user.id
+            return {"id": user.id, "email": user.email, "password": password}
+
+    def _login_internal_user(self, email: str, password: str) -> None:
+        response = self.client.post(
+            "/v1/internal/auth/login",
+            json={"email": email, "password": password},
+        )
+        self.assertEqual(response.status_code, 200, response.text)
 
     def _actor(self, ops_user_id, reason: str) -> dict:
         return {
@@ -271,7 +281,9 @@ class PaymentRefundWebhookE2ETests(unittest.TestCase):
         }
 
     def _setup_active_merchant(self, suffix: str) -> dict:
-        ops_user_id = self._create_ops_user(suffix)
+        ops_user = self._create_ops_user(suffix)
+        ops_user_id = ops_user["id"]
+        self._login_internal_user(ops_user["email"], ops_user["password"])
         merchant_id = f"m_e2e_{suffix}"
         secret_key = f"e2e_secret_{suffix}"
 

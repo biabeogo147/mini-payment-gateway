@@ -6,6 +6,7 @@ from fastapi.testclient import TestClient
 
 from app.models.enums import DeliveryAttemptResult, WebhookEventStatus
 from app.schemas.webhook import WebhookRetryResponse
+from tests.internal_auth_test_utils import make_internal_user, override_current_internal_user
 
 
 class WebhookOpsRouteTest(unittest.TestCase):
@@ -22,6 +23,8 @@ class WebhookOpsRouteTest(unittest.TestCase):
             next_retry_at=None,
         )
         self._override_db(app, db)
+        current_user = make_internal_user()
+        override_current_internal_user(app, current_user)
 
         try:
             with patch.object(
@@ -47,7 +50,9 @@ class WebhookOpsRouteTest(unittest.TestCase):
         kwargs = service.call_args.kwargs
         self.assertIs(kwargs["db"], db)
         self.assertEqual(kwargs["event_id"], "evt_123")
-        self.assertIsNone(kwargs["audit_context"])
+        self.assertEqual(kwargs["audit_context"].actor_id, current_user.id)
+        self.assertEqual(kwargs["audit_context"].actor_type.value, "OPS")
+        self.assertIsNone(kwargs["audit_context"].reason)
 
     def test_manual_retry_route_accepts_optional_audit_context_body(self) -> None:
         from app.controllers import webhook_ops_controller
@@ -62,6 +67,7 @@ class WebhookOpsRouteTest(unittest.TestCase):
             next_retry_at=None,
         )
         self._override_db(app, db)
+        override_current_internal_user(app, make_internal_user())
 
         try:
             with patch.object(
@@ -101,6 +107,7 @@ class WebhookOpsRouteTest(unittest.TestCase):
             next_retry_at=next_retry_at,
         )
         self._override_db(app, db)
+        override_current_internal_user(app, make_internal_user())
 
         try:
             with patch.object(

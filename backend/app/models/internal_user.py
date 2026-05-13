@@ -1,4 +1,6 @@
-from sqlalchemy import Enum, String
+from datetime import datetime
+
+from sqlalchemy import DateTime, Enum, String, Text
 from sqlalchemy.orm import Mapped, mapped_column
 
 from .base import Base, TimestampMixin, UUIDPrimaryKeyMixin
@@ -16,6 +18,8 @@ class InternalUser(UUIDPrimaryKeyMixin, TimestampMixin, Base):
     - full_name: display name for audit and approval actions.
     - role: operator role such as ADMIN or OPS.
     - status: whether this internal account is active for use.
+    - password_hash: local internal-auth password hash.
+    - last_login_at: latest successful internal-auth login timestamp.
     - created_at: when the account record was created.
     - updated_at: latest update timestamp.
     """
@@ -33,3 +37,5 @@ class InternalUser(UUIDPrimaryKeyMixin, TimestampMixin, Base):
         nullable=False,
         default=InternalUserStatus.ACTIVE,
     )
+    password_hash: Mapped[str | None] = mapped_column(Text, nullable=True)
+    last_login_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)

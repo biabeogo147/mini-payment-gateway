@@ -67,6 +67,9 @@ Examples:
 - `backend/app/controllers/webhook_ops_controller.py`
 - `backend/app/controllers/ops_merchant_controller.py`
 - `backend/app/controllers/ops_reconciliation_controller.py`
+- `backend/app/controllers/internal_auth_controller.py`
+- `backend/app/controllers/internal_user_controller.py`
+- `backend/app/controllers/ops_dashboard_controller.py`
 
 ### Schemas
 
@@ -99,6 +102,9 @@ Examples:
 - `backend/app/services/reconciliation_service.py`
 - `backend/app/services/webhook_event_factory.py`
 - `backend/app/services/webhook_delivery_service.py`
+- `backend/app/services/internal_auth_service.py`
+- `backend/app/services/internal_user_admin_service.py`
+- `backend/app/services/ops_dashboard_service.py`
 
 ### Repositories
 
@@ -119,24 +125,42 @@ Examples:
 - `backend/app/repositories/audit_repository.py`
 - `backend/app/repositories/onboarding_repository.py`
 - `backend/app/repositories/reconciliation_repository.py`
+- `backend/app/repositories/internal_user_repository.py`
+- `backend/app/repositories/ops_dashboard_repository.py`
 
 ### Ops And Audit Layer
 
-Phase 07 adds internal ops routes without full internal authentication. Mutating
-ops requests carry an explicit actor context for auditability; services pass
-that context to `audit_service.record_event(...)` before committing their
-workflow transaction.
+Phase 07 adds internal ops mutation routes and audit trails. Phase 10 layers a
+real internal auth/session system plus read/search/stat APIs on top of that.
 
-Audit rows store event code, entity type/id, actor type/id, before/after state,
-and reason. State snapshots are sanitized centrally so keys named `secret_key`
-or `secret_key_encrypted` are masked recursively.
+Phase 10 internal auth works like this:
+
+- `internal_auth_controller` exposes bootstrap, login, logout, `me`, and
+  change-password routes;
+- `deps.get_current_internal_user(...)` authenticates a signed session cookie;
+- `require_ops_user(...)` and `require_admin_user(...)` enforce RBAC at the
+  controller boundary;
+- `internal_user_admin_service` manages internal operator accounts;
+- `ops_dashboard_service` backs the internal Ops dashboard read/search
+  experience.
+
+Mutating ops requests still carry an explicit `reason` in the request body for
+auditability; controllers now merge that reason with the authenticated internal
+user so services receive canonical actor context instead of trusting caller
+supplied identity fields.
+
+Audit rows store event code, entity type/id, actor type/id, before/after
+state, and reason. State snapshots are sanitized centrally so keys named
+`secret_key` or `secret_key_encrypted` are masked recursively.
 
 Ops endpoints remain thin controllers:
 
 - merchant onboarding and lifecycle actions live in `merchant_ops_service`;
 - reconciliation list/detail/resolve lives in `reconciliation_service`;
 - webhook manual retry accepts optional actor context and remains backward
-  compatible with no-body phase 06 retry calls.
+  compatible with no-body phase 06 retry calls;
+- dashboard summary/list/detail routes live in `ops_dashboard_service`;
+- internal user admin routes stay separate from money-movement operations.
 
 ### Readiness And E2E Layer
 

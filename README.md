@@ -20,8 +20,8 @@
   <img alt="Python" src="https://img.shields.io/badge/Python-3.13-blue">
   <img alt="FastAPI" src="https://img.shields.io/badge/FastAPI-Backend-009688">
   <img alt="PostgreSQL" src="https://img.shields.io/badge/PostgreSQL-Alembic-336791">
-  <img alt="Tests" src="https://img.shields.io/badge/Tests-146%20passing-brightgreen">
-  <img alt="Status" src="https://img.shields.io/badge/Status-MVP%20complete-success">
+  <img alt="Tests" src="https://img.shields.io/badge/Tests-163%20passing-brightgreen">
+  <img alt="Status" src="https://img.shields.io/badge/Status-Phase%2010%20complete-success">
 </p>
 
 Mini Payment Gateway is not a toy CRUD demo. It is a compact backend that
@@ -117,21 +117,28 @@ backend/app/
 
 Read more in [docs/architecture/backend.md](docs/architecture/backend.md).
 
-## Frontend Workspace
+## Internal Ops Dashboard
 
-Phase 10 preparation adds a frontend workspace scaffold for the internal Ops
-dashboard at `apps/ops-dashboard/`.
+Phase 10 adds a live internal Ops dashboard at `apps/ops-dashboard/`.
 
-Use it like this once you are ready to start the dashboard implementation:
+It includes:
+
+- secure internal login/bootstrap for `ADMIN` and `OPS`;
+- overview metrics, queues, and trend charts;
+- merchant lifecycle and credential actions;
+- onboarding review workflow;
+- payment, refund, webhook, reconciliation, and audit explorers;
+- internal user management for `ADMIN`.
+
+Run it locally like this:
 
 ```bash
 npm install
 npm run ops-dashboard:dev
 ```
 
-This scaffold is intentionally route-first only. Internal auth, RBAC, API
-integration, tables, filters, and live charts still belong to phase 10
-implementation work.
+In local dev, Vite proxies `/api` to `http://127.0.0.1:8000`, so the frontend
+and backend share the same session flow as the sandbox deployment.
 
 ## Quick Start
 
@@ -156,6 +163,7 @@ Then open:
 
 - Health: `http://127.0.0.1:8000/health`
 - OpenAPI UI: `http://127.0.0.1:8000/docs`
+- Ops dashboard: `http://127.0.0.1:4173`
 
 Detailed setup lives in
 [docs/getting-started/local-setup.md](docs/getting-started/local-setup.md).
@@ -205,7 +213,7 @@ python scripts/smoke_ops_reconciliation_api.py
 
 ## Project Status
 
-MVP scope is complete through phase 08:
+Current scope is complete through phase 10:
 
 - API contract and backend foundation
 - Merchant HMAC auth and readiness checks
@@ -215,10 +223,11 @@ MVP scope is complete through phase 08:
 - Webhook delivery and retry
 - Ops onboarding, credentials, reconciliation, and audit
 - Readiness docs and route-level E2E coverage
+- Sandbox CI/CD
+- Internal auth, RBAC, and Ops dashboard UI
 
 Intentionally out of scope for this MVP:
 
-- production internal auth/JWT/RBAC for ops users;
 - settlement, ledger posting, disputes, analytics, and multi-provider routing;
 - partial refunds;
 - merchant self-service UI.

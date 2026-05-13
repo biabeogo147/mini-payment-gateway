@@ -30,3 +30,13 @@ services:
     command: bash -lc "uvicorn app.main:app --host 0.0.0.0 --port 8000"
     ports:
       - "8000:8000"
+
+  ops-dashboard:
+    build:
+      context: .
+      dockerfile: apps/ops-dashboard/Dockerfile
+    depends_on:
+      backend:
+        condition: service_started
+    ports:
+      - "${OPS_DASHBOARD_PORT:-4173}:8080"

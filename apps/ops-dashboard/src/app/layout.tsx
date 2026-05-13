@@ -1,4 +1,11 @@
-import { NavLink, Outlet } from "react-router-dom";
+import { useState } from "react";
+import { NavLink, Navigate, Outlet, useLocation } from "react-router-dom";
+import { useMutation, useQueryClient } from "@tanstack/react-query";
+
+import { changeInternalPassword, logoutInternalAuth } from "../features/common/api";
+import { sessionQueryKey } from "../features/common/query";
+import { ErrorCard, InlineField, StatusBadge } from "../features/common/ui";
+import { useSession } from "../features/auth/use-session";
 
 const navigation = [
   { to: "/", label: "Overview" },
@@ -9,10 +16,70 @@ const navigation = [
   { to: "/webhooks", label: "Webhooks" },
   { to: "/reconciliation", label: "Reconciliation" },
   { to: "/audit", label: "Audit" },
-  { to: "/internal-users", label: "Internal Users" },
+  { to: "/internal-users", label: "Internal Users", adminOnly: true },
 ];
 
 export function AppLayout() {
+  const location = useLocation();
+  const queryClient = useQueryClient();
+  const { data: session, isLoading, error } = useSession();
+  const [showPasswordForm, setShowPasswordForm] = useState(false);
+  const [currentPassword, setCurrentPassword] = useState("");
+  const [newPassword, setNewPassword] = useState("");
+
+  const logoutMutation = useMutation({
+    mutationFn: logoutInternalAuth,
+    onSuccess: async () => {
+      await queryClient.setQueryData(sessionQueryKey, null);
+    },
+  });
+
+  const changePasswordMutation = useMutation({
+    mutationFn: changeInternalPassword,
+    onSuccess: async (payload) => {
+      queryClient.setQueryData(sessionQueryKey, payload);
+      setCurrentPassword("");
+      setNewPassword("");
+      setShowPasswordForm(false);
+    },
+  });
+
+  if (isLoading) {
+    return (
+      <div className="login-shell">
+        <section className="login-card">
+          <p className="eyebrow">Ops Console</p>
+          <h1>Restoring internal session</h1>
+          <p className="section-copy">
+            The console is checking the secure operator session before it
+            unlocks the live data surface.
+          </p>
+        </section>
+      </div>
+    );
+  }
+
+  if (error instanceof Error) {
+    return (
+      <div className="login-shell">
+        <section className="login-card">
+          <ErrorCard
+            title="Session check failed"
+            message={error.message}
+          />
+        </section>
+      </div>
+    );
+  }
+
+  if (!session) {
+    return <Navigate to="/login" replace state={{ from: location.pathname }} />;
+  }
+
+  const visibleNavigation = navigation.filter(
+    (item) => !item.adminOnly || session.user.role === "ADMIN",
+  );
+
   return (
     <div className="app-shell">
       <aside className="sidebar">
@@ -20,13 +87,13 @@ export function AppLayout() {
           <p className="eyebrow">Mini Payment Gateway</p>
           <h1>Ops Console</h1>
           <p className="lede">
-            Phase 10 scaffold is ready. Auth, RBAC, and live data wiring land
-            in the implementation phase.
+            Internal operating surface for onboarding, transaction support,
+            webhook recovery, reconciliation, and audit review.
           </p>
         </div>
 
         <nav className="nav-list" aria-label="Primary">
-          {navigation.map((item) => (
+          {visibleNavigation.map((item) => (
             <NavLink
               key={item.to}
               to={item.to}
@@ -41,28 +108,94 @@ export function AppLayout() {
         </nav>
 
         <div className="status-card">
-          <span className="status-badge">Sandbox Ready</span>
-          <p>
-            This shell gives phase 10 a stable place to land without deciding
-            UI structure mid-implementation.
-          </p>
+          <p className="eyebrow">Active session</p>
+          <h4>{session.user.full_name}</h4>
+          <p>{session.user.email}</p>
+          <div className="status-stack">
+            <StatusBadge value={session.user.role} />
+            <StatusBadge value={session.user.status} />
+          </div>
         </div>
       </aside>
 
       <main className="main-panel">
         <header className="topbar">
           <div>
-            <p className="eyebrow">Prepared ahead of phase 10</p>
+            <p className="eyebrow">Authenticated operator</p>
             <h2>Internal Ops Dashboard</h2>
           </div>
 
           <div className="topbar-meta">
-            <span className="env-pill">role model: ADMIN / OPS</span>
-            <NavLink className="topbar-link" to="/login">
-              Preview login
-            </NavLink>
+            <button
+              type="button"
+              className="secondary-button"
+              onClick={() => setShowPasswordForm((current) => !current)}
+            >
+              {showPasswordForm ? "Hide password form" : "Change password"}
+            </button>
+            <button
+              type="button"
+              className="primary-button"
+              onClick={() => logoutMutation.mutate()}
+              disabled={logoutMutation.isPending}
+            >
+              {logoutMutation.isPending ? "Signing out..." : "Sign out"}
+            </button>
           </div>
         </header>
+
+        {showPasswordForm ? (
+          <section className="content-card">
+            <div className="section-heading">
+              <div>
+                <p className="eyebrow">Credential hygiene</p>
+                <h3>Change internal password</h3>
+              </div>
+            </div>
+            <div className="form-grid">
+              <InlineField label="Current password">
+                <input
+                  type="password"
+                  value={currentPassword}
+                  onChange={(event) => setCurrentPassword(event.target.value)}
+                />
+              </InlineField>
+              <InlineField label="New password">
+                <input
+                  type="password"
+                  value={newPassword}
+                  onChange={(event) => setNewPassword(event.target.value)}
+                />
+              </InlineField>
+            </div>
+            <div className="inline-actions">
+              <button
+                type="button"
+                className="primary-button"
+                disabled={
+                  changePasswordMutation.isPending ||
+                  currentPassword.length < 1 ||
+                  newPassword.length < 8
+                }
+                onClick={() =>
+                  changePasswordMutation.mutate({
+                    current_password: currentPassword,
+                    new_password: newPassword,
+                  })
+                }
+              >
+                {changePasswordMutation.isPending
+                  ? "Updating..."
+                  : "Update password"}
+              </button>
+              {changePasswordMutation.error instanceof Error ? (
+                <span className="feedback feedback-danger">
+                  {changePasswordMutation.error.message}
+                </span>
+              ) : null}
+            </div>
+          </section>
+        ) : null}
 
         <Outlet />
       </main>
