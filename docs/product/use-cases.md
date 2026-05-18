@@ -41,12 +41,20 @@ actor "Provider simulator" as Provider
 actor "Scheduler / Timer" as Scheduler
 
 rectangle "Mini Payment Gateway" {
-  usecase "Onboard and activate\nmerchant" as UC001
-  usecase "Create dynamic QR\npayment" as UC002
-  usecase "Process payment\nresult callback" as UC003
-  usecase "Create full refund and\nprocess refund result" as UC004
-  usecase "Deliver webhook with retry\nand manual recovery" as UC005
-  usecase "Review audit and\nreconciliation evidence" as UC_Audit
+  package "Merchant readiness" {
+    usecase "Onboard and activate\nmerchant" as UC001
+  }
+
+  package "Money movement lifecycle" {
+    usecase "Create dynamic QR\npayment" as UC002
+    usecase "Process payment\nresult callback" as UC003
+    usecase "Create full refund and\nprocess refund result" as UC004
+  }
+
+  package "Notification and evidence" {
+    usecase "Deliver webhook with retry\nand manual recovery" as UC005
+    usecase "Review audit and\nreconciliation evidence" as UC_Audit
+  }
 }
 
 Admin --> UC001
@@ -100,11 +108,20 @@ actor "Admin / Ops" as Admin
 
 rectangle "Mini Payment Gateway" {
   usecase "Onboard and activate\nmerchant" as UC001
-  usecase "Create merchant\nprofile" as UC_CreateMerchant
-  usecase "Submit onboarding\nevidence" as UC_SubmitEvidence
-  usecase "Make onboarding\ndecision" as UC_DecideOnboarding
-  usecase "Issue active\ncredential" as UC_IssueCredential
-  usecase "Activate merchant" as UC_ActivateMerchant
+
+  package "Merchant record" {
+    usecase "Create merchant\nprofile" as UC_CreateMerchant
+  }
+
+  package "Onboarding review" {
+    usecase "Submit onboarding\nevidence" as UC_SubmitEvidence
+    usecase "Make onboarding\ndecision" as UC_DecideOnboarding
+  }
+
+  package "Activation readiness" {
+    usecase "Issue active\ncredential" as UC_IssueCredential
+    usecase "Activate merchant" as UC_ActivateMerchant
+  }
 }
 
 Admin --> UC001
@@ -231,12 +248,21 @@ skinparam packageStyle rectangle
 actor "Merchant" as Merchant
 rectangle "Mini Payment Gateway" {
   usecase "Create dynamic QR\npayment" as UC002
-  usecase "Authenticate merchant\nrequest" as UC_Authenticate
-  usecase "Validate merchant and\nexpiration strategy" as UC_ValidateRequest
-  usecase "Enforce payment\nidempotency" as UC_Idempotency
-  usecase "Create or reuse\norder reference" as UC_Order
-  usecase "Create pending\npayment transaction" as UC_CreatePending
-  usecase "Generate dynamic\nQR content" as UC_GenerateQr
+
+  package "Request gate" {
+    usecase "Authenticate merchant\nrequest" as UC_Authenticate
+    usecase "Validate merchant and\nexpiration strategy" as UC_ValidateRequest
+  }
+
+  package "Payment creation decision" {
+    usecase "Enforce payment\nidempotency" as UC_Idempotency
+    usecase "Create or reuse\norder reference" as UC_Order
+    usecase "Create pending\npayment transaction" as UC_CreatePending
+  }
+
+  package "QR response" {
+    usecase "Generate dynamic\nQR content" as UC_GenerateQr
+  }
 }
 
 Merchant --> UC002
