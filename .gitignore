@@ -19,3 +19,4 @@ backend/.venv/
 .worktrees/
 worktrees/
 *.egg-info
+.idea/
