@@ -33,6 +33,8 @@ The current design uses a split pipeline:
   Ops dashboard.
 - Deployment is accepted only if the local backend `/health` endpoint and the
   Ops dashboard root both pass.
+- As of June 2, 2026, the live sandbox publishes PostgreSQL, backend, and the
+  Ops dashboard on `192.168.1.199` for internal LAN access.
 
 The key architectural choice is **internal pull deployment**:
 
@@ -131,6 +133,10 @@ execution.
 - GitHub-hosted runners reach GitHub-managed infrastructure only.
 - The self-hosted runner connects outbound to GitHub over HTTPS.
 - No inbound SSH from GitHub to `192.168.1.199` is required.
+- Internal clients on the same LAN can connect directly to:
+  - `192.168.1.199:5432` for PostgreSQL
+  - `192.168.1.199:8000` for the backend
+  - `192.168.1.199:4173` for the Ops dashboard
 
 ### Secret Placement
 
@@ -271,8 +277,8 @@ docker compose -f docker-compose.sandbox.yml build backend ops-dashboard
 docker compose -f docker-compose.sandbox.yml up -d postgres
 docker compose -f docker-compose.sandbox.yml run --rm backend python -m alembic upgrade head
 docker compose -f docker-compose.sandbox.yml up -d backend ops-dashboard
-curl -fsS http://127.0.0.1:8000/health
-curl -fsS http://127.0.0.1:4173/
+curl -fsS http://192.168.1.199:8000/health
+curl -fsS http://192.168.1.199:4173/
 ```
 
 ### Why Build On Host
@@ -343,9 +349,9 @@ cd /opt/mini-payment-gateway
 docker compose -f docker-compose.sandbox.yml ps
 docker compose -f docker-compose.sandbox.yml logs --tail 100 backend
 docker compose -f docker-compose.sandbox.yml logs --tail 100 postgres
-curl -fsS http://127.0.0.1:8000/health
-curl -fsS http://127.0.0.1:4173/
-curl -fsS http://127.0.0.1:8000/v1/internal/auth/bootstrap-status
+curl -fsS http://192.168.1.199:8000/health
+curl -fsS http://192.168.1.199:4173/
+curl -fsS http://192.168.1.199:8000/v1/internal/auth/bootstrap-status
 ```
 
 ### Current Rollback Model

@@ -4,8 +4,6 @@ set -euo pipefail
 
 APP_DIR="${APP_DIR:-/opt/mini-payment-gateway}"
 COMPOSE_FILE="${COMPOSE_FILE:-docker-compose.sandbox.yml}"
-HEALTH_URL="${HEALTH_URL:-http://127.0.0.1:8000/health}"
-OPS_DASHBOARD_URL="${OPS_DASHBOARD_URL:-http://127.0.0.1:4173/}"
 HEALTH_ATTEMPTS="${HEALTH_ATTEMPTS:-30}"
 HEALTH_SLEEP_SECONDS="${HEALTH_SLEEP_SECONDS:-2}"
 
@@ -18,6 +16,38 @@ require_command() {
     log "Missing required command: $1"
     exit 1
   fi
+}
+
+env_value_or_default() {
+  local key="$1"
+  local default_value="$2"
+  local current_value=""
+
+  current_value="$(
+    awk -F= -v wanted_key="$key" '
+      $0 !~ /^[[:space:]]*#/ && $1 == wanted_key {
+        print substr($0, index($0, "=") + 1)
+      }
+    ' .env | tail -n 1
+  )"
+
+  if [[ -n "$current_value" ]]; then
+    printf '%s\n' "$current_value"
+    return
+  fi
+
+  printf '%s\n' "$default_value"
+}
+
+probe_host_for_bind_addr() {
+  local bind_addr="$1"
+
+  if [[ -z "$bind_addr" || "$bind_addr" == "0.0.0.0" ]]; then
+    printf '127.0.0.1\n'
+    return
+  fi
+
+  printf '%s\n' "$bind_addr"
 }
 
 print_failure_context() {
@@ -48,6 +78,14 @@ if [[ ! -f ".env" ]]; then
   log "Expected server-only .env at $APP_DIR/.env"
   exit 1
 fi
+
+BACKEND_BIND_ADDR_VALUE="$(env_value_or_default BACKEND_BIND_ADDR 127.0.0.1)"
+BACKEND_PORT_VALUE="$(env_value_or_default BACKEND_PORT 8000)"
+OPS_DASHBOARD_BIND_ADDR_VALUE="$(env_value_or_default OPS_DASHBOARD_BIND_ADDR 127.0.0.1)"
+OPS_DASHBOARD_PORT_VALUE="$(env_value_or_default OPS_DASHBOARD_PORT 4173)"
+
+HEALTH_URL="${HEALTH_URL:-http://$(probe_host_for_bind_addr "$BACKEND_BIND_ADDR_VALUE"):${BACKEND_PORT_VALUE}/health}"
+OPS_DASHBOARD_URL="${OPS_DASHBOARD_URL:-http://$(probe_host_for_bind_addr "$OPS_DASHBOARD_BIND_ADDR_VALUE"):${OPS_DASHBOARD_PORT_VALUE}/}"
 
 log "Updating checkout to origin/main"
 git fetch --prune origin main
