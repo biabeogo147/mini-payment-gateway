@@ -8,10 +8,11 @@ from app.core.config import get_settings
 from app.db.session import SessionLocal
 from app.models.enums import ActorType, InternalUserRole
 from app.models.internal_user import InternalUser
+from app.models.merchant_user import MerchantUser
 from app.schemas.auth import AuthenticatedMerchant
 from app.schemas.ops import OpsActorContext
 from app.services.auth_service import authenticate_merchant_request
-from app.services import internal_auth_service
+from app.services import internal_auth_service, merchant_portal_auth_service
 
 
 def get_db() -> Generator[Session, None, None]:
@@ -42,6 +43,14 @@ def get_current_internal_user(
 ) -> InternalUser:
     session_token = request.cookies.get(get_settings().internal_auth_cookie_name)
     return internal_auth_service.authenticate_session(db=db, session_token=session_token)
+
+
+def get_current_merchant_user(
+    request: Request,
+    db: Session = Depends(get_db),
+) -> MerchantUser:
+    session_token = request.cookies.get(get_settings().merchant_auth_cookie_name)
+    return merchant_portal_auth_service.authenticate_session(db=db, session_token=session_token)
 
 
 def require_ops_user(

@@ -5,6 +5,7 @@ from app.models import (
     merchant,
     merchant_credential,
     merchant_onboarding_case,
+    merchant_user,
     order_reference,
     payment_transaction,
     reconciliation_record,

@@ -33,9 +33,11 @@ Known-good deployment context for the phase 10 rollout:
 - Runner service:
   `actions.runner.biabeogo147-mini-payment-gateway.sandbox-runner-01.service`
 - First verified phase 10 application deploy commit: `6d0b0bc`
+- Dashboard merchant portal migration: `20260609_0007_merchant_portal.py`
 - Verified backend health result: `{"status":"ok"}`
 - Verified Ops dashboard root response: HTML shell served on
   `http://127.0.0.1:4173/`
+- Merchant Dashboard is served separately on `http://127.0.0.1:4174/`.
 - Verified internal auth bootstrap status:
   `{"bootstrap_required":true}`
 
@@ -44,17 +46,44 @@ Known-good deployment context for the phase 10 rollout:
 These points should stay true during normal operations:
 
 - GitHub `main` is the deploy source of truth.
-- `backend-tests` must pass before deploy is allowed to run.
+- `backend-tests` and `frontend-build` must pass before deploy is allowed to
+  run.
 - The deploy runner lives on the target sandbox host.
 - The runner executes deploy commands locally on that host.
 - The app checkout path is `/opt/mini-payment-gateway`.
 - Runtime configuration is loaded from `/opt/mini-payment-gateway/.env`.
 - Runtime orchestration uses `docker-compose.sandbox.yml`.
-- A deploy is only considered successful if backend `/health` and the Ops
-  dashboard root both pass.
+- A deploy is only considered successful if backend `/health`, the Ops
+  dashboard root, and the Merchant Dashboard root all pass.
 
 If one of these assumptions changes, update this runbook and
 `devops-architecture.md` together.
+
+## Dashboard Release `.env` Check
+
+Before the first deploy that includes the Merchant Dashboard, confirm the server
+`.env` contains the database, dashboard auth, and port values from
+`.env.sandbox.example`:
+
+```bash
+sudo -u github-runner bash -lc 'cd /opt/mini-payment-gateway && grep -E "^(INTERNAL_AUTH_|MERCHANT_AUTH_|OPS_DASHBOARD_|MERCHANT_DASHBOARD_|DATABASE_URL=|POSTGRES_PASSWORD=)" .env'
+```
+
+Required runtime values:
+
+- `POSTGRES_PASSWORD`
+- `DATABASE_URL`
+- `INTERNAL_AUTH_SECRET`
+- `INTERNAL_AUTH_COOKIE_NAME`
+- `INTERNAL_AUTH_TTL_SECONDS`
+- `INTERNAL_AUTH_COOKIE_SECURE`
+- `MERCHANT_AUTH_SECRET`
+- `MERCHANT_AUTH_COOKIE_NAME`
+- `MERCHANT_AUTH_TTL_SECONDS`
+- `MERCHANT_AUTH_COOKIE_SECURE`
+
+Use different long random values for `INTERNAL_AUTH_SECRET` and
+`MERCHANT_AUTH_SECRET`. Do not leave either one at the example value.
 
 ## Standard Deploy Paths
 
@@ -78,6 +107,7 @@ Trigger:
 Expected result:
 
 - `backend-tests` finishes `success`;
+- `frontend-build` finishes `success`;
 - `deploy-sandbox` finishes `success`;
 - the sandbox host advances to the expected commit.
 
@@ -137,7 +167,7 @@ Success means:
 
 - a workflow run appears in GitHub Actions for the intended commit.
 
-### Step 3: Wait For `backend-tests`
+### Step 3: Wait For Test And Build Gates
 
 Why:
 
@@ -146,7 +176,9 @@ Why:
 
 Success means:
 
-- the `backend-tests` job ends with `success`.
+- the `backend-tests` job ends with `success`;
+- the `frontend-build` job ends with `success`, including Ops typecheck/build
+  and Merchant typecheck/test/build.
 
 If it fails:
 
@@ -197,7 +229,8 @@ Success means:
 
 - `postgres` is `Up` and healthy;
 - `backend` is `Up` and healthy;
-- `ops-dashboard` is `Up` and healthy.
+- `ops-dashboard` is `Up` and healthy;
+- `merchant-dashboard` is `Up` and healthy.
 
 ### Step 7: Verify Backend Health
 
@@ -215,7 +248,7 @@ Success means:
 
 - the endpoint returns `{"status":"ok"}` and exits successfully.
 
-### Step 8: Verify Ops Dashboard Reachability
+### Step 8: Verify Dashboard Reachability
 
 Why:
 
@@ -225,12 +258,13 @@ Command:
 
 ```bash
 curl -fsS http://127.0.0.1:4173/
+curl -fsS http://127.0.0.1:4174/
 curl -fsS http://127.0.0.1:8000/v1/internal/auth/bootstrap-status
 ```
 
 Success means:
 
-- the dashboard root returns HTML successfully;
+- both dashboard roots return HTML successfully;
 - the auth bootstrap-status route responds successfully through the backend.
 
 ## Manual Recovery Deploy Procedure
@@ -276,6 +310,7 @@ sudo -u github-runner bash -lc 'cd /opt/mini-payment-gateway && git rev-parse --
 sudo -u github-runner bash -lc 'cd /opt/mini-payment-gateway && docker compose -f docker-compose.sandbox.yml ps'
 curl -fsS http://127.0.0.1:8000/health
 curl -fsS http://127.0.0.1:4173/
+curl -fsS http://127.0.0.1:4174/
 curl -fsS http://127.0.0.1:8000/v1/internal/auth/bootstrap-status
 ```
 
@@ -291,6 +326,7 @@ After every deploy, verify all three layers:
 ### Layer 1: Workflow
 
 - `backend-tests` is `success`
+- `frontend-build` is `success`
 - `deploy-sandbox` is `success`
 
 ### Layer 2: Host Runtime
@@ -299,11 +335,13 @@ After every deploy, verify all three layers:
 - `postgres` is healthy
 - `backend` is up
 - `ops-dashboard` is up
+- `merchant-dashboard` is up
 
 ### Layer 3: Application
 
 - `GET /health` returns `{"status":"ok"}`
-- `GET /` on port `4173` returns the dashboard HTML shell
+- `GET /` on port `4173` returns the Ops Dashboard HTML shell
+- `GET /` on port `4174` returns the Merchant Dashboard HTML shell
 - `GET /v1/internal/auth/bootstrap-status` responds successfully
 
 A deploy should not be treated as complete until all three layers are true.

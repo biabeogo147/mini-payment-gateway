@@ -99,11 +99,17 @@ class AuditServiceTest(unittest.TestCase):
 
 
 class AuditMetadataTest(unittest.TestCase):
-    def test_internal_user_table_is_loaded_for_audit_foreign_key_sorting(self) -> None:
-        from app.repositories import audit_repository  # noqa: F401
+    def test_actor_id_is_polymorphic_and_not_bound_to_internal_users(self) -> None:
         from app.models.audit_log import AuditLog
 
-        self.assertIn("internal_users", AuditLog.metadata.tables)
+        self.assertEqual(
+            [
+                foreign_key.parent.name
+                for foreign_key in AuditLog.__table__.foreign_keys
+                if foreign_key.parent.name == "actor_id"
+            ],
+            [],
+        )
 
 
 class _FakeDb:

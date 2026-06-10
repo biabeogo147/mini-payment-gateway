@@ -7,6 +7,8 @@ explicitly changes the behavior.
 ## Documents
 
 - `merchant.md` - merchant-facing payment and refund APIs.
+- `merchant-portal.md` - merchant dashboard session auth and read-only portal
+  APIs.
 - `ops.md` - internal ops/admin APIs.
 - `provider-callback.md` - bank/provider/simulator callback APIs.
 - `webhook.md` - outbound merchant webhook contract.
@@ -14,7 +16,11 @@ explicitly changes the behavior.
 
 ## Endpoint Ownership
 
-- Merchant-facing endpoints are authenticated with merchant HMAC headers.
+- Merchant-facing payment/refund endpoints are authenticated with merchant HMAC
+  headers.
+- Merchant Portal endpoints are authenticated with a separate HttpOnly session
+  cookie. Portal users are scoped to one merchant and are provisioned by
+  internal `ADMIN` users from Ops.
 - Provider callback endpoints are accepted from the bank/provider/simulator side.
   For the MVP simulator, transport trust can be environment-local until provider
   signing is introduced.

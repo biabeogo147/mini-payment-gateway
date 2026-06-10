@@ -1,5 +1,7 @@
 export type InternalUserRole = "ADMIN" | "OPS";
 export type InternalUserStatus = "ACTIVE" | "INACTIVE";
+export type MerchantUserRole = "MERCHANT_ADMIN" | "MERCHANT_VIEWER";
+export type MerchantUserStatus = "ACTIVE" | "INACTIVE";
 export type MerchantStatus =
   | "PENDING_REVIEW"
   | "ACTIVE"
@@ -23,7 +25,7 @@ export type ReconciliationStatus =
   | "MISMATCHED"
   | "PENDING_REVIEW"
   | "RESOLVED";
-export type ActorType = "SYSTEM" | "ADMIN" | "OPS";
+export type ActorType = "SYSTEM" | "ADMIN" | "OPS" | "MERCHANT";
 export type EntityType =
   | "PAYMENT"
   | "REFUND"
@@ -32,7 +34,8 @@ export type EntityType =
   | "ONBOARDING_CASE"
   | "WEBHOOK_EVENT"
   | "RECONCILIATION"
-  | "INTERNAL_USER";
+  | "INTERNAL_USER"
+  | "MERCHANT_USER";
 export type CallbackSourceType =
   | "BANK"
   | "NAPAS"
@@ -78,6 +81,23 @@ export interface InternalUser {
   last_login_at: string | null;
   created_at: string;
   updated_at: string;
+}
+
+export interface MerchantPortalUser {
+  user_id: string;
+  merchant_id: string;
+  email: string;
+  full_name: string;
+  role: MerchantUserRole;
+  status: MerchantUserStatus;
+  last_login_at: string | null;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface MerchantPortalGeneratedPasswordResponse {
+  user: MerchantPortalUser;
+  generated_password: string;
 }
 
 export interface InternalAuthSessionResponse {
@@ -596,6 +616,60 @@ export async function getMerchantOnboardingCase(merchantId: string) {
 export async function listMerchantCredentials(merchantId: string) {
   return apiFetch<{ credentials: MerchantCredential[] }>(
     `/v1/ops/merchants/${merchantId}/credentials`,
+  );
+}
+
+export async function listMerchantPortalUsers(merchantId: string) {
+  return apiFetch<{ users: MerchantPortalUser[] }>(
+    `/v1/ops/merchants/${merchantId}/portal-users`,
+  );
+}
+
+export async function createMerchantPortalUser(
+  merchantId: string,
+  payload: {
+    email: string;
+    full_name: string;
+    role: MerchantUserRole;
+    status: MerchantUserStatus;
+  },
+) {
+  return apiFetch<MerchantPortalGeneratedPasswordResponse>(
+    `/v1/ops/merchants/${merchantId}/portal-users`,
+    {
+      method: "POST",
+      bodyJson: payload,
+    },
+  );
+}
+
+export async function updateMerchantPortalUser(
+  merchantId: string,
+  userId: string,
+  payload: {
+    full_name?: string;
+    role?: MerchantUserRole;
+    status?: MerchantUserStatus;
+  },
+) {
+  return apiFetch<MerchantPortalUser>(
+    `/v1/ops/merchants/${merchantId}/portal-users/${userId}`,
+    {
+      method: "PATCH",
+      bodyJson: payload,
+    },
+  );
+}
+
+export async function resetMerchantPortalUserPassword(
+  merchantId: string,
+  userId: string,
+) {
+  return apiFetch<MerchantPortalGeneratedPasswordResponse>(
+    `/v1/ops/merchants/${merchantId}/portal-users/${userId}/reset-password`,
+    {
+      method: "POST",
+    },
   );
 }
 

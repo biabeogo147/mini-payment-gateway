@@ -19,6 +19,7 @@ class WebhookEvent(UUIDPrimaryKeyMixin, TimestampMixin, Base):
     __table_args__ = (
         CheckConstraint("attempt_count >= 0", name="ck_webhook_events_attempt_count_non_negative"),
         Index("ix_webhook_events_merchant_status_retry", "merchant_db_id", "status", "next_retry_at"),
+        Index("ix_webhook_events_merchant_created_at", "merchant_db_id", "created_at"),
     )
 
     event_id: Mapped[str] = mapped_column(String(64), unique=True, nullable=False)

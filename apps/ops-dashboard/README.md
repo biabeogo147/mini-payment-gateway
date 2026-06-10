@@ -1,33 +1,35 @@
-# Ops Dashboard Scaffold
+# Ops Dashboard
 
-This app is the route-first scaffold prepared ahead of phase 10.
+Internal operations dashboard for Mini Payment Gateway.
 
-What is ready here:
+## Scope
 
-- React + Vite + TypeScript app structure
-- workspace wiring from the repository root
-- env template for local API wiring
-- shared app shell and planned navigation
-- placeholder pages for the phase 10 feature areas
+- Internal session login/bootstrap for `ADMIN` and `OPS`.
+- Overview metrics, operational queues, and trend charts.
+- Merchant onboarding and merchant lifecycle management.
+- Merchant credential creation/rotation/status actions.
+- Payment, refund, webhook, reconciliation, and audit explorers.
+- Internal user management for `ADMIN`.
+- Merchant portal user provisioning for `ADMIN`.
 
-What is intentionally not implemented yet:
+`OPS` can continue operational workflows, but only `ADMIN` can create merchant
+portal users, update their status/role/name, or reset their passwords.
 
-- internal auth
-- RBAC
-- API integration
-- tables, filters, charts, and operator workflows backed by real data
+## Local Development
 
-Local commands from the repository root:
+From the repository root:
 
 ```bash
 npm install
 npm run ops-dashboard:dev
 ```
 
-Then open the Vite local URL shown in the terminal.
+The app runs on `http://127.0.0.1:4173` by default and proxies `/api` to
+`http://127.0.0.1:8000`.
 
-Local env setup:
+## Verification
 
 ```bash
-copy apps\\ops-dashboard\\.env.example apps\\ops-dashboard\\.env.local
+npm run ops-dashboard:typecheck
+npm run ops-dashboard:build
 ```

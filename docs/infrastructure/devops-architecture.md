@@ -25,14 +25,14 @@ Related documents:
 
 The current design uses a split pipeline:
 
-- GitHub-hosted Actions runners perform backend verification.
+- GitHub-hosted Actions runners perform backend and frontend verification.
 - A self-hosted GitHub Actions runner runs directly on the sandbox Ubuntu host.
 - The sandbox host pulls `main` itself and deploys locally with Docker Compose.
 - Database migrations run on-host before backend restart.
-- The sandbox runtime now includes both the FastAPI backend and the internal
-  Ops dashboard.
-- Deployment is accepted only if the local backend `/health` endpoint and the
-  Ops dashboard root both pass.
+- The sandbox runtime includes the FastAPI backend, the internal Ops Dashboard,
+  and the Merchant Dashboard.
+- Deployment is accepted only if the local backend `/health` endpoint and both
+  dashboard roots pass.
 
 The key architectural choice is **internal pull deployment**:
 
@@ -84,7 +84,8 @@ flowchart LR
         Compose["docker-compose.sandbox.yml"]
         DB["postgres container"]
         API["backend container"]
-        UI["ops-dashboard container\nnginx + static assets"]
+        OpsUI["ops-dashboard container\nnginx + static assets"]
+        MerchantUI["merchant-dashboard container\nnginx + static assets"]
         Env["/opt/mini-payment-gateway/.env"]
     end
 
@@ -98,7 +99,8 @@ flowchart LR
     Env --> Compose
     Compose --> DB
     Compose --> API
-    Compose --> UI
+    Compose --> OpsUI
+    Compose --> MerchantUI
 ```
 
 ### Component Roles
@@ -106,7 +108,7 @@ flowchart LR
 | Component | Role |
 | --- | --- |
 | GitHub repository | Source of truth for deployable application code on `main` |
-| GitHub-hosted runner | Executes `backend-tests` before any deploy can happen |
+| GitHub-hosted runner | Executes `backend-tests` and `frontend-build` before any deploy can happen |
 | Self-hosted runner | Executes deploy job locally on the sandbox host |
 | `/opt/mini-payment-gateway` | Persistent checkout used by both manual and automated deploys |
 | `docker-compose.sandbox.yml` | Defines the sandbox runtime stack |
@@ -114,6 +116,7 @@ flowchart LR
 | `postgres` container | Sandbox database runtime |
 | `backend` container | FastAPI application runtime |
 | `ops-dashboard` container | Internal browser UI served by nginx and proxying `/api` to the backend |
+| `merchant-dashboard` container | Merchant browser UI served by nginx and proxying `/api` to the backend |
 
 ## Trust Boundaries And Secret Flow
 
@@ -154,14 +157,15 @@ execution.
 The deployment pipeline is intentionally short and linear:
 
 1. a change lands on `main`;
-2. GitHub Actions runs backend verification;
-3. only after test success is the deploy job eligible to run;
+2. GitHub Actions runs backend verification and frontend dashboard builds;
+3. only after test/build success is the deploy job eligible to run;
 4. the self-hosted runner picks up the deploy job;
 5. the host fast-forwards its local checkout to `origin/main`;
 6. the host rebuilds and restarts the sandbox stack;
 7. the deploy verifies backend health;
-8. the deploy verifies the internal Ops dashboard root;
-9. the deploy is accepted only if both checks succeed.
+8. the deploy verifies the internal Ops Dashboard root;
+9. the deploy verifies the Merchant Dashboard root;
+10. the deploy is accepted only if all checks succeed.
 
 ### Pipeline Diagram
 
@@ -169,37 +173,40 @@ The deployment pipeline is intentionally short and linear:
 sequenceDiagram
     participant Dev as Developer
     participant GH as GitHub
-    participant CI as GitHub-hosted backend-tests
+    participant CI as GitHub-hosted checks
     participant SR as Self-hosted runner
     participant Repo as /opt/mini-payment-gateway
     participant DC as Docker Compose
     participant API as backend /health
-    participant UI as ops dashboard /
+    participant OpsUI as ops dashboard /
+    participant MerchantUI as merchant dashboard /
 
     Dev->>GH: Push commit to main
-    GH->>CI: Start backend-tests
+    GH->>CI: Start backend-tests + frontend-build
     CI-->>GH: Pass or fail
-    alt backend-tests failed
+    alt checks failed
         GH-->>Dev: Stop pipeline, no deploy
-    else backend-tests passed
+    else checks passed
         GH->>SR: Queue deploy-sandbox
         SR->>Repo: git fetch + checkout main + pull --ff-only
-        SR->>DC: build backend + ops-dashboard
+        SR->>DC: build backend + dashboards
         SR->>DC: up -d postgres
         SR->>DC: run alembic upgrade head
-        SR->>DC: up -d backend + ops-dashboard
+        SR->>DC: up -d backend + dashboards
         SR->>API: GET /health
         alt health failed
             API-->>SR: non-200 or connection failure
             SR-->>GH: Job failed with logs
         else health passed
             API-->>SR: {"status":"ok"}
-            SR->>UI: GET /
+            SR->>OpsUI: GET /
+            SR->>MerchantUI: GET /
             alt UI failed
-                UI-->>SR: non-200 or invalid response
+                OpsUI-->>SR: non-200 or invalid response
                 SR-->>GH: Job failed with logs
             else UI passed
-                UI-->>SR: HTML shell returned
+                OpsUI-->>SR: HTML shell returned
+                MerchantUI-->>SR: HTML shell returned
                 SR-->>GH: Job succeeded
             end
         end
@@ -219,6 +226,7 @@ The sandbox host is both the deploy target and the self-hosted runner node.
   docker-compose.sandbox.yml
   apps/
     ops-dashboard/
+    merchant-dashboard/
   deploy/
     sandbox_deploy.sh
   backend/
@@ -249,9 +257,10 @@ multi-environment platform.
 The deploy workflow entrypoint is
 `.github/workflows/sandbox-deploy.yml`.
 
-It has two jobs:
+It has three jobs:
 
 - `backend-tests`
+- `frontend-build`
 - `deploy-sandbox`
 
 The deploy job runs this host-local model:
@@ -267,12 +276,13 @@ bash deploy/sandbox_deploy.sh
 The deploy script then performs:
 
 ```bash
-docker compose -f docker-compose.sandbox.yml build backend ops-dashboard
+docker compose -f docker-compose.sandbox.yml build backend ops-dashboard merchant-dashboard
 docker compose -f docker-compose.sandbox.yml up -d postgres
 docker compose -f docker-compose.sandbox.yml run --rm backend python -m alembic upgrade head
-docker compose -f docker-compose.sandbox.yml up -d backend ops-dashboard
+docker compose -f docker-compose.sandbox.yml up -d backend ops-dashboard merchant-dashboard
 curl -fsS http://127.0.0.1:8000/health
 curl -fsS http://127.0.0.1:4173/
+curl -fsS http://127.0.0.1:4174/
 ```
 
 ### Why Build On Host
@@ -290,10 +300,11 @@ The tradeoff is slower deploys than a registry-based image promotion model.
 
 The pipeline has three important control points.
 
-### Gate 1: Test Gate
+### Gate 1: Test And Build Gate
 
 - `backend-tests` must succeed first.
-- If tests fail, deploy does not run.
+- `frontend-build` must succeed first.
+- If tests or dashboard builds fail, deploy does not run.
 
 ### Gate 2: Fast-Forward Gate
 
@@ -304,9 +315,9 @@ The pipeline has three important control points.
 ### Gate 3: Runtime Health Gate
 
 - even if image build and migrations succeed, deploy is still considered failed
-  until `/health` returns successfully and the Ops dashboard root responds.
+  until `/health` returns successfully and both dashboard roots respond.
 - On failure, the deploy script prints compose status and recent backend,
-  ops-dashboard, and postgres logs.
+  dashboard, and postgres logs.
 
 ## Operational Model
 
@@ -319,9 +330,9 @@ The pipeline has three important control points.
 ### Normal Deploy
 
 - merge or push to `main`;
-- wait for `backend-tests`;
+- wait for `backend-tests` and `frontend-build`;
 - allow `deploy-sandbox` to run on the self-hosted runner;
-- verify `/health`.
+- verify `/health` and both dashboard roots.
 
 ### Manual Recovery Deploy
 
@@ -345,6 +356,7 @@ docker compose -f docker-compose.sandbox.yml logs --tail 100 backend
 docker compose -f docker-compose.sandbox.yml logs --tail 100 postgres
 curl -fsS http://127.0.0.1:8000/health
 curl -fsS http://127.0.0.1:4173/
+curl -fsS http://127.0.0.1:4174/
 curl -fsS http://127.0.0.1:8000/v1/internal/auth/bootstrap-status
 ```
 

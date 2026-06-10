@@ -1,7 +1,7 @@
 from datetime import datetime
 from uuid import UUID
 
-from sqlalchemy import DateTime, Enum, JSON, String, Text, ForeignKey, func
+from sqlalchemy import DateTime, Enum, JSON, String, Text, func
 from sqlalchemy.dialects.postgresql import JSONB, UUID as PGUUID
 from sqlalchemy.orm import Mapped, mapped_column
 
@@ -39,7 +39,6 @@ class AuditLog(UUIDPrimaryKeyMixin, Base):
     )
     actor_id: Mapped[UUID | None] = mapped_column(
         PGUUID(as_uuid=True),
-        ForeignKey("internal_users.id"),
         nullable=True,
     )
     before_state_json: Mapped[dict | None] = mapped_column(JSONB().with_variant(JSON(), "sqlite"), nullable=True)

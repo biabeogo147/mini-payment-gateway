@@ -27,6 +27,7 @@ class PaymentTransaction(UUIDPrimaryKeyMixin, TimestampMixin, Base):
             postgresql_where=text("status = 'PENDING'"),
         ),
         Index("ix_payment_transactions_merchant_order", "merchant_db_id", "order_id"),
+        Index("ix_payment_transactions_merchant_created_at", "merchant_db_id", "created_at"),
     )
 
     transaction_id: Mapped[str] = mapped_column(String(64), unique=True, nullable=False)

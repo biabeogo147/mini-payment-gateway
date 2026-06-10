@@ -58,6 +58,37 @@ jobs:
       - name: Run backend tests
         run: python -m unittest discover tests -v
 
+  frontend-build:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: npm
+          cache-dependency-path: package-lock.json
+
+      - name: Install frontend dependencies
+        run: npm ci
+
+      - name: Typecheck Ops dashboard
+        run: npm run ops-dashboard:typecheck
+
+      - name: Build Ops dashboard
+        run: npm run ops-dashboard:build
+
+      - name: Typecheck Merchant dashboard
+        run: npm run merchant-dashboard:typecheck
+
+      - name: Test Merchant dashboard
+        run: npm run merchant-dashboard:test
+
+      - name: Build Merchant dashboard
+        run: npm run merchant-dashboard:build
+
   deploy-sandbox:
     if: github.event_name == 'workflow_dispatch' || github.ref == 'refs/heads/main'
     runs-on:
@@ -65,7 +96,9 @@ jobs:
       - linux
       - sandbox
       - deploy
-    needs: backend-tests
+    needs:
+      - backend-tests
+      - frontend-build
     environment: sandbox
     steps:
       - name: Deploy on sandbox host
@@ -74,12 +107,16 @@ jobs:
           SANDBOX_APP_DIR: ${{ vars.SANDBOX_APP_DIR }}
           SANDBOX_COMPOSE_FILE: ${{ vars.SANDBOX_COMPOSE_FILE }}
           SANDBOX_HEALTH_URL: ${{ vars.SANDBOX_HEALTH_URL }}
+          SANDBOX_OPS_DASHBOARD_URL: ${{ vars.SANDBOX_OPS_DASHBOARD_URL }}
+          SANDBOX_MERCHANT_DASHBOARD_URL: ${{ vars.SANDBOX_MERCHANT_DASHBOARD_URL }}
         run: |
           set -euo pipefail
 
           APP_DIR="${SANDBOX_APP_DIR:-/opt/mini-payment-gateway}"
           COMPOSE_FILE="${SANDBOX_COMPOSE_FILE:-docker-compose.sandbox.yml}"
           HEALTH_URL="${SANDBOX_HEALTH_URL:-http://127.0.0.1:8000/health}"
+          OPS_DASHBOARD_URL="${SANDBOX_OPS_DASHBOARD_URL:-http://127.0.0.1:4173/}"
+          MERCHANT_DASHBOARD_URL="${SANDBOX_MERCHANT_DASHBOARD_URL:-http://127.0.0.1:4174/}"
 
           cd "$APP_DIR"
           git fetch --prune origin main
@@ -89,4 +126,6 @@ jobs:
           APP_DIR="$APP_DIR" \
           COMPOSE_FILE="$COMPOSE_FILE" \
           HEALTH_URL="$HEALTH_URL" \
+          OPS_DASHBOARD_URL="$OPS_DASHBOARD_URL" \
+          MERCHANT_DASHBOARD_URL="$MERCHANT_DASHBOARD_URL" \
           bash deploy/sandbox_deploy.sh

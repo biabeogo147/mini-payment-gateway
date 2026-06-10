@@ -4,8 +4,11 @@ from app.controllers.errors import app_error_handler
 from app.controllers.health_controller import router as health_router
 from app.controllers.internal_auth_controller import router as internal_auth_router
 from app.controllers.internal_user_controller import router as internal_user_router
+from app.controllers.merchant_portal_auth_controller import router as merchant_portal_auth_router
+from app.controllers.merchant_portal_controller import router as merchant_portal_router
 from app.controllers.ops_dashboard_controller import router as ops_dashboard_router
 from app.controllers.ops_merchant_controller import router as ops_merchant_router
+from app.controllers.ops_merchant_portal_user_controller import router as ops_merchant_portal_user_router
 from app.controllers.ops_reconciliation_controller import router as ops_reconciliation_router
 from app.controllers.payment_controller import router as payment_router
 from app.controllers.provider_callback_controller import router as provider_callback_router
@@ -19,10 +22,13 @@ app.add_exception_handler(AppError, app_error_handler)
 app.include_router(health_router)
 app.include_router(internal_auth_router)
 app.include_router(internal_user_router)
+app.include_router(merchant_portal_auth_router)
+app.include_router(merchant_portal_router)
 app.include_router(ops_dashboard_router)
 app.include_router(payment_router)
 app.include_router(refund_router)
 app.include_router(provider_callback_router)
 app.include_router(webhook_ops_router)
 app.include_router(ops_merchant_router)
+app.include_router(ops_merchant_portal_user_router)
 app.include_router(ops_reconciliation_router)
