@@ -6,9 +6,11 @@ historical phase files.
 ## For Developers
 
 1. `getting-started/local-setup.md` - local environment and first run.
-2. `architecture/backend.md` - backend layers and request flow.
-3. `api/README.md` - API contract index.
-4. `testing/README.md` - scenario and test coverage map.
+2. `architecture/system.md` - system context, trust boundaries, and dashboard
+   architecture.
+3. `architecture/backend.md` - backend layers and request flow.
+4. `api/README.md` - API contract index.
+5. `testing/README.md` - scenario and test coverage map.
 
 ## For Operators And Demo Runs
 
@@ -33,6 +35,13 @@ historical phase files.
 - `product/modules-and-entities.md`
 - `product/state-machine.md`
 - `product/use-cases.md`
+- `product/user-stories.md`
+- `product/ui-design.md`
+
+## For Presentation Prep
+
+- `presentation/intro-to-se-slide-outline.md` - slide outline matched to the
+  Intro to Software Engineering presentation requirements.
 
 ## For Historical Context
 

@@ -114,9 +114,9 @@ jobs:
 
           APP_DIR="${SANDBOX_APP_DIR:-/opt/mini-payment-gateway}"
           COMPOSE_FILE="${SANDBOX_COMPOSE_FILE:-docker-compose.sandbox.yml}"
-          HEALTH_URL="${SANDBOX_HEALTH_URL:-http://127.0.0.1:8000/health}"
-          OPS_DASHBOARD_URL="${SANDBOX_OPS_DASHBOARD_URL:-http://127.0.0.1:4173/}"
-          MERCHANT_DASHBOARD_URL="${SANDBOX_MERCHANT_DASHBOARD_URL:-http://127.0.0.1:4174/}"
+          HEALTH_URL="${SANDBOX_HEALTH_URL:-}"
+          OPS_DASHBOARD_URL="${SANDBOX_OPS_DASHBOARD_URL:-}"
+          MERCHANT_DASHBOARD_URL="${SANDBOX_MERCHANT_DASHBOARD_URL:-}"
 
           cd "$APP_DIR"
           git fetch --prune origin main

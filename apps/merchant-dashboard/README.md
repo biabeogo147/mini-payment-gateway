@@ -7,6 +7,8 @@ Merchant-facing read-only portal for Mini Payment Gateway.
 - Merchant session login/logout with a separate HttpOnly cookie.
 - Current user session and local password change.
 - Overview summary and chart cards.
+- Interactive analytics with 7/30/90 day ranges, tooltips, data tables, and
+  drill-down links.
 - Merchant-scoped payment, refund, and webhook explorers.
 - Read-only merchant profile metadata.
 - Read-only credential metadata: `access_key`, `secret_key_last4`, status, and
@@ -48,5 +50,6 @@ python scripts/seed_dashboard_demo.py
 
 ```bash
 npm run merchant-dashboard:typecheck
+npm run merchant-dashboard:test
 npm run merchant-dashboard:build
 ```

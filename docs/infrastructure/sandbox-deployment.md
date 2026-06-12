@@ -36,10 +36,19 @@ Known-good deployment context for the phase 10 rollout:
 - Dashboard merchant portal migration: `20260609_0007_merchant_portal.py`
 - Verified backend health result: `{"status":"ok"}`
 - Verified Ops dashboard root response: HTML shell served on
-  `http://127.0.0.1:4173/`
-- Merchant Dashboard is served separately on `http://127.0.0.1:4174/`.
+  `http://192.168.1.199:4173/`
+- Merchant Dashboard is served separately on `http://192.168.1.199:4174/`.
 - Verified internal auth bootstrap status:
   `{"bootstrap_required":true}`
+
+Current LAN-published service model as of June 2, 2026:
+
+- PostgreSQL is published on `192.168.1.199:5432`
+- Backend is published on `192.168.1.199:8000`
+- Ops dashboard is published on `192.168.1.199:4173`
+- Merchant Dashboard is published on `192.168.1.199:4174`
+- `deploy/sandbox_deploy.sh` now derives its health-check URLs from the bind
+  addresses in `.env` unless explicit workflow overrides are supplied
 
 ## Operational Invariants
 
@@ -55,6 +64,8 @@ These points should stay true during normal operations:
 - Runtime orchestration uses `docker-compose.sandbox.yml`.
 - A deploy is only considered successful if backend `/health`, the Ops
   dashboard root, and the Merchant Dashboard root all pass.
+- The live sandbox currently binds all published service ports to
+  `192.168.1.199` so internal LAN clients can connect directly.
 
 If one of these assumptions changes, update this runbook and
 `devops-architecture.md` together.
@@ -241,7 +252,7 @@ Why:
 Command:
 
 ```bash
-curl -fsS http://127.0.0.1:8000/health
+curl -fsS http://192.168.1.199:8000/health
 ```
 
 Success means:
@@ -257,9 +268,9 @@ Why:
 Command:
 
 ```bash
-curl -fsS http://127.0.0.1:4173/
-curl -fsS http://127.0.0.1:4174/
-curl -fsS http://127.0.0.1:8000/v1/internal/auth/bootstrap-status
+curl -fsS http://192.168.1.199:4173/
+curl -fsS http://192.168.1.199:4174/
+curl -fsS http://192.168.1.199:8000/v1/internal/auth/bootstrap-status
 ```
 
 Success means:
@@ -308,10 +319,10 @@ Run:
 ```bash
 sudo -u github-runner bash -lc 'cd /opt/mini-payment-gateway && git rev-parse --short HEAD'
 sudo -u github-runner bash -lc 'cd /opt/mini-payment-gateway && docker compose -f docker-compose.sandbox.yml ps'
-curl -fsS http://127.0.0.1:8000/health
-curl -fsS http://127.0.0.1:4173/
-curl -fsS http://127.0.0.1:4174/
-curl -fsS http://127.0.0.1:8000/v1/internal/auth/bootstrap-status
+curl -fsS http://192.168.1.199:8000/health
+curl -fsS http://192.168.1.199:4173/
+curl -fsS http://192.168.1.199:4174/
+curl -fsS http://192.168.1.199:8000/v1/internal/auth/bootstrap-status
 ```
 
 Success means:
@@ -343,6 +354,8 @@ After every deploy, verify all three layers:
 - `GET /` on port `4173` returns the Ops Dashboard HTML shell
 - `GET /` on port `4174` returns the Merchant Dashboard HTML shell
 - `GET /v1/internal/auth/bootstrap-status` responds successfully
+- port `5432` on `192.168.1.199` is reachable from internal clients when direct
+  DB access is expected
 
 A deploy should not be treated as complete until all three layers are true.
 
@@ -470,7 +483,7 @@ What it usually means:
 Check:
 
 ```bash
-curl -v http://127.0.0.1:8000/health
+curl -v http://192.168.1.199:8000/health
 sudo -u github-runner bash -lc 'cd /opt/mini-payment-gateway && docker compose -f docker-compose.sandbox.yml logs --tail 100 backend'
 ```
 

@@ -38,11 +38,13 @@ Response sets the merchant session cookie and returns:
     "last_login_at": null,
     "created_at": "2026-06-09T00:00:00Z",
     "updated_at": "2026-06-09T00:00:00Z"
-  }
+  },
+  "merchant_status": "ACTIVE"
 }
 ```
 
-Inactive users and invalid passwords return `401`.
+Invalid merchant id, email, or password returns `401`. Inactive merchant portal
+users return `403` with `MERCHANT_AUTH_INACTIVE`.
 
 ### POST `/auth/logout`
 
@@ -199,3 +201,7 @@ Internal `ADMIN` users manage merchant portal users through Ops routes:
 
 Create/reset responses return the generated password once. Plaintext passwords
 are never persisted or retrievable later.
+
+The full request and response contract for these internal routes is documented
+in `ops.md` because the routes belong to the Ops API surface and require an
+internal `ADMIN` session.

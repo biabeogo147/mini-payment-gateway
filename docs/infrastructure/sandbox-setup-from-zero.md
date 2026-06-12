@@ -323,6 +323,9 @@ MERCHANT_DASHBOARD_PORT=4174
 
 - Keep `DATABASE_URL` pointed at the Docker service host `postgres`, not
   `localhost`.
+- Use `127.0.0.1` bind addresses for host-only access.
+- Use the sandbox host LAN IP, for example `192.168.1.199`, when internal
+  clients should connect directly to PostgreSQL, backend, and Ops dashboard.
 - `INTERNAL_AUTH_SECRET` should be a long random value and must stay
   server-only.
 - `MERCHANT_AUTH_SECRET` should use a different long random value from
@@ -398,12 +401,16 @@ The script:
 
 ### Verify
 
+Replace `<configured-host>` with the same host value you used for the bind
+address. That is usually either `127.0.0.1` for host-only access or the server
+LAN IP such as `192.168.1.199` for internal network access.
+
 ```bash
 sudo -u github-runner bash -lc 'cd /opt/mini-payment-gateway && docker compose -f docker-compose.sandbox.yml ps'
-curl -fsS http://127.0.0.1:8000/health
-curl -fsS http://127.0.0.1:4173/
-curl -fsS http://127.0.0.1:4174/
-curl -fsS http://127.0.0.1:8000/v1/internal/auth/bootstrap-status
+curl -fsS http://<configured-host>:8000/health
+curl -fsS http://<configured-host>:4173/
+curl -fsS http://<configured-host>:4174/
+curl -fsS http://<configured-host>:8000/v1/internal/auth/bootstrap-status
 ```
 
 Expected:
@@ -517,9 +524,9 @@ Recommended environment variables:
 | --- | --- |
 | `SANDBOX_APP_DIR` | `/opt/mini-payment-gateway` |
 | `SANDBOX_COMPOSE_FILE` | `docker-compose.sandbox.yml` |
-| `SANDBOX_HEALTH_URL` | `http://127.0.0.1:8000/health` |
-| `SANDBOX_OPS_DASHBOARD_URL` | `http://127.0.0.1:4173/` |
-| `SANDBOX_MERCHANT_DASHBOARD_URL` | `http://127.0.0.1:4174/` |
+| `SANDBOX_HEALTH_URL` | optional override; leave unset to derive from `.env` |
+| `SANDBOX_OPS_DASHBOARD_URL` | optional override; leave unset to derive from `.env` |
+| `SANDBOX_MERCHANT_DASHBOARD_URL` | optional override; leave unset to derive from `.env` |
 
 ### Important Note
 
@@ -564,13 +571,16 @@ In GitHub:
 
 On the server:
 
+Replace `<configured-host>` with the same host value used by your published
+bind addresses.
+
 ```bash
 sudo -u github-runner bash -lc 'cd /opt/mini-payment-gateway && git rev-parse --short HEAD'
 sudo -u github-runner bash -lc 'cd /opt/mini-payment-gateway && docker compose -f docker-compose.sandbox.yml ps'
-curl -fsS http://127.0.0.1:8000/health
-curl -fsS http://127.0.0.1:4173/
-curl -fsS http://127.0.0.1:4174/
-curl -fsS http://127.0.0.1:8000/v1/internal/auth/bootstrap-status
+curl -fsS http://<configured-host>:8000/health
+curl -fsS http://<configured-host>:4173/
+curl -fsS http://<configured-host>:4174/
+curl -fsS http://<configured-host>:8000/v1/internal/auth/bootstrap-status
 ```
 
 Expected:

@@ -71,6 +71,20 @@ entity "merchant_credentials" as MERCHANT_CREDENTIAL {
   updated_at : datetime
 }
 
+entity "merchant_users" as MERCHANT_USER {
+  * id : UUID <<PK>>
+  --
+  merchant_db_id : UUID <<FK>>
+  email : string
+  full_name : string
+  role : enum
+  status : enum
+  password_hash : text
+  last_login_at : datetime
+  created_at : datetime
+  updated_at : datetime
+}
+
 entity "order_references" as ORDER_REFERENCE {
   * id : UUID <<PK>>
   --
@@ -201,7 +215,7 @@ entity "audit_logs" as AUDIT_LOG {
   entity_type : enum
   entity_id : UUID
   actor_type : enum
-  actor_id : UUID <<FK>>
+  actor_id : UUID
   before_state_json : jsonb
   after_state_json : jsonb
   reason : text
@@ -210,6 +224,7 @@ entity "audit_logs" as AUDIT_LOG {
 
 MERCHANT "1" -down- "0..1" MERCHANT_ONBOARDING_CASE
 MERCHANT "1" -down- "0..*" MERCHANT_CREDENTIAL
+MERCHANT "1" -down- "0..*" MERCHANT_USER
 MERCHANT "1" -right- "0..*" ORDER_REFERENCE
 MERCHANT "1" -right- "0..*" PAYMENT_TRANSACTION
 MERCHANT "1" -right- "0..*" REFUND_TRANSACTION
@@ -217,7 +232,8 @@ MERCHANT "1" -right- "0..*" WEBHOOK_EVENT
 
 INTERNAL_USER "1" -down- "0..*" MERCHANT_ONBOARDING_CASE
 INTERNAL_USER "1" -right- "0..*" RECONCILIATION_RECORD
-INTERNAL_USER "1" -right- "0..*" AUDIT_LOG
+INTERNAL_USER "1" ..> "0..*" AUDIT_LOG
+MERCHANT_USER "1" ..> "0..*" AUDIT_LOG
 
 ORDER_REFERENCE "1" -right- "0..*" PAYMENT_TRANSACTION
 ORDER_REFERENCE "0..1" ..> "0..1" PAYMENT_TRANSACTION
@@ -237,13 +253,15 @@ meaning of each relation.
 | --- | --- | --- | --- |
 | `MERCHANT` | `MERCHANT_ONBOARDING_CASE` | `1 -> 0..1` | Merchant has one onboarding case in the MVP. |
 | `MERCHANT` | `MERCHANT_CREDENTIAL` | `1 -> 0..*` | Merchant owns API credentials. |
+| `MERCHANT` | `MERCHANT_USER` | `1 -> 0..*` | Merchant owns portal users for the Merchant Dashboard. |
 | `MERCHANT` | `ORDER_REFERENCE` | `1 -> 0..*` | Merchant owns order references. |
 | `MERCHANT` | `PAYMENT_TRANSACTION` | `1 -> 0..*` | Merchant receives payment transactions. |
 | `MERCHANT` | `REFUND_TRANSACTION` | `1 -> 0..*` | Merchant owns refund transactions. |
 | `MERCHANT` | `WEBHOOK_EVENT` | `1 -> 0..*` | Merchant receives webhook events. |
 | `INTERNAL_USER` | `MERCHANT_ONBOARDING_CASE` | `1 -> 0..*` | Internal user reviews onboarding cases. |
 | `INTERNAL_USER` | `RECONCILIATION_RECORD` | `1 -> 0..*` | Internal user reviews reconciliation records. |
-| `INTERNAL_USER` | `AUDIT_LOG` | `1 -> 0..*` | Internal user acts as an audit actor. |
+| `INTERNAL_USER` | `AUDIT_LOG` | logical `1 -> 0..*` | Internal user can act as an audit actor through `actor_type + actor_id`. |
+| `MERCHANT_USER` | `AUDIT_LOG` | logical `1 -> 0..*` | Merchant user can act as an audit actor for portal password changes. |
 | `ORDER_REFERENCE` | `PAYMENT_TRANSACTION` | `1 -> 0..*` | Order reference groups payment attempts. |
 | `ORDER_REFERENCE` | `PAYMENT_TRANSACTION` | `0..1 -> 0..1` | Order reference points to the latest payment attempt. |
 | `PAYMENT_TRANSACTION` | `REFUND_TRANSACTION` | `1 -> 0..*` | Payment transaction can have refund attempts. |
@@ -253,19 +271,35 @@ meaning of each relation.
 
 - `merchants.merchant_id` is unique and is the public merchant identifier.
 - `merchant_credentials` allows only one `ACTIVE` credential per merchant.
+- `merchant_users` is unique by `merchant_db_id + email`.
+- `merchant_users` is indexed by `merchant_db_id` and `email` for scoped
+  login, list, and admin management.
+- `merchant_users.role` is `MERCHANT_ADMIN | MERCHANT_VIEWER`.
+- `merchant_users.status` is `ACTIVE | INACTIVE`.
+- Merchant portal users authenticate with password hashes and a separate
+  HttpOnly session; they do not use merchant API credentials.
 - `merchant_onboarding_cases` allows one onboarding case per merchant in the MVP.
 - `order_references` is unique by `merchant_db_id + order_id`.
 - `payment_transactions` allows one active `PENDING` payment per `merchant_db_id + order_id`.
 - `refund_transactions` is unique by `merchant_db_id + refund_id`.
 - `refund_transactions` allows at most one `REFUNDED` row per payment.
+- `payment_transactions`, `refund_transactions`, and `webhook_events` each have
+  `(merchant_db_id, created_at)` indexes for merchant-scoped dashboard
+  analytics.
 - Payment and refund amounts must be positive.
 - `webhook_events.attempt_count` must be non-negative.
+- Raw credential secrets and plaintext merchant portal passwords are not
+  retrievable from the schema. Credential responses expose only
+  `secret_key_last4`; generated merchant passwords are returned once on create
+  or reset.
 
 ## Logical References
 
 `AuditLog`, `WebhookEvent`, and `ReconciliationRecord` use `entity_type + entity_id`
 to point at business entities. Those references are polymorphic by design, so they
 are validated by service logic rather than by a direct database foreign key.
+`AuditLog.actor_type + actor_id` also supports system, internal user, and
+merchant-user actions without forcing every actor type through one foreign key.
 
 `BankCallbackLog` stores raw provider evidence and references gateway objects by
 provider or gateway reference strings instead of strict foreign keys.
