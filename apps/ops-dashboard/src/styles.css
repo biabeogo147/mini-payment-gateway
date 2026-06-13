@@ -69,6 +69,8 @@ textarea {
 
 .app-shell > *,
 .panel-grid > *,
+.merchant-access-grid > *,
+.merchant-access-column > *,
 .metric-grid > *,
 .detail-grid > *,
 .form-grid > *,
@@ -284,15 +286,22 @@ textarea {
   grid-template-columns: minmax(280px, 360px) minmax(0, 1fr);
 }
 
-.merchant-detail-panels {
-  grid-template-columns: repeat(auto-fit, minmax(min(100%, 380px), 1fr));
-}
-
 .content-card {
   padding: 1.25rem;
   display: flex;
   flex-direction: column;
   gap: 1rem;
+}
+
+.section-panel {
+  padding: 1rem;
+  border: 1px solid var(--line);
+  border-radius: 16px;
+  background: rgba(255, 255, 255, 0.58);
+  display: flex;
+  flex-direction: column;
+  gap: 0.9rem;
+  min-width: 0;
 }
 
 .nested-card {
@@ -350,6 +359,28 @@ textarea {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(min(100%, 180px), 1fr));
   gap: 0.9rem;
+}
+
+.merchant-access-grid {
+  display: grid;
+  grid-template-columns: minmax(260px, 0.95fr) minmax(360px, 1.2fr);
+  align-items: start;
+  gap: 1rem;
+}
+
+.merchant-access-grid-single {
+  grid-template-columns: 1fr;
+}
+
+.merchant-access-column,
+.portal-user-create-panel {
+  display: grid;
+  gap: 1rem;
+}
+
+.portal-user-create-panel {
+  padding-top: 1rem;
+  border-top: 1px solid var(--line);
 }
 
 .inline-actions {
@@ -480,6 +511,31 @@ textarea {
 
 .stack-row-meta > * {
   max-width: 100%;
+}
+
+.portal-user-row {
+  grid-template-columns: minmax(0, 1fr) minmax(12rem, auto);
+}
+
+.portal-user-actions {
+  display: flex;
+  flex-direction: column;
+  gap: 0.65rem;
+  align-items: flex-end;
+  min-width: 0;
+}
+
+.portal-user-badges,
+.portal-user-buttons {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  justify-content: flex-end;
+  max-width: 100%;
+}
+
+.portal-user-buttons .secondary-button {
+  padding: 0.65rem 0.95rem;
 }
 
 .status-inline {
@@ -628,7 +684,8 @@ textarea {
 }
 
 @media (max-width: 1160px) {
-  .panel-grid-wide {
+  .panel-grid-wide,
+  .merchant-access-grid {
     grid-template-columns: 1fr;
   }
 }
@@ -673,6 +730,15 @@ textarea {
   }
 
   .stack-row-meta {
+    justify-content: flex-start;
+  }
+
+  .portal-user-actions {
+    align-items: flex-start;
+  }
+
+  .portal-user-badges,
+  .portal-user-buttons {
     justify-content: flex-start;
   }
 }

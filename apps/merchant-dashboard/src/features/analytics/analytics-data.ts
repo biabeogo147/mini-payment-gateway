@@ -131,7 +131,7 @@ export function buildAnalyticsViewModel(response: MerchantAnalyticsResponse): An
       label: "Open webhooks",
       value: response.attention.open_webhooks,
       tone: "info",
-      href: "/webhooks?status=FAILED",
+      href: "/webhooks",
       actionLabel: "Inspect open webhooks",
     },
   ];
@@ -140,7 +140,7 @@ export function buildAnalyticsViewModel(response: MerchantAnalyticsResponse): An
     count: item.count,
     pending: item.pending,
     failed: item.failed,
-    href: `/webhooks?status=FAILED&event_type=${encodeURIComponent(item.event_type)}`,
+    href: buildTopWebhookHref(item),
   }));
 
   const hasActivity =
@@ -179,6 +179,20 @@ export function buildDrilldownHref(
     params.set("event_type", eventType);
   }
   return `/${target}?${params.toString()}`;
+}
+
+function buildTopWebhookHref(
+  item: MerchantAnalyticsResponse["attention"]["top_webhook_event_types"][number],
+) {
+  const params = new URLSearchParams();
+  if (item.pending > 0 && item.failed === 0) {
+    params.set("status", "PENDING");
+  }
+  if (item.failed > 0 && item.pending === 0) {
+    params.set("status", "FAILED");
+  }
+  params.set("event_type", item.event_type);
+  return `/webhooks?${params.toString()}`;
 }
 
 export function formatChartMoney(value: string | number) {

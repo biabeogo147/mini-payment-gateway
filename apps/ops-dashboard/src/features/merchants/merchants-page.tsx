@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { type ReactNode, useEffect, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 
 import {
@@ -41,6 +41,21 @@ const merchantStatusOptions: Array<MerchantStatus | ""> = [
   "SUSPENDED",
   "DISABLED",
 ];
+
+function MerchantSection(props: {
+  title: string;
+  children: ReactNode;
+  className?: string;
+}) {
+  return (
+    <section className={props.className ? `section-panel ${props.className}` : "section-panel"}>
+      <div className="card-title-row">
+        <h4>{props.title}</h4>
+      </div>
+      {props.children}
+    </section>
+  );
+}
 
 export function MerchantsPage() {
   const queryClient = useQueryClient();
@@ -471,33 +486,70 @@ export function MerchantsPage() {
                 ) : null}
               </div>
 
-              <div className="panel-grid merchant-detail-panels">
-                <ContentCard title="Credentials">
-                  {merchantDetail.credentials.length === 0 ? (
-                    <EmptyState
-                      title="No credentials yet"
-                      message="Issue the first credential after onboarding approval."
-                    />
-                  ) : (
-                    <div className="stack-list">
-                      {merchantDetail.credentials.map((credential) => (
-                        <article key={credential.credential_id} className="stack-row">
-                          <div>
-                            <strong>{credential.access_key}</strong>
-                            <p>••••{credential.secret_key_last4}</p>
-                          </div>
-                          <div className="stack-row-meta">
-                            <StatusBadge value={credential.status} />
-                            <span>{formatDateTime(credential.created_at)}</span>
-                          </div>
-                        </article>
-                      ))}
-                    </div>
-                  )}
-                </ContentCard>
+              <div
+                className={
+                  session?.user.role === "ADMIN"
+                    ? "merchant-access-grid"
+                    : "merchant-access-grid merchant-access-grid-single"
+                }
+              >
+                <div className="merchant-access-column">
+                  <MerchantSection title="Credentials">
+                    {merchantDetail.credentials.length === 0 ? (
+                      <EmptyState
+                        title="No credentials yet"
+                        message="Issue the first credential after onboarding approval."
+                      />
+                    ) : (
+                      <div className="stack-list">
+                        {merchantDetail.credentials.map((credential) => (
+                          <article key={credential.credential_id} className="stack-row">
+                            <div>
+                              <strong>{credential.access_key}</strong>
+                              <p>••••{credential.secret_key_last4}</p>
+                            </div>
+                            <div className="stack-row-meta">
+                              <StatusBadge value={credential.status} />
+                              <span>{formatDateTime(credential.created_at)}</span>
+                            </div>
+                          </article>
+                        ))}
+                      </div>
+                    )}
+                  </MerchantSection>
+
+                  <MerchantSection title="Onboarding case">
+                    {merchantDetail.onboarding_case ? (
+                      <div className="page-stack">
+                        <DetailGrid
+                          items={[
+                            {
+                              label: "Case status",
+                              value: <StatusBadge value={merchantDetail.onboarding_case.status} />,
+                            },
+                            {
+                              label: "Domain or app",
+                              value: merchantDetail.onboarding_case.domain_or_app_name ?? "N/A",
+                            },
+                            {
+                              label: "Reviewed at",
+                              value: formatDateTime(merchantDetail.onboarding_case.reviewed_at),
+                            },
+                          ]}
+                        />
+                        <JsonBlock value={merchantDetail.onboarding_case.review_checks_json} />
+                      </div>
+                    ) : (
+                      <EmptyState
+                        title="No onboarding case"
+                        message="Use the onboarding page to submit merchant readiness for review."
+                      />
+                    )}
+                  </MerchantSection>
+                </div>
 
                 {session?.user.role === "ADMIN" ? (
-                  <ContentCard title="Merchant portal users">
+                  <MerchantSection title="Merchant portal users" className="portal-users-panel">
                     {portalUsersQuery.isLoading ? (
                       <EmptyState
                         title="Loading portal users"
@@ -508,44 +560,48 @@ export function MerchantsPage() {
                     ) : portalUsersQuery.data?.users.length ? (
                       <div className="stack-list">
                         {portalUsersQuery.data.users.map((user) => (
-                          <article key={user.user_id} className="stack-row">
+                          <article key={user.user_id} className="stack-row portal-user-row">
                             <div>
                               <strong>{user.full_name}</strong>
                               <p>{user.email}</p>
                             </div>
-                            <div className="stack-row-meta">
-                              <StatusBadge value={user.role} />
-                              <StatusBadge value={user.status} />
-                              <button
-                                type="button"
-                                className="secondary-button"
-                                disabled={updatePortalUserMutation.isPending}
-                                onClick={() =>
-                                  updatePortalUserMutation.mutate({
-                                    merchantId: merchantDetail.merchant_id,
-                                    userId: user.user_id,
-                                    status:
-                                      user.status === "ACTIVE"
-                                        ? "INACTIVE"
-                                        : "ACTIVE",
-                                  })
-                                }
-                              >
-                                {user.status === "ACTIVE" ? "Deactivate" : "Activate"}
-                              </button>
-                              <button
-                                type="button"
-                                className="secondary-button"
-                                disabled={resetPortalPasswordMutation.isPending}
-                                onClick={() =>
-                                  resetPortalPasswordMutation.mutate({
-                                    merchantId: merchantDetail.merchant_id,
-                                    userId: user.user_id,
-                                  })
-                                }
-                              >
-                                Reset password
-                              </button>
+                            <div className="portal-user-actions">
+                              <div className="portal-user-badges">
+                                <StatusBadge value={user.role} />
+                                <StatusBadge value={user.status} />
+                              </div>
+                              <div className="portal-user-buttons">
+                                <button
+                                  type="button"
+                                  className="secondary-button"
+                                  disabled={updatePortalUserMutation.isPending}
+                                  onClick={() =>
+                                    updatePortalUserMutation.mutate({
+                                      merchantId: merchantDetail.merchant_id,
+                                      userId: user.user_id,
+                                      status:
+                                        user.status === "ACTIVE"
+                                          ? "INACTIVE"
+                                          : "ACTIVE",
+                                    })
+                                  }
+                                >
+                                  {user.status === "ACTIVE" ? "Deactivate" : "Activate"}
+                                </button>
+                                <button
+                                  type="button"
+                                  className="secondary-button"
+                                  disabled={resetPortalPasswordMutation.isPending}
+                                  onClick={() =>
+                                    resetPortalPasswordMutation.mutate({
+                                      merchantId: merchantDetail.merchant_id,
+                                      userId: user.user_id,
+                                    })
+                                  }
+                                >
+                                  Reset password
+                                </button>
+                              </div>
                             </div>
                           </article>
                         ))}
@@ -557,131 +613,104 @@ export function MerchantsPage() {
                       />
                     )}
 
-                    <div className="form-grid">
-                      <InlineField label="Email">
-                        <input
-                          value={portalUserForm.email}
-                          onChange={(event) =>
-                            setPortalUserForm((current) => ({
-                              ...current,
-                              email: event.target.value,
-                            }))
+                    <div className="portal-user-create-panel">
+                      <div className="form-grid">
+                        <InlineField label="Email">
+                          <input
+                            value={portalUserForm.email}
+                            onChange={(event) =>
+                              setPortalUserForm((current) => ({
+                                ...current,
+                                email: event.target.value,
+                              }))
+                            }
+                          />
+                        </InlineField>
+                        <InlineField label="Full name">
+                          <input
+                            value={portalUserForm.full_name}
+                            onChange={(event) =>
+                              setPortalUserForm((current) => ({
+                                ...current,
+                                full_name: event.target.value,
+                              }))
+                            }
+                          />
+                        </InlineField>
+                        <InlineField label="Role">
+                          <select
+                            value={portalUserForm.role}
+                            onChange={(event) =>
+                              setPortalUserForm((current) => ({
+                                ...current,
+                                role: event.target.value as MerchantUserRole,
+                              }))
+                            }
+                          >
+                            <option value="MERCHANT_ADMIN">MERCHANT_ADMIN</option>
+                            <option value="MERCHANT_VIEWER">MERCHANT_VIEWER</option>
+                          </select>
+                        </InlineField>
+                        <InlineField label="Status">
+                          <select
+                            value={portalUserForm.status}
+                            onChange={(event) =>
+                              setPortalUserForm((current) => ({
+                                ...current,
+                                status: event.target.value as MerchantUserStatus,
+                              }))
+                            }
+                          >
+                            <option value="ACTIVE">ACTIVE</option>
+                            <option value="INACTIVE">INACTIVE</option>
+                          </select>
+                        </InlineField>
+                      </div>
+                      <div className="inline-actions">
+                        <button
+                          type="button"
+                          className="primary-button"
+                          disabled={
+                            createPortalUserMutation.isPending ||
+                            !portalUserForm.email ||
+                            !portalUserForm.full_name
                           }
-                        />
-                      </InlineField>
-                      <InlineField label="Full name">
-                        <input
-                          value={portalUserForm.full_name}
-                          onChange={(event) =>
-                            setPortalUserForm((current) => ({
-                              ...current,
-                              full_name: event.target.value,
-                            }))
-                          }
-                        />
-                      </InlineField>
-                      <InlineField label="Role">
-                        <select
-                          value={portalUserForm.role}
-                          onChange={(event) =>
-                            setPortalUserForm((current) => ({
-                              ...current,
-                              role: event.target.value as MerchantUserRole,
-                            }))
+                          onClick={() =>
+                            createPortalUserMutation.mutate(merchantDetail.merchant_id)
                           }
                         >
-                          <option value="MERCHANT_ADMIN">MERCHANT_ADMIN</option>
-                          <option value="MERCHANT_VIEWER">MERCHANT_VIEWER</option>
-                        </select>
-                      </InlineField>
-                      <InlineField label="Status">
-                        <select
-                          value={portalUserForm.status}
-                          onChange={(event) =>
-                            setPortalUserForm((current) => ({
-                              ...current,
-                              status: event.target.value as MerchantUserStatus,
-                            }))
-                          }
-                        >
-                          <option value="ACTIVE">ACTIVE</option>
-                          <option value="INACTIVE">INACTIVE</option>
-                        </select>
-                      </InlineField>
+                          {createPortalUserMutation.isPending
+                            ? "Creating..."
+                            : "Create portal user"}
+                        </button>
+                        {generatedPortalPassword ? (
+                          <span className="feedback">
+                            Temporary password: {generatedPortalPassword}
+                          </span>
+                        ) : null}
+                        {createPortalUserMutation.error instanceof Error ? (
+                          <span className="feedback feedback-danger">
+                            {createPortalUserMutation.error.message}
+                          </span>
+                        ) : null}
+                        {updatePortalUserMutation.error instanceof Error ? (
+                          <span className="feedback feedback-danger">
+                            {updatePortalUserMutation.error.message}
+                          </span>
+                        ) : null}
+                        {resetPortalPasswordMutation.error instanceof Error ? (
+                          <span className="feedback feedback-danger">
+                            {resetPortalPasswordMutation.error.message}
+                          </span>
+                        ) : null}
+                      </div>
                     </div>
-                    <div className="inline-actions">
-                      <button
-                        type="button"
-                        className="primary-button"
-                        disabled={
-                          createPortalUserMutation.isPending ||
-                          !portalUserForm.email ||
-                          !portalUserForm.full_name
-                        }
-                        onClick={() =>
-                          createPortalUserMutation.mutate(merchantDetail.merchant_id)
-                        }
-                      >
-                        {createPortalUserMutation.isPending
-                          ? "Creating..."
-                          : "Create portal user"}
-                      </button>
-                      {generatedPortalPassword ? (
-                        <span className="feedback">
-                          Temporary password: {generatedPortalPassword}
-                        </span>
-                      ) : null}
-                      {createPortalUserMutation.error instanceof Error ? (
-                        <span className="feedback feedback-danger">
-                          {createPortalUserMutation.error.message}
-                        </span>
-                      ) : null}
-                      {updatePortalUserMutation.error instanceof Error ? (
-                        <span className="feedback feedback-danger">
-                          {updatePortalUserMutation.error.message}
-                        </span>
-                      ) : null}
-                      {resetPortalPasswordMutation.error instanceof Error ? (
-                        <span className="feedback feedback-danger">
-                          {resetPortalPasswordMutation.error.message}
-                        </span>
-                      ) : null}
-                    </div>
-                  </ContentCard>
+                  </MerchantSection>
                 ) : null}
-
-                <ContentCard title="Onboarding case">
-                  {merchantDetail.onboarding_case ? (
-                    <div className="page-stack">
-                      <DetailGrid
-                        items={[
-                          {
-                            label: "Case status",
-                            value: <StatusBadge value={merchantDetail.onboarding_case.status} />,
-                          },
-                          {
-                            label: "Domain or app",
-                            value: merchantDetail.onboarding_case.domain_or_app_name ?? "N/A",
-                          },
-                          {
-                            label: "Reviewed at",
-                            value: formatDateTime(merchantDetail.onboarding_case.reviewed_at),
-                          },
-                        ]}
-                      />
-                      <JsonBlock value={merchantDetail.onboarding_case.review_checks_json} />
-                    </div>
-                  ) : (
-                    <EmptyState
-                      title="No onboarding case"
-                      message="Use the onboarding page to submit merchant readiness for review."
-                    />
-                  )}
-                </ContentCard>
               </div>
 
               <div className="panel-grid">
-                <ContentCard title="Issue credential">
+                <MerchantSection title="Issue credential">
                   <div className="form-grid">
                     <InlineField label="Reason">
                       <input
@@ -739,10 +768,10 @@ export function MerchantsPage() {
                       </span>
                     ) : null}
                   </div>
-                </ContentCard>
+                </MerchantSection>
 
                 {session?.user.role === "ADMIN" ? (
-                  <ContentCard title="Rotate credential">
+                  <MerchantSection title="Rotate credential">
                     <div className="form-grid">
                       <InlineField label="Reason">
                         <input
@@ -800,12 +829,12 @@ export function MerchantsPage() {
                         </span>
                       ) : null}
                     </div>
-                  </ContentCard>
+                  </MerchantSection>
                 ) : null}
               </div>
 
               <div className="panel-grid">
-                <ContentCard title="Recent payments">
+                <MerchantSection title="Recent payments">
                   {merchantDetail.recent_payments.length === 0 ? (
                     <EmptyState title="No payments yet" message="No recent payments on file." />
                   ) : (
@@ -824,9 +853,9 @@ export function MerchantsPage() {
                       ))}
                     </div>
                   )}
-                </ContentCard>
+                </MerchantSection>
 
-                <ContentCard title="Recent audit">
+                <MerchantSection title="Recent audit">
                   {merchantDetail.recent_audit_logs.length === 0 ? (
                     <EmptyState title="No audit rows" message="No audit history for this merchant yet." />
                   ) : (
@@ -845,7 +874,7 @@ export function MerchantsPage() {
                       ))}
                     </div>
                   )}
-                </ContentCard>
+                </MerchantSection>
               </div>
             </div>
           ) : null}

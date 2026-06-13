@@ -135,6 +135,28 @@ describe("merchant analytics data", () => {
     expect(empty.hasActivity).toBe(false);
   });
 
+  it("builds webhook attention links from the actual open status mix", () => {
+    const viewModel = buildAnalyticsViewModel({
+      ...response,
+      attention: {
+        ...response.attention,
+        open_webhooks: 3,
+        top_webhook_event_types: [
+          { event_type: "payment.expired", count: 1, pending: 1, failed: 0 },
+          { event_type: "refund.refunded", count: 1, pending: 0, failed: 1 },
+          { event_type: "payment.succeeded", count: 2, pending: 1, failed: 1 },
+        ],
+      },
+    });
+
+    expect(viewModel.attentionItems.find((item) => item.key === "webhooks")?.href).toBe("/webhooks");
+    expect(viewModel.topWebhookEventTypes.map((item) => item.href)).toEqual([
+      "/webhooks?status=PENDING&event_type=payment.expired",
+      "/webhooks?status=FAILED&event_type=refund.refunded",
+      "/webhooks?event_type=payment.succeeded",
+    ]);
+  });
+
   it("builds explorer drill-down hrefs with full-day date boundaries", () => {
     expect(buildDrilldownHref("payments", "FAILED", "2026-06-04")).toBe(
       "/payments?status=FAILED&date_from=2026-06-04T00%3A00&date_to=2026-06-04T23%3A59",
