@@ -116,7 +116,7 @@ export function WebhooksPage() {
           {events.length === 0 ? (
             <EmptyState title="No webhooks match" message="Change filters to inspect another event slice." />
           ) : (
-            <div className="stack-list">
+            <div className="stack-list scrollable-list explorer-list" aria-label="Webhook list">
               {events.map((event) => (
                 <button
                   type="button"
@@ -168,9 +168,13 @@ export function WebhooksPage() {
                 {eventDetail.attempts.length === 0 ? (
                   <EmptyState title="No attempts" message="No delivery attempts recorded yet." />
                 ) : (
-                  <div className="stack-list">
+                  <div
+                    className="stack-list scrollable-list detail-list"
+                    role="list"
+                    aria-label="Webhook delivery attempts"
+                  >
                     {eventDetail.attempts.map((attempt) => (
-                      <article key={attempt.attempt_id} className="stack-row">
+                      <article key={attempt.attempt_id} className="stack-row" role="listitem">
                         <div>
                           <strong>Attempt {attempt.attempt_no}</strong>
                           <p>{attempt.error_message ?? attempt.response_body_snippet ?? "No error captured"}</p>

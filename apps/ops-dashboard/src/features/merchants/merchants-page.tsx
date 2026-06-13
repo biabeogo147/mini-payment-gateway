@@ -558,9 +558,17 @@ export function MerchantsPage() {
                     ) : portalUsersQuery.error instanceof Error ? (
                       <ErrorCard message={portalUsersQuery.error.message} />
                     ) : portalUsersQuery.data?.users.length ? (
-                      <div className="stack-list">
+                      <div
+                        className="stack-list activity-list-scroll portal-users-list"
+                        role="list"
+                        aria-label="Merchant portal users"
+                      >
                         {portalUsersQuery.data.users.map((user) => (
-                          <article key={user.user_id} className="stack-row portal-user-row">
+                          <article
+                            key={user.user_id}
+                            className="stack-row portal-user-row"
+                            role="listitem"
+                          >
                             <div>
                               <strong>{user.full_name}</strong>
                               <p>{user.email}</p>
@@ -834,13 +842,21 @@ export function MerchantsPage() {
               </div>
 
               <div className="panel-grid">
-                <MerchantSection title="Recent payments">
+                <MerchantSection title="Recent payments" className="activity-section">
                   {merchantDetail.recent_payments.length === 0 ? (
                     <EmptyState title="No payments yet" message="No recent payments on file." />
                   ) : (
-                    <div className="stack-list">
+                    <div
+                      className="stack-list activity-list-scroll recent-payments-list"
+                      role="list"
+                      aria-label="Recent payments"
+                    >
                       {merchantDetail.recent_payments.map((payment) => (
-                        <article key={payment.transaction_id} className="stack-row">
+                        <article
+                          key={payment.transaction_id}
+                          className="stack-row"
+                          role="listitem"
+                        >
                           <div>
                             <strong>{payment.transaction_id}</strong>
                             <p>{payment.order_id}</p>
@@ -855,13 +871,17 @@ export function MerchantsPage() {
                   )}
                 </MerchantSection>
 
-                <MerchantSection title="Recent audit">
+                <MerchantSection title="Recent audit" className="activity-section">
                   {merchantDetail.recent_audit_logs.length === 0 ? (
                     <EmptyState title="No audit rows" message="No audit history for this merchant yet." />
                   ) : (
-                    <div className="stack-list">
+                    <div
+                      className="stack-list activity-list-scroll recent-audit-list"
+                      role="list"
+                      aria-label="Recent audit rows"
+                    >
                       {merchantDetail.recent_audit_logs.map((item) => (
-                        <article key={item.log_id} className="stack-row">
+                        <article key={item.log_id} className="stack-row" role="listitem">
                           <div>
                             <strong>{item.event_type}</strong>
                             <p>{item.reason ?? "No reason captured"}</p>

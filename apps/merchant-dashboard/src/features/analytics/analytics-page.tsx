@@ -501,9 +501,13 @@ function AttentionCard(props: { viewModel: AnalyticsViewModel }) {
       <div className="chart-data-panel">
         <h5>Top webhook event types</h5>
         {props.viewModel.topWebhookEventTypes.length > 0 ? (
-          <div className="stack-list">
+          <div
+            className="stack-list scrollable-list attention-event-list"
+            role="list"
+            aria-label="Top webhook event types"
+          >
             {props.viewModel.topWebhookEventTypes.map((item) => (
-              <article key={item.eventType} className="stack-row">
+              <article key={item.eventType} className="stack-row" role="listitem">
                 <div>
                   <strong>{item.eventType}</strong>
                   <p>

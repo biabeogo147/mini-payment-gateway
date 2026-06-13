@@ -129,7 +129,7 @@ export function PaymentsPage() {
           {payments.length === 0 ? (
             <EmptyState title="No payments match" message="Change filters to inspect a different payment slice." />
           ) : (
-            <div className="stack-list">
+            <div className="stack-list scrollable-list explorer-list" aria-label="Payment list">
               {payments.map((payment) => (
                 <button
                   type="button"
@@ -182,9 +182,13 @@ export function PaymentsPage() {
                   {paymentDetail.callback_logs.length === 0 ? (
                     <EmptyState title="No callbacks" message="No provider callback evidence is attached." />
                   ) : (
-                    <div className="stack-list">
+                    <div
+                      className="stack-list scrollable-list detail-list"
+                      role="list"
+                      aria-label="Payment callback evidence"
+                    >
                       {paymentDetail.callback_logs.map((callback) => (
-                        <article key={callback.callback_id} className="stack-row">
+                        <article key={callback.callback_id} className="stack-row" role="listitem">
                           <div>
                             <strong>{callback.source_type}</strong>
                             <p>{callback.normalized_status ?? "No normalized status"}</p>
@@ -202,9 +206,17 @@ export function PaymentsPage() {
                   {paymentDetail.refunds.length === 0 ? (
                     <EmptyState title="No refunds" message="No refund is linked to this payment." />
                   ) : (
-                    <div className="stack-list">
+                    <div
+                      className="stack-list scrollable-list detail-list"
+                      role="list"
+                      aria-label="Payment refund links"
+                    >
                       {paymentDetail.refunds.map((refund) => (
-                        <article key={refund.refund_transaction_id} className="stack-row">
+                        <article
+                          key={refund.refund_transaction_id}
+                          className="stack-row"
+                          role="listitem"
+                        >
                           <div>
                             <strong>{refund.refund_transaction_id}</strong>
                             <p>{refund.refund_id}</p>

@@ -127,7 +127,7 @@ export function RefundsPage() {
           {refunds.length === 0 ? (
             <EmptyState title="No refunds match" message="Change filters to inspect a different refund slice." />
           ) : (
-            <div className="stack-list">
+            <div className="stack-list scrollable-list explorer-list" aria-label="Refund list">
               {refunds.map((refund) => (
                 <button
                   type="button"
@@ -176,9 +176,13 @@ export function RefundsPage() {
                 {refundDetail.callback_logs.length === 0 ? (
                   <EmptyState title="No callbacks" message="No provider callback evidence is attached." />
                 ) : (
-                  <div className="stack-list">
+                  <div
+                    className="stack-list scrollable-list detail-list"
+                    role="list"
+                    aria-label="Refund callback evidence"
+                  >
                     {refundDetail.callback_logs.map((callback) => (
-                      <article key={callback.callback_id} className="stack-row">
+                      <article key={callback.callback_id} className="stack-row" role="listitem">
                         <div>
                           <strong>{callback.source_type}</strong>
                           <p>{callback.normalized_status ?? "No normalized status"}</p>

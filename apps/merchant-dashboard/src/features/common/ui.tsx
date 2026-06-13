@@ -113,9 +113,9 @@ export function EmptyState(props: { title: string; message: string }) {
   );
 }
 
-export function InlineField(props: PropsWithChildren<{ label: string }>) {
+export function InlineField(props: PropsWithChildren<{ label: string; htmlFor?: string }>) {
   return (
-    <label className="field">
+    <label className="field" htmlFor={props.htmlFor}>
       <span>{props.label}</span>
       {props.children}
     </label>

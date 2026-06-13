@@ -304,6 +304,12 @@ textarea {
   min-width: 0;
 }
 
+.activity-section,
+.portal-users-panel {
+  align-self: start;
+  min-height: 0;
+}
+
 .nested-card {
   border-radius: 16px;
   background: rgba(255, 255, 255, 0.64);
@@ -363,7 +369,7 @@ textarea {
 
 .merchant-access-grid {
   display: grid;
-  grid-template-columns: minmax(260px, 0.95fr) minmax(360px, 1.2fr);
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 300px), 1fr));
   align-items: start;
   gap: 1rem;
 }
@@ -456,6 +462,45 @@ textarea {
   gap: 0.75rem;
 }
 
+.activity-list-scroll {
+  max-height: clamp(18rem, 42vh, 34rem);
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  padding-right: 0.35rem;
+  scrollbar-gutter: stable;
+}
+
+.recent-payments-list,
+.portal-users-list {
+  max-height: clamp(18rem, 38vh, 28rem);
+}
+
+.recent-payments-list {
+  max-height: clamp(30rem, 56vh, 34rem);
+}
+
+.recent-audit-list {
+  max-height: clamp(20rem, 48vh, 36rem);
+}
+
+.activity-list-scroll::-webkit-scrollbar {
+  width: 0.6rem;
+}
+
+.activity-list-scroll::-webkit-scrollbar-track {
+  background: rgba(31, 36, 48, 0.04);
+  border-radius: 999px;
+}
+
+.activity-list-scroll::-webkit-scrollbar-thumb {
+  background: rgba(31, 36, 48, 0.22);
+  border-radius: 999px;
+}
+
+.activity-list-scroll::-webkit-scrollbar-thumb:hover {
+  background: rgba(31, 36, 48, 0.34);
+}
+
 .stack-row,
 .table-row-button {
   display: grid;
@@ -514,14 +559,14 @@ textarea {
 }
 
 .portal-user-row {
-  grid-template-columns: minmax(0, 1fr) minmax(12rem, auto);
+  grid-template-columns: 1fr;
 }
 
 .portal-user-actions {
   display: flex;
   flex-direction: column;
   gap: 0.65rem;
-  align-items: flex-end;
+  align-items: flex-start;
   min-width: 0;
 }
 
@@ -530,7 +575,7 @@ textarea {
   display: flex;
   flex-wrap: wrap;
   gap: 0.5rem;
-  justify-content: flex-end;
+  justify-content: flex-start;
   max-width: 100%;
 }
 
@@ -724,6 +769,14 @@ textarea {
 }
 
 @media (max-width: 720px) {
+  .activity-list-scroll,
+  .recent-payments-list,
+  .portal-users-list,
+  .recent-audit-list {
+    max-height: min(62vh, 30rem);
+    padding-right: 0.2rem;
+  }
+
   .stack-row,
   .table-row-button {
     grid-template-columns: 1fr;

@@ -516,7 +516,10 @@ button {
 
 .chart-data-table-wrap {
   width: 100%;
-  overflow-x: auto;
+  max-height: clamp(14rem, 42vh, 30rem);
+  overflow: auto;
+  overscroll-behavior: contain;
+  scrollbar-gutter: stable;
 }
 
 .chart-data-table {
@@ -535,6 +538,10 @@ button {
 }
 
 .chart-data-table th {
+  position: sticky;
+  top: 0;
+  z-index: 1;
+  background: var(--paper);
   color: var(--muted);
   font-weight: 700;
 }
@@ -849,15 +856,64 @@ button {
   gap: 0.7rem;
 }
 
+.scrollable-list {
+  max-height: clamp(16rem, 44vh, 34rem);
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  padding-right: 0.35rem;
+  scrollbar-gutter: stable;
+}
+
+.explorer-list {
+  max-height: clamp(22rem, calc(100vh - 22rem), 42rem);
+}
+
+.detail-list {
+  max-height: clamp(14rem, 34vh, 24rem);
+}
+
+.credential-list {
+  max-height: clamp(20rem, 56vh, 38rem);
+}
+
+.attention-event-list {
+  max-height: clamp(12rem, 30vh, 20rem);
+}
+
+.scrollable-list::-webkit-scrollbar,
+.chart-data-table-wrap::-webkit-scrollbar {
+  height: 0.6rem;
+  width: 0.6rem;
+}
+
+.scrollable-list::-webkit-scrollbar-track,
+.chart-data-table-wrap::-webkit-scrollbar-track {
+  background: rgba(23, 32, 42, 0.04);
+  border-radius: 999px;
+}
+
+.scrollable-list::-webkit-scrollbar-thumb,
+.chart-data-table-wrap::-webkit-scrollbar-thumb {
+  background: rgba(23, 32, 42, 0.22);
+  border-radius: 999px;
+}
+
+.scrollable-list::-webkit-scrollbar-thumb:hover,
+.chart-data-table-wrap::-webkit-scrollbar-thumb:hover {
+  background: rgba(23, 32, 42, 0.34);
+}
+
 .stack-row,
 .table-row-button {
   display: flex;
   align-items: flex-start;
   justify-content: space-between;
+  flex-wrap: wrap;
   gap: 0.75rem;
   padding: 0.85rem;
   border-radius: 8px;
   background: rgba(23, 32, 42, 0.04);
+  min-width: 0;
 }
 
 .stack-row > :first-child,
@@ -890,6 +946,11 @@ button {
   overflow-wrap: anywhere;
 }
 
+.stack-row strong,
+.table-row-button strong {
+  overflow-wrap: anywhere;
+}
+
 .stack-row-meta {
   display: flex;
   gap: 0.5rem;
@@ -897,12 +958,17 @@ button {
   flex: 0 0 auto;
   align-items: center;
   justify-content: flex-end;
+  margin-left: auto;
+  min-width: 0;
+  max-width: 100%;
   color: var(--muted);
   font-size: 0.9rem;
 }
 
 .stack-row-meta span {
-  white-space: nowrap;
+  max-width: 100%;
+  overflow-wrap: anywhere;
+  text-align: right;
 }
 
 .status-inline {
@@ -1083,5 +1149,27 @@ button {
 
   .attention-grid {
     grid-template-columns: 1fr;
+  }
+
+  .scrollable-list,
+  .explorer-list,
+  .detail-list,
+  .credential-list,
+  .attention-event-list {
+    max-height: min(62vh, 32rem);
+    padding-right: 0.2rem;
+  }
+
+  .chart-data-table-wrap {
+    max-height: min(58vh, 28rem);
+  }
+
+  .stack-row-meta {
+    justify-content: flex-start;
+    margin-left: 0;
+  }
+
+  .stack-row-meta span {
+    text-align: left;
   }
 }

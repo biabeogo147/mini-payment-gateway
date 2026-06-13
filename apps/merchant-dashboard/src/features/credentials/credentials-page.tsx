@@ -42,9 +42,13 @@ export function CredentialsPage() {
         {credentials.length === 0 ? (
           <EmptyState title="No credentials" message="No credential metadata is available for this merchant." />
         ) : (
-          <div className="stack-list">
+          <div
+            className="stack-list scrollable-list credential-list"
+            role="list"
+            aria-label="Credential metadata"
+          >
             {credentials.map((credential) => (
-              <article key={credential.credential_id} className="stack-row">
+              <article key={credential.credential_id} className="stack-row" role="listitem">
                 <div>
                   <strong>{credential.access_key}</strong>
                   <p>Secret suffix: {credential.secret_key_last4}</p>

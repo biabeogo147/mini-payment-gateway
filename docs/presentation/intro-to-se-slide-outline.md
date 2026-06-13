@@ -7,8 +7,11 @@ implemented functionality.
 
 Show the implemented actor map:
 
-- Admin/Ops: merchant onboarding, lifecycle, credentials, webhook recovery,
-  reconciliation, audit, internal user management, merchant portal provisioning.
+- Admin: internal privileged user for merchant onboarding/lifecycle,
+  operational evidence, internal user management, and merchant portal user
+  provisioning.
+- Ops: internal day-to-day operations user for merchant lifecycle and
+  operational evidence; Ops does not provision merchant portal password access.
 - Merchant backend: create/query payments and refunds through HMAC APIs.
 - Provider simulator: payment/refund result callbacks.
 - Scheduler/Timer: expiration and webhook retry triggers.

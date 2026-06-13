@@ -95,6 +95,14 @@ These use cases are included in the current dashboard branch and should be used
 in the final presentation demo only if they can be shown through the running
 application.
 
+`Admin` and `Ops` are both internal users of the Ops Dashboard, but they are
+modeled separately here because the implementation enforces different RBAC
+permissions. `Admin` can perform privileged account-provisioning work such as
+creating, activating/deactivating, and resetting passwords for merchant portal
+users. `Ops` represents day-to-day internal operations users who can inspect
+and operate the payment gateway workflows but cannot provision merchant portal
+password access.
+
 ```plantuml
 @startuml dashboard_use_cases
 left to right direction
@@ -149,6 +157,9 @@ Dashboard constraints:
   client-provided `merchant_id`.
 - Merchant Dashboard is read-only except for local password change.
 - `OPS` users cannot create or reset merchant portal user passwords.
+- Dashboard use-case diagrams intentionally split `Admin` and `Ops` because
+  they share the same internal application but not the same authorization
+  boundary.
 
 ---
 

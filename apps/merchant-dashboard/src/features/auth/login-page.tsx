@@ -49,23 +49,26 @@ export function LoginPage() {
         </div>
 
         <div className="login-fields">
-          <InlineField label="Merchant ID">
+          <InlineField label="Merchant ID" htmlFor="merchant-login-merchant-id">
             <input
+              id="merchant-login-merchant-id"
               value={merchantId}
               onChange={(event) => setMerchantId(event.target.value)}
               placeholder="m_demo_dashboard"
             />
           </InlineField>
-          <InlineField label="Email">
+          <InlineField label="Email" htmlFor="merchant-login-email">
             <input
+              id="merchant-login-email"
               type="email"
               value={email}
               onChange={(event) => setEmail(event.target.value)}
               placeholder="merchant@example.com"
             />
           </InlineField>
-          <InlineField label="Password">
+          <InlineField label="Password" htmlFor="merchant-login-password">
             <input
+              id="merchant-login-password"
               type="password"
               value={password}
               onChange={(event) => setPassword(event.target.value)}
