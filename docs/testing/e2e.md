@@ -58,6 +58,15 @@ Implemented now:
   `POST /v1/ops/reconciliation/{record_id}/resolve`.
 - Audit logging for ops merchant actions, credential operations,
   reconciliation resolution, and optional webhook manual retry actor context.
+- Internal Ops auth with bootstrap, login, logout, `me`, change-password, RBAC,
+  and internal user admin routes.
+- Ops Dashboard read APIs for summary, charts, merchants, payments, refunds,
+  webhooks, reconciliation, audit, and internal users.
+- Merchant portal user provisioning through Admin-only Ops routes.
+- Merchant Portal auth with separate HttpOnly session cookie.
+- Merchant Dashboard read APIs for summary, charts, analytics, payments,
+  refunds, webhooks, profile, and credential metadata.
+- Merchant-scoped interactive analytics for `7`, `30`, and `90` day ranges.
 - Automated E2E tests for:
   - ops onboarding -> active credential -> payment success -> payment webhook ->
     full refund -> refund webhook;
@@ -69,9 +78,10 @@ Implemented now:
 
 Not implemented yet:
 
-- Full internal auth/JWT/RBAC for ops users.
-- Production settlement, disputes, analytics, multi-provider routing, and
-  partial refunds.
+- Production settlement, disputes, BI-grade analytics/export, realtime
+  dashboard polling, multi-provider routing, and partial refunds.
+- Merchant self-service onboarding, merchant profile mutation, and merchant
+  credential rotation from the Merchant Dashboard.
 
 ## Scenario Files
 
@@ -87,6 +97,7 @@ Not implemented yet:
 | `scenarios/ops.md` | OPS-01 to OPS-03 and AUD-01 to AUD-02 ops and audit cases | Phase 07 |
 | `scenarios/reconciliation.md` | REC-01 to REC-05 reconciliation mismatch and resolution cases | Phase 04, Phase 07 |
 | `matrix.md` | Coverage mapping from scenario IDs to test targets | Phase 03.5, Phase 08 |
+| Dashboard smoke checklist | Ops and Merchant Dashboard browser journeys | Phase 10, Phase 11 |
 
 ## Scenario Matrix
 
@@ -131,6 +142,10 @@ Not implemented yet:
 | OPS-01 Ops suspends merchant | Ops | `scenarios/ops.md` | suspend API | `merchants`, `audit_logs` | Implemented | Phase 07 |
 | OPS-02 Ops disables merchant | Ops | `scenarios/ops.md` | disable API | `merchants`, `audit_logs` | Implemented | Phase 07 |
 | OPS-03 Credential rotation | Ops | `scenarios/ops.md` | `/v1/ops/merchants/{merchant_id}/credentials/rotate` | `merchant_credentials`, `audit_logs` | Implemented | Phase 07 |
+| OPS-04 Admin provisions merchant portal user | Admin | `matrix.md` | `/v1/ops/merchants/{merchant_id}/portal-users` | `merchant_users`, `audit_logs` | Implemented | Phase 11 |
+| PORTAL-01 Merchant portal auth | Merchant portal user | `matrix.md` | `/v1/merchant-portal/auth/*` | `merchant_users`, `audit_logs` | Implemented | Phase 11 |
+| PORTAL-02 Merchant dashboard read APIs | Merchant portal user | `matrix.md` | `/v1/merchant-portal/dashboard/*`, explorers, profile, credentials | merchant-owned records | Implemented | Phase 11 |
+| PORTAL-03 Merchant analytics | Merchant portal user | `matrix.md` | `/v1/merchant-portal/analytics` | payment/refund/webhook aggregates | Implemented | Phase 12 |
 | REC-05 Resolve reconciliation record | Ops | `scenarios/reconciliation.md` | `POST /v1/ops/reconciliation/{record_id}/resolve` | `reconciliation_records`, `audit_logs` | Implemented | Phase 07 |
 | E2E-01 Merchant onboarding to successful payment and refund | Ops, Merchant backend, Provider simulator, Gateway worker | `scenarios/happy-path.md` | ops, payment, callback, refund, webhook APIs | `merchants`, `merchant_credentials`, `payment_transactions`, `refund_transactions`, `webhook_events`, `webhook_delivery_attempts`, `audit_logs` | Automated E2E | Phase 08 |
 | E2E-02 Duplicate and idempotency path | Merchant backend | `scenarios/happy-path.md` | `POST /v1/payments` | `payment_transactions` | Automated E2E | Phase 08 |

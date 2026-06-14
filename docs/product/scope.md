@@ -55,6 +55,9 @@ External side that returns payment or refund results. In MVP this can be a simul
 * webhook retry policy with operator retry support
 * reconciliation records and audit trail
 * onboarding case stored in DB as a first-class entity
+* internal Ops Dashboard for operational workflows
+* read-only Merchant Dashboard with merchant-scoped overview, analytics,
+  explorers, profile, credentials, and password change
 
 ## Out of scope
 
@@ -65,9 +68,9 @@ External side that returns payment or refund results. In MVP this can be a simul
 * multi-currency
 * chargeback, dispute, or settlement engine
 * accounting ledger
-* advanced analytics dashboard
+* BI-grade analytics, export, and realtime polling
 * multiple provider routing engine
-* merchant-facing portal beyond API usage
+* merchant self-service profile, credential, webhook, or onboarding mutation
 
 ## Canonical lifecycle split
 

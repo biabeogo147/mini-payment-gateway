@@ -92,6 +92,16 @@ export function AppLayout() {
           </p>
         </div>
 
+        <div className="status-card session-card" aria-label="Active session">
+          <p className="eyebrow">Active session</p>
+          <h4>{session.user.full_name}</h4>
+          <p>{session.user.email}</p>
+          <div className="status-stack">
+            <StatusBadge value={session.user.role} />
+            <StatusBadge value={session.user.status} />
+          </div>
+        </div>
+
         <nav className="nav-list" aria-label="Primary">
           {visibleNavigation.map((item) => (
             <NavLink
@@ -106,21 +116,11 @@ export function AppLayout() {
             </NavLink>
           ))}
         </nav>
-
-        <div className="status-card">
-          <p className="eyebrow">Active session</p>
-          <h4>{session.user.full_name}</h4>
-          <p>{session.user.email}</p>
-          <div className="status-stack">
-            <StatusBadge value={session.user.role} />
-            <StatusBadge value={session.user.status} />
-          </div>
-        </div>
       </aside>
 
       <main className="main-panel">
         <header className="topbar">
-          <div>
+          <div className="topbar-heading">
             <p className="eyebrow">Authenticated operator</p>
             <h2>Internal Ops Dashboard</h2>
           </div>

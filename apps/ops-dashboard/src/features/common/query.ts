@@ -9,6 +9,7 @@ const dashboardQueryPrefixes = [
   ["merchant-detail"],
   ["merchant-onboarding"],
   ["merchant-credentials"],
+  ["merchant-portal-users"],
   ["payments"],
   ["payment-detail"],
   ["refunds"],

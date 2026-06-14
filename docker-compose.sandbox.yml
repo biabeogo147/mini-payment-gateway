@@ -5,7 +5,7 @@ services:
     environment:
       POSTGRES_DB: ${POSTGRES_DB:-mini_payment_gateway}
       POSTGRES_USER: ${POSTGRES_USER:-postgres}
-      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-postgres}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?POSTGRES_PASSWORD is required for sandbox}
     ports:
       - "${POSTGRES_BIND_ADDR:-127.0.0.1}:${POSTGRES_PORT:-5432}:5432"
     volumes:
@@ -22,7 +22,15 @@ services:
     restart: unless-stopped
     environment:
       APP_ENV: ${APP_ENV:-sandbox}
-      DATABASE_URL: ${DATABASE_URL:-postgresql+psycopg2://postgres:postgres@postgres:5432/mini_payment_gateway}
+      DATABASE_URL: ${DATABASE_URL:?DATABASE_URL is required for sandbox}
+      INTERNAL_AUTH_SECRET: ${INTERNAL_AUTH_SECRET:?INTERNAL_AUTH_SECRET is required for sandbox}
+      INTERNAL_AUTH_COOKIE_NAME: ${INTERNAL_AUTH_COOKIE_NAME:-mini_payment_gateway_internal_session}
+      INTERNAL_AUTH_TTL_SECONDS: ${INTERNAL_AUTH_TTL_SECONDS:-43200}
+      INTERNAL_AUTH_COOKIE_SECURE: ${INTERNAL_AUTH_COOKIE_SECURE:-false}
+      MERCHANT_AUTH_SECRET: ${MERCHANT_AUTH_SECRET:?MERCHANT_AUTH_SECRET is required for sandbox}
+      MERCHANT_AUTH_COOKIE_NAME: ${MERCHANT_AUTH_COOKIE_NAME:-mini_payment_gateway_merchant_session}
+      MERCHANT_AUTH_TTL_SECONDS: ${MERCHANT_AUTH_TTL_SECONDS:-43200}
+      MERCHANT_AUTH_COOKIE_SECURE: ${MERCHANT_AUTH_COOKIE_SECURE:-false}
     depends_on:
       postgres:
         condition: service_healthy
@@ -51,6 +59,22 @@ services:
         condition: service_started
     ports:
       - "${OPS_DASHBOARD_BIND_ADDR:-127.0.0.1}:${OPS_DASHBOARD_PORT:-4173}:8080"
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://127.0.0.1:8080/"]
+      interval: 10s
+      timeout: 5s
+      retries: 6
+
+  merchant-dashboard:
+    build:
+      context: .
+      dockerfile: apps/merchant-dashboard/Dockerfile
+    restart: unless-stopped
+    depends_on:
+      backend:
+        condition: service_started
+    ports:
+      - "${MERCHANT_DASHBOARD_BIND_ADDR:-127.0.0.1}:${MERCHANT_DASHBOARD_PORT:-4174}:8080"
     healthcheck:
       test: ["CMD", "wget", "-qO-", "http://127.0.0.1:8080/"]
       interval: 10s

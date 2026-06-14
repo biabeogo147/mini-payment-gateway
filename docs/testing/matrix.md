@@ -20,6 +20,7 @@ Status values:
 | REF | `scenarios/refund.md` |
 | WH | `scenarios/webhook.md` |
 | OPS, AUD | `scenarios/ops.md` |
+| PORTAL, DASH | Dashboard and merchant portal verification in this matrix |
 | REC | `scenarios/reconciliation.md` |
 | E2E | `scenarios/happy-path.md` |
 
@@ -49,6 +50,15 @@ Status values:
 | OPS-01 | Ops suspends merchant | Service, route | Phase 07 | Covered | Yes | `backend/tests/test_merchant_ops_service.py`, `backend/tests/test_merchant_ops_routes.py` |
 | OPS-02 | Ops disables merchant | Service, route | Phase 07 | Covered | Yes | `backend/tests/test_merchant_ops_service.py`, `backend/tests/test_merchant_ops_routes.py` |
 | OPS-03 | Credential rotation leaves one active credential | Service, route | Phase 07 | Covered | Yes | `backend/tests/test_merchant_ops_service.py`, `backend/tests/test_merchant_ops_routes.py` |
+| OPS-04 | Admin manages merchant portal users | Route, service | Phase 11 | Covered | Yes | `backend/tests/test_ops_merchant_portal_user_routes.py`, `backend/tests/test_merchant_portal_schema_contract.py` |
+| PORTAL-01 | Merchant portal login/logout/me/change-password | Route | Phase 11 | Covered | Yes | `backend/tests/test_merchant_portal_auth_routes.py` |
+| PORTAL-02 | Inactive merchant portal user is rejected | Route | Phase 11 | Covered | Yes | `backend/tests/test_merchant_portal_auth_routes.py` |
+| PORTAL-03 | Merchant portal explorers are merchant-scoped | Route | Phase 11 | Covered | Yes | `backend/tests/test_merchant_portal_routes.py` |
+| PORTAL-04 | Merchant portal profile and credentials hide raw secrets | Route | Phase 11 | Covered | Yes | `backend/tests/test_merchant_portal_routes.py` |
+| PORTAL-05 | Merchant analytics supports valid ranges and zero buckets | Route, service | Phase 12 | Covered | Yes | `backend/tests/test_merchant_portal_analytics.py` |
+| DASH-01 | Merchant Dashboard typecheck, tests, and build | Frontend | Phase 11, Phase 12 | Covered | Yes | `npm run merchant-dashboard:typecheck`, `npm run merchant-dashboard:test`, `npm run merchant-dashboard:build` |
+| DASH-02 | Ops Dashboard typecheck and build | Frontend | Phase 10, Phase 11 | Covered | Yes | `npm run ops-dashboard:typecheck`, `npm run ops-dashboard:build` |
+| DASH-03 | Browser smoke for Ops and Merchant dashboards | Manual smoke | Phase 10, Phase 11, Phase 12 | Manual | Yes | Local browser checklist in `docs/testing/README.md` |
 | CB-01 | Payment success callback marks payment success | Service, route, smoke | Phase 04 | Covered with DB seed | Yes | `backend/tests/test_provider_callback_service.py`, `backend/tests/test_provider_callback_routes.py`, `backend/scripts/smoke_provider_callback_api.py` |
 | CB-02 | Payment failed callback marks payment failed | Service | Phase 04 | Covered | Yes | `backend/tests/test_provider_callback_service.py` |
 | CB-03 | Unknown transaction callback is logged | Service | Phase 04 | Covered | Yes | `backend/tests/test_provider_callback_service.py` |

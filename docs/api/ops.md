@@ -65,12 +65,16 @@ Dashboard summary and charts:
 - `GET /v1/ops/dashboard/summary`
 - `GET /v1/ops/dashboard/charts`
 
-Merchant read APIs:
+Merchant read and portal user APIs:
 
 - `GET /v1/ops/merchants`
 - `GET /v1/ops/merchants/{merchant_id}`
 - `GET /v1/ops/merchants/{merchant_id}/onboarding-case`
 - `GET /v1/ops/merchants/{merchant_id}/credentials`
+- `GET /v1/ops/merchants/{merchant_id}/portal-users`
+- `POST /v1/ops/merchants/{merchant_id}/portal-users`
+- `PATCH /v1/ops/merchants/{merchant_id}/portal-users/{user_id}`
+- `POST /v1/ops/merchants/{merchant_id}/portal-users/{user_id}/reset-password`
 
 Payment read APIs:
 
@@ -93,6 +97,92 @@ Audit and reconciliation:
 - `GET /v1/ops/audit-logs`
 - `GET /v1/ops/reconciliation`
 - `GET /v1/ops/reconciliation/{record_id}`
+- `POST /v1/ops/reconciliation/{record_id}/resolve`
+
+## Merchant Portal User Management
+
+Merchant portal user management is `ADMIN`-only. `OPS` users can continue the
+standard operational workflows, but they cannot create merchant dashboard users,
+change portal roles/status, or reset merchant portal passwords.
+
+### List Portal Users
+
+`GET /v1/ops/merchants/{merchant_id}/portal-users`
+
+Response:
+
+```json
+{
+  "users": [
+    {
+      "user_id": "uuid",
+      "merchant_id": "m_demo",
+      "email": "merchant@example.com",
+      "full_name": "Merchant Admin",
+      "role": "MERCHANT_ADMIN",
+      "status": "ACTIVE",
+      "last_login_at": null,
+      "created_at": "2026-06-09T00:00:00Z",
+      "updated_at": "2026-06-09T00:00:00Z"
+    }
+  ]
+}
+```
+
+### Create Portal User
+
+`POST /v1/ops/merchants/{merchant_id}/portal-users`
+
+Request:
+
+```json
+{
+  "email": "merchant@example.com",
+  "full_name": "Merchant Admin",
+  "role": "MERCHANT_ADMIN",
+  "status": "ACTIVE"
+}
+```
+
+Response returns the generated password once:
+
+```json
+{
+  "user": {
+    "user_id": "uuid",
+    "merchant_id": "m_demo",
+    "email": "merchant@example.com",
+    "full_name": "Merchant Admin",
+    "role": "MERCHANT_ADMIN",
+    "status": "ACTIVE",
+    "last_login_at": null,
+    "created_at": "2026-06-09T00:00:00Z",
+    "updated_at": "2026-06-09T00:00:00Z"
+  },
+  "generated_password": "one-time-password"
+}
+```
+
+### Update Portal User
+
+`PATCH /v1/ops/merchants/{merchant_id}/portal-users/{user_id}`
+
+Request fields are optional, but at least one should be supplied by the client:
+
+```json
+{
+  "full_name": "Merchant Viewer",
+  "role": "MERCHANT_VIEWER",
+  "status": "INACTIVE"
+}
+```
+
+### Reset Portal User Password
+
+`POST /v1/ops/merchants/{merchant_id}/portal-users/{user_id}/reset-password`
+
+Response shape matches create and returns the generated password once.
+Plaintext passwords are not stored or retrievable later.
 
 ## Merchant Management
 

@@ -22,6 +22,14 @@ services:
     environment:
       APP_ENV: ${APP_ENV:-local}
       DATABASE_URL: ${DATABASE_URL:-postgresql+psycopg2://postgres:postgres@postgres:5432/mini_payment_gateway}
+      INTERNAL_AUTH_SECRET: ${INTERNAL_AUTH_SECRET:-dev-insecure-internal-auth-secret-change-me}
+      INTERNAL_AUTH_COOKIE_NAME: ${INTERNAL_AUTH_COOKIE_NAME:-mini_payment_gateway_internal_session}
+      INTERNAL_AUTH_TTL_SECONDS: ${INTERNAL_AUTH_TTL_SECONDS:-43200}
+      INTERNAL_AUTH_COOKIE_SECURE: ${INTERNAL_AUTH_COOKIE_SECURE:-false}
+      MERCHANT_AUTH_SECRET: ${MERCHANT_AUTH_SECRET:-dev-insecure-merchant-auth-secret-change-me}
+      MERCHANT_AUTH_COOKIE_NAME: ${MERCHANT_AUTH_COOKIE_NAME:-mini_payment_gateway_merchant_session}
+      MERCHANT_AUTH_TTL_SECONDS: ${MERCHANT_AUTH_TTL_SECONDS:-43200}
+      MERCHANT_AUTH_COOKIE_SECURE: ${MERCHANT_AUTH_COOKIE_SECURE:-false}
     volumes:
       - ./backend:/app
     depends_on:
@@ -40,3 +48,13 @@ services:
         condition: service_started
     ports:
       - "${OPS_DASHBOARD_PORT:-4173}:8080"
+
+  merchant-dashboard:
+    build:
+      context: .
+      dockerfile: apps/merchant-dashboard/Dockerfile
+    depends_on:
+      backend:
+        condition: service_started
+    ports:
+      - "${MERCHANT_DASHBOARD_PORT:-4174}:8080"

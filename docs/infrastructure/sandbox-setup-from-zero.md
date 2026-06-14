@@ -30,8 +30,8 @@ When this guide is complete, the server will have:
 - a registered GitHub self-hosted runner running as a systemd service;
 - a working CI/CD pipeline where GitHub tests first and then deploys to the
   sandbox host;
-- a healthy backend, postgres stack, and Ops dashboard reachable locally on the
-  host;
+- a healthy backend, postgres stack, Ops dashboard, and Merchant Dashboard
+  reachable locally on the host;
 - internal auth configuration ready so the first `ADMIN` user can be
   bootstrapped from the browser.
 
@@ -61,13 +61,15 @@ This guide assumes:
 - you can SSH into the machine;
 - your SSH user has `sudo` access;
 - the server can reach GitHub over outbound HTTPS;
-- the repository already contains the phase 09 and phase 10 deploy/runtime
+- the repository already contains the phase 09, phase 10, and dashboard
+  deploy/runtime
   files:
   - `.github/workflows/sandbox-deploy.yml`
   - `deploy/sandbox_deploy.sh`
   - `docker-compose.sandbox.yml`
   - `.env.sandbox.example`
   - `apps/ops-dashboard/`
+  - `apps/merchant-dashboard/`
 - you have GitHub access to register a self-hosted runner for the repository.
 
 ## Information You Need Before Starting
@@ -96,8 +98,14 @@ Minimum sandbox runtime values:
 - `INTERNAL_AUTH_COOKIE_NAME`
 - `INTERNAL_AUTH_TTL_SECONDS`
 - `INTERNAL_AUTH_COOKIE_SECURE`
+- `MERCHANT_AUTH_SECRET`
+- `MERCHANT_AUTH_COOKIE_NAME`
+- `MERCHANT_AUTH_TTL_SECONDS`
+- `MERCHANT_AUTH_COOKIE_SECURE`
 - `OPS_DASHBOARD_BIND_ADDR`
 - `OPS_DASHBOARD_PORT`
+- `MERCHANT_DASHBOARD_BIND_ADDR`
+- `MERCHANT_DASHBOARD_PORT`
 - optionally `POSTGRES_BIND_ADDR` and `POSTGRES_PORT`
 
 ## Step 0: Verify The Starting Conditions
@@ -301,8 +309,14 @@ INTERNAL_AUTH_SECRET=replace-with-a-long-random-secret
 INTERNAL_AUTH_COOKIE_NAME=mini_payment_gateway_internal_session
 INTERNAL_AUTH_TTL_SECONDS=43200
 INTERNAL_AUTH_COOKIE_SECURE=false
+MERCHANT_AUTH_SECRET=replace-with-a-different-long-random-secret
+MERCHANT_AUTH_COOKIE_NAME=mini_payment_gateway_merchant_session
+MERCHANT_AUTH_TTL_SECONDS=43200
+MERCHANT_AUTH_COOKIE_SECURE=false
 OPS_DASHBOARD_BIND_ADDR=127.0.0.1
 OPS_DASHBOARD_PORT=4173
+MERCHANT_DASHBOARD_BIND_ADDR=127.0.0.1
+MERCHANT_DASHBOARD_PORT=4174
 ```
 
 ### Important Notes
@@ -314,9 +328,14 @@ OPS_DASHBOARD_PORT=4173
   clients should connect directly to PostgreSQL, backend, and Ops dashboard.
 - `INTERNAL_AUTH_SECRET` should be a long random value and must stay
   server-only.
+- `MERCHANT_AUTH_SECRET` should use a different long random value from
+  `INTERNAL_AUTH_SECRET`; merchant and internal dashboard sessions are separate
+  auth surfaces.
 - `INTERNAL_AUTH_COOKIE_SECURE=false` is acceptable for the current internal
   sandbox because the dashboard is served on plain local HTTP. Revisit this if
   TLS is introduced later.
+- Keep `MERCHANT_AUTH_COOKIE_SECURE` aligned with the merchant dashboard URL:
+  `false` for the current plain HTTP sandbox, `true` after TLS is introduced.
 - Keep the real `.env` only on the server.
 - Do not commit `.env` to Git.
 
@@ -373,12 +392,12 @@ The script:
 
 1. checks for `git`, `docker`, and `curl`
 2. fast-forwards the local checkout to `origin/main`
-3. builds the backend and Ops dashboard images
+3. builds the backend, Ops dashboard, and Merchant Dashboard images
 4. starts PostgreSQL
 5. runs Alembic migrations
-6. starts the backend and Ops dashboard
+6. starts the backend, Ops dashboard, and Merchant Dashboard
 7. polls `/health`
-8. verifies the dashboard root returns HTML
+8. verifies both dashboard roots return HTML
 
 ### Verify
 
@@ -390,6 +409,7 @@ LAN IP such as `192.168.1.199` for internal network access.
 sudo -u github-runner bash -lc 'cd /opt/mini-payment-gateway && docker compose -f docker-compose.sandbox.yml ps'
 curl -fsS http://<configured-host>:8000/health
 curl -fsS http://<configured-host>:4173/
+curl -fsS http://<configured-host>:4174/
 curl -fsS http://<configured-host>:8000/v1/internal/auth/bootstrap-status
 ```
 
@@ -398,8 +418,9 @@ Expected:
 - `postgres` is healthy
 - `backend` is up
 - `ops-dashboard` is up
+- `merchant-dashboard` is up
 - health returns `{"status":"ok"}`
-- the dashboard root returns HTML
+- both dashboard roots return HTML
 - bootstrap status returns JSON such as `{"bootstrap_required":true}`
 
 ## Step 9: Install The GitHub Actions Runner
@@ -504,7 +525,8 @@ Recommended environment variables:
 | `SANDBOX_APP_DIR` | `/opt/mini-payment-gateway` |
 | `SANDBOX_COMPOSE_FILE` | `docker-compose.sandbox.yml` |
 | `SANDBOX_HEALTH_URL` | optional override; leave unset to derive from `.env` |
-| `SANDBOX_DASHBOARD_URL` | optional override; leave unset to derive from `.env` |
+| `SANDBOX_OPS_DASHBOARD_URL` | optional override; leave unset to derive from `.env` |
+| `SANDBOX_MERCHANT_DASHBOARD_URL` | optional override; leave unset to derive from `.env` |
 
 ### Important Note
 
@@ -538,6 +560,7 @@ Use one of these methods:
 4. the host runs `deploy/sandbox_deploy.sh`
 5. `/health` passes
 6. the Ops dashboard root responds successfully
+7. the Merchant Dashboard root responds successfully
 
 ### Verify
 
@@ -556,6 +579,7 @@ sudo -u github-runner bash -lc 'cd /opt/mini-payment-gateway && git rev-parse --
 sudo -u github-runner bash -lc 'cd /opt/mini-payment-gateway && docker compose -f docker-compose.sandbox.yml ps'
 curl -fsS http://<configured-host>:8000/health
 curl -fsS http://<configured-host>:4173/
+curl -fsS http://<configured-host>:4174/
 curl -fsS http://<configured-host>:8000/v1/internal/auth/bootstrap-status
 ```
 
@@ -565,8 +589,9 @@ Expected:
 - `postgres` is healthy
 - `backend` is healthy or up
 - `ops-dashboard` is healthy or up
+- `merchant-dashboard` is healthy or up
 - health returns `{"status":"ok"}`
-- the dashboard root returns HTML
+- both dashboard roots return HTML
 - bootstrap status responds successfully
 
 ## Step 12: Confirm The Host Matches The Architecture
@@ -574,7 +599,8 @@ Expected:
 ### Why This Step Exists
 
 The goal is not just "app runs". The goal is "the server now matches the
-current sandbox DevOps design with internal auth and the Ops dashboard".
+current sandbox DevOps design with internal auth, the Ops dashboard, and the
+Merchant Dashboard".
 
 ### Acceptance Checklist
 
@@ -591,6 +617,7 @@ You are done when all of these are true:
 - a full workflow deploy succeeds
 - `/health` returns `{"status":"ok"}`
 - the Ops dashboard is reachable on its configured local port
+- the Merchant Dashboard is reachable on its configured local port
 - `/v1/internal/auth/bootstrap-status` responds successfully
 
 At that point, the host should match the model documented in
@@ -628,6 +655,7 @@ sudo -u github-runner bash -lc 'cd /opt/mini-payment-gateway && docker compose -
 sudo -u github-runner bash -lc 'cd /opt/mini-payment-gateway && docker compose -f docker-compose.sandbox.yml logs --tail 100 backend'
 sudo -u github-runner bash -lc 'cd /opt/mini-payment-gateway && docker compose -f docker-compose.sandbox.yml logs --tail 100 postgres'
 sudo -u github-runner bash -lc 'cd /opt/mini-payment-gateway && docker compose -f docker-compose.sandbox.yml logs --tail 100 ops-dashboard'
+sudo -u github-runner bash -lc 'cd /opt/mini-payment-gateway && docker compose -f docker-compose.sandbox.yml logs --tail 100 merchant-dashboard'
 ```
 
 ### Runner Service Fails

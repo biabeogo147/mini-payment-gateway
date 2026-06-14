@@ -11,6 +11,16 @@ class InternalUserStatus(str, enum.Enum):
     INACTIVE = "INACTIVE"
 
 
+class MerchantUserRole(str, enum.Enum):
+    MERCHANT_ADMIN = "MERCHANT_ADMIN"
+    MERCHANT_VIEWER = "MERCHANT_VIEWER"
+
+
+class MerchantUserStatus(str, enum.Enum):
+    ACTIVE = "ACTIVE"
+    INACTIVE = "INACTIVE"
+
+
 class MerchantStatus(str, enum.Enum):
     PENDING_REVIEW = "PENDING_REVIEW"
     ACTIVE = "ACTIVE"
@@ -93,9 +103,11 @@ class EntityType(str, enum.Enum):
     WEBHOOK_EVENT = "WEBHOOK_EVENT"
     RECONCILIATION = "RECONCILIATION"
     INTERNAL_USER = "INTERNAL_USER"
+    MERCHANT_USER = "MERCHANT_USER"
 
 
 class ActorType(str, enum.Enum):
     SYSTEM = "SYSTEM"
     ADMIN = "ADMIN"
     OPS = "OPS"
+    MERCHANT = "MERCHANT"

@@ -1,8 +1,11 @@
 # Architecture Docs
 
-Use this folder to understand how the backend is structured today.
+Use this folder to understand how the implemented system and backend are
+structured today.
 
-- `backend.md` - layer responsibilities, request flow, and feature placement
+- `system.md` - system context, trust boundaries, runtime containers, and
+  dashboard/API request flows.
+- `backend.md` - backend layer responsibilities, request flow, and feature placement
   rules.
 - `diagrams/usecase.puml` - use-case diagram source.
 - `diagrams/payment-flow.puml` - payment sequence.

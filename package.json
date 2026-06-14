@@ -9,6 +9,11 @@
     "ops-dashboard:dev": "npm --workspace @mini-payment-gateway/ops-dashboard run dev",
     "ops-dashboard:build": "npm --workspace @mini-payment-gateway/ops-dashboard run build",
     "ops-dashboard:typecheck": "npm --workspace @mini-payment-gateway/ops-dashboard run typecheck",
-    "ops-dashboard:preview": "npm --workspace @mini-payment-gateway/ops-dashboard run preview"
+    "ops-dashboard:preview": "npm --workspace @mini-payment-gateway/ops-dashboard run preview",
+    "merchant-dashboard:dev": "npm --workspace @mini-payment-gateway/merchant-dashboard run dev",
+    "merchant-dashboard:build": "npm --workspace @mini-payment-gateway/merchant-dashboard run build",
+    "merchant-dashboard:typecheck": "npm --workspace @mini-payment-gateway/merchant-dashboard run typecheck",
+    "merchant-dashboard:test": "npm --workspace @mini-payment-gateway/merchant-dashboard run test",
+    "merchant-dashboard:preview": "npm --workspace @mini-payment-gateway/merchant-dashboard run preview"
   }
 }

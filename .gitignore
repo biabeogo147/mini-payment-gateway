@@ -20,3 +20,4 @@ backend/.venv/
 worktrees/
 *.egg-info
 .idea/
+.codex-dev-logs/

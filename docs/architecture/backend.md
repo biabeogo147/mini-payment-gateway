@@ -70,6 +70,9 @@ Examples:
 - `backend/app/controllers/internal_auth_controller.py`
 - `backend/app/controllers/internal_user_controller.py`
 - `backend/app/controllers/ops_dashboard_controller.py`
+- `backend/app/controllers/ops_merchant_portal_user_controller.py`
+- `backend/app/controllers/merchant_portal_auth_controller.py`
+- `backend/app/controllers/merchant_portal_controller.py`
 
 ### Schemas
 
@@ -105,6 +108,9 @@ Examples:
 - `backend/app/services/internal_auth_service.py`
 - `backend/app/services/internal_user_admin_service.py`
 - `backend/app/services/ops_dashboard_service.py`
+- `backend/app/services/merchant_portal_auth_service.py`
+- `backend/app/services/merchant_portal_user_admin_service.py`
+- `backend/app/services/merchant_portal_service.py`
 
 ### Repositories
 
@@ -127,6 +133,7 @@ Examples:
 - `backend/app/repositories/reconciliation_repository.py`
 - `backend/app/repositories/internal_user_repository.py`
 - `backend/app/repositories/ops_dashboard_repository.py`
+- `backend/app/repositories/merchant_user_repository.py`
 
 ### Ops And Audit Layer
 
@@ -161,6 +168,24 @@ Ops endpoints remain thin controllers:
   compatible with no-body phase 06 retry calls;
 - dashboard summary/list/detail routes live in `ops_dashboard_service`;
 - internal user admin routes stay separate from money-movement operations.
+
+### Merchant Portal Layer
+
+The Merchant Dashboard uses a separate portal auth boundary instead of merchant
+HMAC API credentials:
+
+- `merchant_portal_auth_controller` exposes login, logout, `me`, and
+  change-password routes;
+- `deps.get_current_merchant_user(...)` authenticates the merchant portal
+  session cookie;
+- `merchant_portal_user_admin_service` lets internal `ADMIN` users provision,
+  update, deactivate, reactivate, and reset passwords for merchant portal users;
+- `merchant_portal_service` backs read-only merchant-scoped dashboard summary,
+  charts, analytics, explorers, profile, and credential metadata.
+
+Merchant Portal routes must derive merchant scope from the authenticated
+`MerchantUser`. They must not accept a client-supplied `merchant_id` for data
+scoping.
 
 ### Readiness And E2E Layer
 

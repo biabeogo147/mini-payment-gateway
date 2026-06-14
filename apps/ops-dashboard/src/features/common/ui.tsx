@@ -4,6 +4,8 @@ import {
   type CredentialStatus,
   type InternalUserRole,
   type InternalUserStatus,
+  type MerchantUserRole,
+  type MerchantUserStatus,
   type MerchantStatus,
   type OnboardingCaseStatus,
   type PaymentStatus,
@@ -19,6 +21,8 @@ type Tone =
   | CredentialStatus
   | InternalUserStatus
   | InternalUserRole
+  | MerchantUserStatus
+  | MerchantUserRole
   | PaymentStatus
   | RefundStatus
   | WebhookEventStatus
@@ -35,12 +39,14 @@ const toneClassMap: Record<Tone, string> = {
   MATCHED: "status-tone-good",
   RESOLVED: "status-tone-good",
   ADMIN: "status-tone-good",
+  MERCHANT_ADMIN: "status-tone-good",
   PENDING: "status-tone-warn",
   PENDING_REVIEW: "status-tone-warn",
   REFUND_PENDING: "status-tone-warn",
   REFUNDED: "status-tone-good",
   ROTATED: "status-tone-warn",
   OPS: "status-tone-info",
+  MERCHANT_VIEWER: "status-tone-info",
   DRAFT: "status-tone-muted",
   INACTIVE: "status-tone-muted",
   EXPIRED: "status-tone-muted",

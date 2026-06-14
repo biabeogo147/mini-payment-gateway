@@ -11,6 +11,10 @@ class Settings:
     internal_auth_cookie_name: str
     internal_auth_ttl_seconds: int
     internal_auth_cookie_secure: bool
+    merchant_auth_secret: str
+    merchant_auth_cookie_name: str
+    merchant_auth_ttl_seconds: int
+    merchant_auth_cookie_secure: bool
 
 
 @lru_cache
@@ -31,6 +35,16 @@ def get_settings() -> Settings:
         ),
         internal_auth_ttl_seconds=_env_int("INTERNAL_AUTH_TTL_SECONDS", 12 * 60 * 60),
         internal_auth_cookie_secure=_env_bool("INTERNAL_AUTH_COOKIE_SECURE", False),
+        merchant_auth_secret=os.getenv(
+            "MERCHANT_AUTH_SECRET",
+            "dev-insecure-merchant-auth-secret-change-me",
+        ),
+        merchant_auth_cookie_name=os.getenv(
+            "MERCHANT_AUTH_COOKIE_NAME",
+            "mini_payment_gateway_merchant_session",
+        ),
+        merchant_auth_ttl_seconds=_env_int("MERCHANT_AUTH_TTL_SECONDS", 12 * 60 * 60),
+        merchant_auth_cookie_secure=_env_bool("MERCHANT_AUTH_COOKIE_SECURE", False),
     )
 
 

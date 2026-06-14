@@ -7,6 +7,7 @@ Responsibilities:
 * store merchant operational profile
 * store and rotate merchant credentials
 * store merchant onboarding case
+* provision merchant dashboard users through internal Admin workflow
 * validate merchant operational readiness
 
 Main entities:
@@ -14,7 +15,33 @@ Main entities:
 * `Merchant`
 * `MerchantCredential`
 * `MerchantOnboardingCase`
+* `MerchantUser`
 * `AuditLog`
+
+## Merchant Portal
+
+Responsibilities:
+
+* authenticate merchant dashboard users with a separate session cookie
+* expose read-only merchant-scoped dashboard, analytics, explorer, profile, and
+  credential metadata
+* allow merchant users to change their own local password
+* prevent client-supplied `merchant_id` from scoping portal data
+
+Main entities:
+
+* `Merchant`
+* `MerchantUser`
+* `PaymentTransaction`
+* `RefundTransaction`
+* `WebhookEvent`
+* `MerchantCredential`
+
+Boundary:
+
+* Merchant Portal is not the same as Merchant API. Merchant API is
+  server-to-server and uses HMAC credentials; Merchant Portal is interactive
+  and uses an HttpOnly session cookie.
 
 ## Payment Service
 
@@ -152,6 +179,35 @@ Required fields:
 DB rule:
 
 * partial unique: one `ACTIVE` credential per merchant
+
+## MerchantUser
+
+Purpose: interactive Merchant Dashboard account scoped to exactly one merchant.
+
+Required fields:
+
+* `id`
+* `merchant_db_id`
+* `email`
+* `full_name`
+* `role` = `MERCHANT_ADMIN | MERCHANT_VIEWER`
+* `status` = `ACTIVE | INACTIVE`
+* `password_hash`
+* `last_login_at`
+* `created_at`
+* `updated_at`
+
+DB rules:
+
+* unique: `merchant_db_id + email`
+* indexed: `merchant_db_id`
+* indexed: `email`
+
+Notes:
+
+* merchant portal users are provisioned by internal `ADMIN` users
+* plaintext passwords are returned only once on create/reset and are not stored
+* merchant portal users do not use merchant API `access_key` or `secret_key`
 
 ## OrderReference
 

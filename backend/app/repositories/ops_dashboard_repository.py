@@ -2,7 +2,7 @@ from datetime import datetime
 from decimal import Decimal
 from uuid import UUID
 
-from sqlalchemy import func, or_, select
+from sqlalchemy import case, func, or_, select
 from sqlalchemy.orm import Session
 
 from app.models.audit_log import AuditLog
@@ -14,6 +14,7 @@ from app.models.enums import (
     OnboardingCaseStatus,
     PaymentStatus,
     ReconciliationStatus,
+    RefundStatus,
     WebhookEventStatus,
 )
 from app.models.merchant import Merchant
@@ -438,14 +439,113 @@ def list_payments_since(db: Session, since: datetime) -> list[PaymentTransaction
     )
 
 
+def aggregate_payment_analytics(
+    db: Session,
+    *,
+    merchant_id: str,
+    date_from: datetime,
+    date_to: datetime,
+):
+    bucket_date = func.date(PaymentTransaction.created_at).label("bucket_date")
+    successful_amount = func.coalesce(
+        func.sum(
+            case(
+                (PaymentTransaction.status == PaymentStatus.SUCCESS, PaymentTransaction.amount),
+                else_=0,
+            )
+        ),
+        0,
+    ).label("successful_amount")
+    stmt = (
+        select(
+            bucket_date,
+            PaymentTransaction.status.label("status"),
+            func.count(PaymentTransaction.id).label("count"),
+            successful_amount,
+        )
+        .join(Merchant, Merchant.id == PaymentTransaction.merchant_db_id)
+        .where(
+            Merchant.merchant_id == merchant_id,
+            PaymentTransaction.created_at >= date_from,
+            PaymentTransaction.created_at < date_to,
+        )
+        .group_by(bucket_date, PaymentTransaction.status)
+        .order_by(bucket_date)
+    )
+    return list(db.execute(stmt).all())
+
+
 def list_refunds_since(db: Session, since: datetime) -> list[RefundTransaction]:
     return list(
         db.scalars(select(RefundTransaction).where(RefundTransaction.created_at >= since)).all()
     )
 
 
+def aggregate_refund_analytics(
+    db: Session,
+    *,
+    merchant_id: str,
+    date_from: datetime,
+    date_to: datetime,
+):
+    bucket_date = func.date(RefundTransaction.created_at).label("bucket_date")
+    refunded_amount = func.coalesce(
+        func.sum(
+            case(
+                (RefundTransaction.status == RefundStatus.REFUNDED, RefundTransaction.refund_amount),
+                else_=0,
+            )
+        ),
+        0,
+    ).label("amount")
+    stmt = (
+        select(
+            bucket_date,
+            RefundTransaction.status.label("status"),
+            func.count(RefundTransaction.id).label("count"),
+            refunded_amount,
+        )
+        .join(Merchant, Merchant.id == RefundTransaction.merchant_db_id)
+        .where(
+            Merchant.merchant_id == merchant_id,
+            RefundTransaction.created_at >= date_from,
+            RefundTransaction.created_at < date_to,
+        )
+        .group_by(bucket_date, RefundTransaction.status)
+        .order_by(bucket_date)
+    )
+    return list(db.execute(stmt).all())
+
+
 def list_webhooks_since(db: Session, since: datetime) -> list[WebhookEvent]:
     return list(db.scalars(select(WebhookEvent).where(WebhookEvent.created_at >= since)).all())
+
+
+def aggregate_webhook_analytics(
+    db: Session,
+    *,
+    merchant_id: str,
+    date_from: datetime,
+    date_to: datetime,
+):
+    bucket_date = func.date(WebhookEvent.created_at).label("bucket_date")
+    stmt = (
+        select(
+            bucket_date,
+            WebhookEvent.event_type.label("event_type"),
+            WebhookEvent.status.label("status"),
+            func.count(WebhookEvent.id).label("count"),
+        )
+        .join(Merchant, Merchant.id == WebhookEvent.merchant_db_id)
+        .where(
+            Merchant.merchant_id == merchant_id,
+            WebhookEvent.created_at >= date_from,
+            WebhookEvent.created_at < date_to,
+        )
+        .group_by(bucket_date, WebhookEvent.event_type, WebhookEvent.status)
+        .order_by(bucket_date)
+    )
+    return list(db.execute(stmt).all())
 
 
 def list_reconciliation_records_since(db: Session, since: datetime) -> list[ReconciliationRecord]:

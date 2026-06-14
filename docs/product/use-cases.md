@@ -18,6 +18,11 @@ The five selected detailed use cases are:
 - UC004 - Create full refund and process refund result
 - UC005 - Deliver webhook with retry and manual recovery
 
+Dashboard use cases are implemented and summarized in this document, but they
+are not expanded with the same detailed template as the five core money-flow
+use cases. The detailed sections stay focused on the end-to-end gateway
+lifecycle.
+
 Each use case includes a PlantUML diagram in a `plantuml` fence. Rendering
 depends on the Markdown viewer or IDE PlantUML plugin.
 
@@ -81,6 +86,80 @@ UC004 ..> UC005 : notify refund result
 | **Merchant** | Merchant that calls gateway APIs to create payments, request refunds, and receive webhooks. |
 | **Provider simulator** | Simulated payment provider that sends payment and refund result callbacks. |
 | **Scheduler / Timer** | External trigger for automatic webhook delivery and retry selection. |
+
+---
+
+# Implemented Dashboard Use Cases
+
+These use cases are included in the current dashboard branch and should be used
+in the final presentation demo only if they can be shown through the running
+application.
+
+`Admin` and `Ops` are both internal users of the Ops Dashboard, but they are
+modeled separately here because the implementation enforces different RBAC
+permissions. `Admin` can perform privileged account-provisioning work such as
+creating, activating/deactivating, and resetting passwords for merchant portal
+users. `Ops` represents day-to-day internal operations users who can inspect
+and operate the payment gateway workflows but cannot provision merchant portal
+password access.
+
+```plantuml
+@startuml dashboard_use_cases
+left to right direction
+skinparam packageStyle rectangle
+
+actor "Admin" as Admin
+actor "Ops" as Ops
+actor "Merchant portal user" as MerchantUser
+
+rectangle "Ops Dashboard" {
+  usecase "Login and view\noperations overview" as DUC001
+  usecase "Manage merchant\nlifecycle" as DUC002
+  usecase "Provision merchant\nportal users" as DUC003
+  usecase "Inspect payments,\nrefunds, webhooks,\nreconciliation, audit" as DUC004
+}
+
+rectangle "Merchant Dashboard" {
+  usecase "Login and change\npassword" as DUC005
+  usecase "View overview and\ninteractive analytics" as DUC006
+  usecase "Explore payments,\nrefunds, webhooks" as DUC007
+  usecase "View profile and\ncredential metadata" as DUC008
+}
+
+Admin --> DUC001
+Admin --> DUC002
+Admin --> DUC003
+Admin --> DUC004
+Ops --> DUC001
+Ops --> DUC002
+Ops --> DUC004
+MerchantUser --> DUC005
+MerchantUser --> DUC006
+MerchantUser --> DUC007
+MerchantUser --> DUC008
+@enduml
+```
+
+| Code | Use case | Primary actor | Implemented behavior |
+| --- | --- | --- | --- |
+| DUC001 | Login and view operations overview | Admin/Ops | Internal users login with session cookie and inspect dashboard metrics/charts. |
+| DUC002 | Manage merchant lifecycle | Admin/Ops | Operators create merchants, manage onboarding/credentials, and activate/suspend/disable merchants according to RBAC. |
+| DUC003 | Provision merchant portal users | Admin | Admin creates, updates, deactivates/reactivates, and resets passwords for merchant dashboard users. |
+| DUC004 | Inspect operational evidence | Admin/Ops | Internal users inspect payments, refunds, webhooks, reconciliation, audit logs, and webhook attempts. |
+| DUC005 | Login and change password | Merchant portal user | Merchant users login with merchant session cookie and can change their own password. |
+| DUC006 | View overview and analytics | Merchant portal user | Merchant users see scoped summary metrics and interactive 7/30/90-day analytics. |
+| DUC007 | Explore payments, refunds, webhooks | Merchant portal user | Merchant users browse and drill into their own records only. |
+| DUC008 | View profile and credentials | Merchant portal user | Merchant users see read-only merchant profile and credential metadata without raw secrets. |
+
+Dashboard constraints:
+
+- Merchant portal scope is resolved from the session user, never from a
+  client-provided `merchant_id`.
+- Merchant Dashboard is read-only except for local password change.
+- `OPS` users cannot create or reset merchant portal user passwords.
+- Dashboard use-case diagrams intentionally split `Admin` and `Ops` because
+  they share the same internal application but not the same authorization
+  boundary.
 
 ---
 

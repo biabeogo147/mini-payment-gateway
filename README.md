@@ -20,8 +20,8 @@
   <img alt="Python" src="https://img.shields.io/badge/Python-3.13-blue">
   <img alt="FastAPI" src="https://img.shields.io/badge/FastAPI-Backend-009688">
   <img alt="PostgreSQL" src="https://img.shields.io/badge/PostgreSQL-Alembic-336791">
-  <img alt="Tests" src="https://img.shields.io/badge/Tests-163%20passing-brightgreen">
-  <img alt="Status" src="https://img.shields.io/badge/Status-Phase%2010%20complete-success">
+  <img alt="Tests" src="https://img.shields.io/badge/Tests-unittest%20suite-brightgreen">
+  <img alt="Status" src="https://img.shields.io/badge/Status-Dashboard%20expansion-success">
 </p>
 
 Mini Payment Gateway is not a toy CRUD demo. It is a compact backend that
@@ -48,7 +48,10 @@ how money-movement systems are stitched together.
 - **Durable webhooks**: final payment/refund events, signed outbound payloads,
   persisted delivery attempts, retry scheduling, exhaustion, and manual retry.
 - **Internal ops layer**: merchant onboarding, credential creation/rotation,
-  activation, suspension, disabling, reconciliation review, and audit logging.
+  activation, suspension, disabling, reconciliation review, merchant portal
+  user provisioning, and audit logging.
+- **Dashboard surfaces**: an internal Ops Dashboard and a separate read-only
+  Merchant Dashboard with merchant-scoped session auth.
 - **Readable architecture**: thin FastAPI controllers, service-level business
   rules, repository-focused persistence, SQLAlchemy models, Alembic migrations.
 - **Demo-ready verification**: route-level E2E coverage plus smoke scripts for
@@ -117,28 +120,40 @@ backend/app/
 
 Read more in [docs/architecture/backend.md](docs/architecture/backend.md).
 
-## Internal Ops Dashboard
+## Dashboards
 
-Phase 10 adds a live internal Ops dashboard at `apps/ops-dashboard/`.
+The repository has two React/Vite dashboard apps:
 
-It includes:
+- `apps/ops-dashboard/`: internal operations dashboard on port `4173`.
+- `apps/merchant-dashboard/`: merchant-facing read-only portal on port `4174`.
 
-- secure internal login/bootstrap for `ADMIN` and `OPS`;
-- overview metrics, queues, and trend charts;
-- merchant lifecycle and credential actions;
-- onboarding review workflow;
-- payment, refund, webhook, reconciliation, and audit explorers;
-- internal user management for `ADMIN`.
+Ops includes internal login/bootstrap for `ADMIN` and `OPS`, operational
+explorers, merchant lifecycle actions, reconciliation workflows, audit logs,
+internal user management, and `ADMIN` provisioning for merchant portal users.
 
-Run it locally like this:
+Merchant Dashboard includes merchant session auth, overview metrics, payment,
+refund, and webhook explorers, profile metadata, credential metadata, and local
+password change. Its Analytics page gives merchant-scoped revenue, payment
+status, refund, webhook health, and attention-breakdown charts. It never exposes
+raw credential secrets.
+
+Run them locally like this:
 
 ```bash
 npm install
 npm run ops-dashboard:dev
+npm run merchant-dashboard:dev
 ```
 
-In local dev, Vite proxies `/api` to `http://127.0.0.1:8000`, so the frontend
-and backend share the same session flow as the sandbox deployment.
+In local dev, both Vite apps proxy `/api` to `http://127.0.0.1:8000`, so the
+frontends and backend share the same session flow as the sandbox deployment.
+
+Seed dashboard demo data explicitly when you want a local/sandbox walkthrough:
+
+```bash
+cd backend
+python scripts/seed_dashboard_demo.py
+```
 
 ## Quick Start
 
@@ -164,6 +179,7 @@ Then open:
 - Health: `http://127.0.0.1:8000/health`
 - OpenAPI UI: `http://127.0.0.1:8000/docs`
 - Ops dashboard: `http://127.0.0.1:4173`
+- Merchant dashboard: `http://127.0.0.1:4174`
 
 Detailed setup lives in
 [docs/getting-started/local-setup.md](docs/getting-started/local-setup.md).
@@ -225,9 +241,12 @@ Current scope is complete through phase 10:
 - Readiness docs and route-level E2E coverage
 - Sandbox CI/CD
 - Internal auth, RBAC, and Ops dashboard UI
+- Merchant Dashboard backend/session APIs, frontend UI, Ops provisioning, and
+  explicit demo seeding
 
 Intentionally out of scope for this MVP:
 
-- settlement, ledger posting, disputes, analytics, and multi-provider routing;
+- settlement, ledger posting, disputes, advanced BI exports, and multi-provider
+  routing;
 - partial refunds;
-- merchant self-service UI.
+- merchant self-service mutation workflows beyond password change.

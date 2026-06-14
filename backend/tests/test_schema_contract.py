@@ -77,6 +77,15 @@ class SchemaContractTest(unittest.TestCase):
             "status = 'REFUNDED'",
         )
 
+    def test_transaction_tables_have_merchant_created_at_analytics_indexes(self) -> None:
+        for table_name, index_name in [
+            ("payment_transactions", "ix_payment_transactions_merchant_created_at"),
+            ("refund_transactions", "ix_refund_transactions_merchant_created_at"),
+            ("webhook_events", "ix_webhook_events_merchant_created_at"),
+        ]:
+            index = self._find_index(Base.metadata.tables[table_name].indexes, index_name)
+            self.assertEqual([column.name for column in index.columns], ["merchant_db_id", "created_at"])
+
     def test_numeric_safety_check_constraints_exist(self) -> None:
         payment_checks = self._check_constraint_names("payment_transactions")
         refund_checks = self._check_constraint_names("refund_transactions")

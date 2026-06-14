@@ -26,6 +26,7 @@ class RefundTransaction(UUIDPrimaryKeyMixin, TimestampMixin, Base):
             unique=True,
             postgresql_where=text("status = 'REFUNDED'"),
         ),
+        Index("ix_refund_transactions_merchant_created_at", "merchant_db_id", "created_at"),
     )
 
     refund_transaction_id: Mapped[str] = mapped_column(String(64), unique=True, nullable=False)
