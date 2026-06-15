@@ -20,9 +20,10 @@ bootstrap.
 
 ## Current Live Context
 
-Phase 10 rollout was verified on May 13, 2026 (Asia/Saigon). Use the commands
-in this runbook to confirm the current live SHA instead of relying on this
-document for the latest host revision.
+The original phase 10 rollout was verified on May 13, 2026 (Asia/Saigon).
+The merchant dashboard expansion was verified on June 15, 2026
+(Asia/Saigon). Use the commands in this runbook to confirm the current live
+SHA instead of relying on this document for the latest host revision.
 
 Known-good deployment context for the phase 10 rollout:
 
@@ -32,14 +33,14 @@ Known-good deployment context for the phase 10 rollout:
 - Runner labels: `self-hosted`, `linux`, `sandbox`, `deploy`
 - Runner service:
   `actions.runner.biabeogo147-mini-payment-gateway.sandbox-runner-01.service`
-- First verified phase 10 application deploy commit: `6d0b0bc`
+- Latest verified deployed commit: `2411e6e`
 - Dashboard merchant portal migration: `20260609_0007_merchant_portal.py`
 - Verified backend health result: `{"status":"ok"}`
 - Verified Ops dashboard root response: HTML shell served on
   `http://192.168.1.199:4173/`
 - Merchant Dashboard is served separately on `http://192.168.1.199:4174/`.
 - Verified internal auth bootstrap status:
-  `{"bootstrap_required":true}`
+  `{"bootstrap_required":false}`
 
 Current LAN-published service model as of June 2, 2026:
 
@@ -49,6 +50,8 @@ Current LAN-published service model as of June 2, 2026:
 - Merchant Dashboard is published on `192.168.1.199:4174`
 - `deploy/sandbox_deploy.sh` now derives its health-check URLs from the bind
   addresses in `.env` unless explicit workflow overrides are supplied
+
+For account and secret-location handoff, use `sandbox-access-inventory.md`.
 
 ## Operational Invariants
 

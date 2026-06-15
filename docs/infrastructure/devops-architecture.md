@@ -141,6 +141,7 @@ execution.
   - `192.168.1.199:5432` for PostgreSQL
   - `192.168.1.199:8000` for the backend
   - `192.168.1.199:4173` for the Ops dashboard
+  - `192.168.1.199:4174` for the Merchant Dashboard
 
 ### Secret Placement
 

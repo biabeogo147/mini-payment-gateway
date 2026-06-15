@@ -10,5 +10,7 @@ operations for the platform itself.
   Dashboard.
 - `sandbox-deployment.md` - day-2 deploy, verification, rollback, and
   troubleshooting runbook for backend plus dashboard health and auth checks.
+- `sandbox-access-inventory.md` - internal account, runner, secret-location,
+  and published-port inventory for the sandbox host.
 - `archive/README.md` - historical infrastructure notes that are no longer part
   of normal operations.

@@ -20,6 +20,8 @@ historical phase files.
   fresh server to a live sandbox CI/CD host.
 - `infrastructure/sandbox-deployment.md` - sandbox CI/CD runner and deployment
   runbook, including dashboard and internal-auth verification.
+- `infrastructure/sandbox-access-inventory.md` - sandbox account, runner,
+  secret-location, and published-port inventory.
 - `getting-started/runbook.md` - smoke scripts and full demo flow.
 - `service-operations/merchant-onboarding-sop.md` - merchant lifecycle
   workflow.
