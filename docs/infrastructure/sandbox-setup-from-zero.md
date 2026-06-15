@@ -1,129 +1,73 @@
 # Sandbox Setup From Zero
 
-This guide explains how to take a fresh Ubuntu server from an empty starting
-point to the full sandbox DevOps state described in
-`devops-architecture.md`.
+This is the day-0 provisioning guide for the sandbox host.
 
-Use this document when:
+Use it when you are:
 
-- you are provisioning a brand-new sandbox host;
-- you are rebuilding the sandbox host after loss or replacement;
-- you want one repeatable checklist from "bare server" to "live CI/CD".
+- building a brand-new sandbox host;
+- rebuilding the host after replacement or loss;
+- handing the first successful deploy to another DevOps operator.
 
-This is the repeatable setup guide.
-Historical rollout evidence and one-time notes still live in:
+This file owns setup from a fresh Ubuntu server to the first successful
+workflow deploy. For current live host facts, use
+`sandbox-access-inventory.md`. For day-2 operations, use
+`sandbox-deployment.md`.
 
-- `archive/sandbox-bootstrap.md`
-- `sandbox-deployment.md`
-- `docs/history/completions/phase-09.md`
-- `docs/history/completions/phase-10.md`
+## What You Need Before Starting
 
-## What You Will End Up With
+- Ubuntu x64 host with SSH access
+- a sudo-capable bootstrap user
+- outbound HTTPS from the host to GitHub
+- repository admin access to register a self-hosted runner
+- runtime values for database, auth secrets, and published ports
 
-When this guide is complete, the server will have:
+Repository prerequisites already expected on `main`:
 
-- Docker Engine and Docker Compose installed;
-- a non-root deployment user named `github-runner`;
-- the repository checked out at `/opt/mini-payment-gateway`;
-- a server-only `.env` file with sandbox runtime values;
-- a working manual deploy path through `deploy/sandbox_deploy.sh`;
-- a registered GitHub self-hosted runner running as a systemd service;
-- a working CI/CD pipeline where GitHub tests first and then deploys to the
-  sandbox host;
-- a healthy backend, postgres stack, Ops dashboard, and Merchant Dashboard
-  reachable locally on the host;
-- internal auth configuration ready so the first `ADMIN` user can be
-  bootstrapped from the browser.
+- `.github/workflows/sandbox-deploy.yml`
+- `docker-compose.sandbox.yml`
+- `deploy/sandbox_deploy.sh`
+- `.env.sandbox.example`
+- `apps/ops-dashboard/`
+- `apps/merchant-dashboard/`
+
+## Day-0 Outcome
+
+When this guide is complete, you should have:
+
+- Docker and Docker Compose installed
+- a non-root deployment account named `github-runner`
+- a sandbox checkout at `/opt/mini-payment-gateway`
+- a server-local `.env` file with runtime values
+- a registered self-hosted runner service
+- a successful manual deploy
+- a successful workflow deploy
 
 ## Setup Flow
 
 ```mermaid
 flowchart TB
-    A["Fresh Ubuntu server"] --> B["Verify access and assumptions"]
-    B --> C["Install base packages"]
-    C --> D["Install Docker"]
-    D --> E["Create github-runner user"]
-    E --> F["Prepare /opt/mini-payment-gateway"]
-    F --> G["Clone repo and create .env"]
-    G --> H["Validate compose config"]
-    H --> I["Run first manual deploy"]
-    I --> J["Install and register self-hosted runner"]
-    J --> K["Configure GitHub sandbox environment (optional but recommended)"]
-    K --> L["Run first live workflow deploy"]
-    L --> M["Verify server matches DevOps architecture"]
+    A["Fresh Ubuntu host"] --> B["Verify access and outbound GitHub reachability"]
+    B --> C["Install base packages and Docker"]
+    C --> D["Create github-runner and app directory"]
+    D --> E["Clone repo and create .env"]
+    E --> F["Validate compose config"]
+    F --> G["Run first manual deploy"]
+    G --> H["Register self-hosted runner"]
+    H --> I["Run first workflow deploy"]
+    I --> J["Hand off to day-2 runbook + inventory"]
 ```
 
-## Assumptions
+## Step 0: Verify The Starting Host
 
-This guide assumes:
+Why:
 
-- the target machine is Ubuntu x64;
-- you can SSH into the machine;
-- your SSH user has `sudo` access;
-- the server can reach GitHub over outbound HTTPS;
-- the repository already contains the phase 09, phase 10, and dashboard
-  deploy/runtime
-  files:
-  - `.github/workflows/sandbox-deploy.yml`
-  - `deploy/sandbox_deploy.sh`
-  - `docker-compose.sandbox.yml`
-  - `.env.sandbox.example`
-  - `apps/ops-dashboard/`
-  - `apps/merchant-dashboard/`
-- you have GitHub access to register a self-hosted runner for the repository.
+- confirm the machine is suitable before installing anything
 
-## Information You Need Before Starting
-
-Prepare these inputs first:
-
-| Item | Why you need it |
-| --- | --- |
-| Server IP or hostname | Needed for SSH and verification |
-| SSH username and password or key | Needed to access and bootstrap the host |
-| Sudo password | Needed to install packages and system services |
-| Repository URL | Needed for the server checkout |
-| GitHub repo admin access | Needed to register the self-hosted runner |
-| Sandbox runtime values | Needed to populate `.env` |
-
-Minimum sandbox runtime values:
-
-- `POSTGRES_DB`
-- `POSTGRES_USER`
-- `POSTGRES_PASSWORD`
-- `DATABASE_URL`
-- `APP_ENV`
-- `BACKEND_BIND_ADDR`
-- `BACKEND_PORT`
-- `INTERNAL_AUTH_SECRET`
-- `INTERNAL_AUTH_COOKIE_NAME`
-- `INTERNAL_AUTH_TTL_SECONDS`
-- `INTERNAL_AUTH_COOKIE_SECURE`
-- `MERCHANT_AUTH_SECRET`
-- `MERCHANT_AUTH_COOKIE_NAME`
-- `MERCHANT_AUTH_TTL_SECONDS`
-- `MERCHANT_AUTH_COOKIE_SECURE`
-- `OPS_DASHBOARD_BIND_ADDR`
-- `OPS_DASHBOARD_PORT`
-- `MERCHANT_DASHBOARD_BIND_ADDR`
-- `MERCHANT_DASHBOARD_PORT`
-- optionally `POSTGRES_BIND_ADDR` and `POSTGRES_PORT`
-
-## Step 0: Verify The Starting Conditions
-
-### Why This Step Exists
-
-Before installing anything, confirm the machine is actually suitable for the
-chosen deployment model. This prevents partial setup on a host that cannot
-reach GitHub or does not allow privileged changes.
-
-### Commands
-
-Run these as your initial SSH user:
+Commands:
 
 ```bash
 whoami
 hostname
-uname -a
 lsb_release -a
 sudo -v
 curl -I https://github.com
@@ -131,159 +75,83 @@ df -h
 free -h
 ```
 
-### What To Look For
+Success means:
 
-- `sudo -v` succeeds.
-- `curl -I https://github.com` succeeds.
-- Disk and RAM are sufficient for Docker, PostgreSQL, and image builds.
+- `sudo -v` works
+- GitHub is reachable over HTTPS
+- disk and memory are sufficient for Docker builds and PostgreSQL
 
-If outbound HTTPS to GitHub fails, stop here and fix network access first.
-The phase 09 design depends on the runner being able to initiate outbound
-connections to GitHub.
+## Step 1: Install Base Packages And Docker
 
-## Step 1: Install Base Packages
-
-### Why This Step Exists
-
-The server needs a minimal toolchain for cloning the repo, downloading the
-GitHub runner, and executing the deploy script. These packages are the base of
-every later step.
-
-### Commands
+Commands:
 
 ```bash
 sudo apt update
 sudo apt install -y git curl tar ca-certificates
-```
-
-### Verify
-
-```bash
-git --version
-curl --version
-tar --version
-```
-
-## Step 2: Install Docker Engine And Compose
-
-### Why This Step Exists
-
-The sandbox runtime is containerized. Both manual deploy and CI/CD deploy use
-Docker Compose on the host, so Docker must be installed before app checkout,
-migrations, or health checks can work.
-
-### Commands
-
-```bash
 curl -fsSL https://get.docker.com | sudo sh
 sudo systemctl enable docker
 sudo systemctl start docker
 ```
 
-### Verify
+Verify:
 
 ```bash
-sudo systemctl is-enabled docker
-sudo systemctl is-active docker
+git --version
+curl --version
 docker version
 docker compose version
+sudo systemctl is-active docker
 ```
 
-Expected:
+## Step 2: Create The Deployment Account
 
-- Docker service is `enabled`
-- Docker service is `active`
-- `docker compose version` returns successfully
-
-## Step 3: Create The Deploy User
-
-### Why This Step Exists
-
-The self-hosted runner must not run as `root`. A dedicated user keeps ownership
-clear, keeps the app checkout predictable, and matches the phase 09 trust
-model.
-
-### Commands
+Commands:
 
 ```bash
 sudo adduser github-runner
 sudo usermod -aG docker github-runner
 ```
 
-If the user already exists, keep it and just confirm the group membership.
-
-### Verify
+Verify:
 
 ```bash
 id github-runner
 ```
 
-Look for the `docker` group in the output.
+Success means the account exists and includes the `docker` group.
 
-## Step 4: Prepare The Application Directory
+## Step 3: Prepare The Application Directory
 
-### Why This Step Exists
-
-The sandbox design keeps a normal Git checkout on the host. This makes both
-manual and automated deploys easy to inspect and keeps the runtime close to
-normal developer commands.
-
-### Commands
+Commands:
 
 ```bash
 sudo mkdir -p /opt/mini-payment-gateway
 sudo chown -R github-runner:github-runner /opt/mini-payment-gateway
 ```
 
-### Verify
+Verify:
 
 ```bash
 ls -ld /opt/mini-payment-gateway
 ```
 
-The owner should be `github-runner`.
-
-## Step 5: Clone The Repository
-
-### Why This Step Exists
-
-The deploy pipeline is built around fast-forwarding a persistent checkout on the
-host. The first clone establishes that checkout.
-
-### Commands
+## Step 4: Clone The Repository
 
 Run as `github-runner`:
 
 ```bash
 sudo -u github-runner git clone --branch main https://github.com/biabeogo147/mini-payment-gateway.git /opt/mini-payment-gateway
-```
-
-If the repository is private in the future, replace the clone method with a
-deploy key or PAT-based HTTPS clone. For the current setup, a normal HTTPS
-clone is sufficient.
-
-### Verify
-
-```bash
 sudo -u github-runner bash -lc 'cd /opt/mini-payment-gateway && git status && git rev-parse --abbrev-ref HEAD'
 ```
 
-Expected:
+Success means:
 
-- branch is `main`
-- working tree is clean
+- the checkout is on `main`
+- the working tree is clean
 
-## Step 6: Create The Server-Only `.env`
+## Step 5: Create The Server-Only `.env`
 
-### Why This Step Exists
-
-The application needs runtime configuration and secrets that must stay on the
-server. The DevOps model intentionally keeps these values out of Git history and
-out of workflow logs.
-
-### Commands
-
-Run as `github-runner`:
+Copy the example:
 
 ```bash
 sudo -u github-runner cp /opt/mini-payment-gateway/.env.sandbox.example /opt/mini-payment-gateway/.env
@@ -291,7 +159,34 @@ sudo -u github-runner chmod 600 /opt/mini-payment-gateway/.env
 sudo -u github-runner editor /opt/mini-payment-gateway/.env
 ```
 
-### Minimum Example
+Minimum categories that must be present:
+
+- database:
+  - `POSTGRES_DB`
+  - `POSTGRES_USER`
+  - `POSTGRES_PASSWORD`
+  - `DATABASE_URL`
+- internal auth:
+  - `INTERNAL_AUTH_SECRET`
+  - `INTERNAL_AUTH_COOKIE_NAME`
+  - `INTERNAL_AUTH_TTL_SECONDS`
+  - `INTERNAL_AUTH_COOKIE_SECURE`
+- merchant auth:
+  - `MERCHANT_AUTH_SECRET`
+  - `MERCHANT_AUTH_COOKIE_NAME`
+  - `MERCHANT_AUTH_TTL_SECONDS`
+  - `MERCHANT_AUTH_COOKIE_SECURE`
+- published bind/port values:
+  - `POSTGRES_BIND_ADDR`
+  - `POSTGRES_PORT`
+  - `BACKEND_BIND_ADDR`
+  - `BACKEND_PORT`
+  - `OPS_DASHBOARD_BIND_ADDR`
+  - `OPS_DASHBOARD_PORT`
+  - `MERCHANT_DASHBOARD_BIND_ADDR`
+  - `MERCHANT_DASHBOARD_PORT`
+
+Minimum example:
 
 ```dotenv
 APP_ENV=sandbox
@@ -301,109 +196,64 @@ POSTGRES_USER=postgres
 POSTGRES_PASSWORD=change-me
 DATABASE_URL=postgresql+psycopg2://postgres:change-me@postgres:5432/mini_payment_gateway
 
-POSTGRES_BIND_ADDR=127.0.0.1
-POSTGRES_PORT=5432
-BACKEND_BIND_ADDR=127.0.0.1
-BACKEND_PORT=8000
 INTERNAL_AUTH_SECRET=replace-with-a-long-random-secret
 INTERNAL_AUTH_COOKIE_NAME=mini_payment_gateway_internal_session
 INTERNAL_AUTH_TTL_SECONDS=43200
 INTERNAL_AUTH_COOKIE_SECURE=false
+
 MERCHANT_AUTH_SECRET=replace-with-a-different-long-random-secret
 MERCHANT_AUTH_COOKIE_NAME=mini_payment_gateway_merchant_session
 MERCHANT_AUTH_TTL_SECONDS=43200
 MERCHANT_AUTH_COOKIE_SECURE=false
+
+POSTGRES_BIND_ADDR=127.0.0.1
+POSTGRES_PORT=5432
+BACKEND_BIND_ADDR=127.0.0.1
+BACKEND_PORT=8000
 OPS_DASHBOARD_BIND_ADDR=127.0.0.1
 OPS_DASHBOARD_PORT=4173
 MERCHANT_DASHBOARD_BIND_ADDR=127.0.0.1
 MERCHANT_DASHBOARD_PORT=4174
 ```
 
-### Important Notes
+Important notes:
 
-- Keep `DATABASE_URL` pointed at the Docker service host `postgres`, not
-  `localhost`.
-- Use `127.0.0.1` bind addresses for host-only access.
-- Use the sandbox host LAN IP, for example `192.168.1.199`, when internal
-  clients should connect directly to PostgreSQL, backend, and Ops dashboard.
-- `INTERNAL_AUTH_SECRET` should be a long random value and must stay
-  server-only.
-- `MERCHANT_AUTH_SECRET` should use a different long random value from
-  `INTERNAL_AUTH_SECRET`; merchant and internal dashboard sessions are separate
-  auth surfaces.
-- `INTERNAL_AUTH_COOKIE_SECURE=false` is acceptable for the current internal
-  sandbox because the dashboard is served on plain local HTTP. Revisit this if
-  TLS is introduced later.
-- Keep `MERCHANT_AUTH_COOKIE_SECURE` aligned with the merchant dashboard URL:
-  `false` for the current plain HTTP sandbox, `true` after TLS is introduced.
-- Keep the real `.env` only on the server.
-- Do not commit `.env` to Git.
+- keep `DATABASE_URL` pointed at the Docker service host `postgres`
+- use different long random values for internal and merchant auth secrets
+- use `127.0.0.1` for host-only publishing
+- use the sandbox LAN IP when internal clients should connect directly
+- do not commit the real `.env`
 
-### Verify
+Verify:
 
 ```bash
 sudo -u github-runner ls -l /opt/mini-payment-gateway/.env
 ```
 
-The permissions should be restricted, ideally `600`.
+## Step 6: Validate Compose Configuration
 
-## Step 7: Validate The Sandbox Compose File
-
-### Why This Step Exists
-
-Before trying to deploy, confirm that environment interpolation and Compose
-syntax are valid. This catches missing variables and syntax mistakes early.
-
-### Commands
-
-Run as `github-runner`:
+Command:
 
 ```bash
 sudo -u github-runner bash -lc 'cd /opt/mini-payment-gateway && docker compose -f docker-compose.sandbox.yml config'
 ```
 
-### Verify
+Success means the merged compose config renders without errors.
 
-The command should print a valid merged Compose configuration and exit with
-status `0`.
+## Step 7: Run The First Manual Deploy
 
-If this fails, fix `.env` or the compose file before continuing.
-
-## Step 8: Run The First Manual Deploy
-
-### Why This Step Exists
-
-Do one clean manual deploy before automation. This proves the host runtime,
-Docker, repository checkout, database connectivity, and migrations all work
-independently of GitHub Actions. If this step fails, you know the issue is host
-setup, not CI/CD wiring.
-
-### Commands
-
-Run as `github-runner`:
+Command:
 
 ```bash
 sudo -u github-runner bash -lc 'cd /opt/mini-payment-gateway && bash deploy/sandbox_deploy.sh'
 ```
 
-### What This Script Does
+What this proves:
 
-The script:
+- checkout, Docker, database, and migrations all work on the host
+- backend and both dashboards can start before GitHub Actions is involved
 
-1. checks for `git`, `docker`, and `curl`
-2. fast-forwards the local checkout to `origin/main`
-3. builds the backend, Ops dashboard, and Merchant Dashboard images
-4. starts PostgreSQL
-5. runs Alembic migrations
-6. starts the backend, Ops dashboard, and Merchant Dashboard
-7. polls `/health`
-8. verifies both dashboard roots return HTML
-
-### Verify
-
-Replace `<configured-host>` with the same host value you used for the bind
-address. That is usually either `127.0.0.1` for host-only access or the server
-LAN IP such as `192.168.1.199` for internal network access.
+Verify using the configured published host and ports:
 
 ```bash
 sudo -u github-runner bash -lc 'cd /opt/mini-payment-gateway && docker compose -f docker-compose.sandbox.yml ps'
@@ -413,61 +263,41 @@ curl -fsS http://<configured-host>:4174/
 curl -fsS http://<configured-host>:8000/v1/internal/auth/bootstrap-status
 ```
 
-Expected:
+Success means:
 
-- `postgres` is healthy
-- `backend` is up
-- `ops-dashboard` is up
-- `merchant-dashboard` is up
-- health returns `{"status":"ok"}`
+- `postgres`, `backend`, `ops-dashboard`, and `merchant-dashboard` are up
+- backend health returns `{"status":"ok"}`
 - both dashboard roots return HTML
-- bootstrap status returns JSON such as `{"bootstrap_required":true}`
 
-## Step 9: Install The GitHub Actions Runner
+## Step 8: Register The Self-Hosted Runner
 
-### Why This Step Exists
-
-This is what turns a manually deployable sandbox into an automatically
-deployable sandbox. The runner is the internal execution point that GitHub uses
-to run the deploy job on the host itself.
-
-### Commands
-
-Log in to GitHub and open:
+In GitHub:
 
 ```text
 Repository -> Settings -> Actions -> Runners -> New self-hosted runner
 ```
 
-Choose:
+Choose Linux x64, then run the GitHub-provided commands as `github-runner`.
+Use the canonical runner name and labels from `sandbox-access-inventory.md`.
 
-```text
-OS: Linux
-Architecture: x64
-```
-
-Then run the GitHub-provided commands as `github-runner`.
-A typical flow looks like this:
+Typical flow:
 
 ```bash
 sudo -u github-runner bash
 cd /home/github-runner
 mkdir -p actions-runner
 cd actions-runner
-
-# Use the download command shown by GitHub, not a hard-coded old version.
 curl -o actions-runner-linux-x64.tar.gz -L <github-provided-runner-url>
 tar xzf actions-runner-linux-x64.tar.gz
-
 ./config.sh \
   --url https://github.com/biabeogo147/mini-payment-gateway \
   --token <runner-registration-token> \
-  --name sandbox-runner-01 \
-  --labels sandbox,deploy
+  --name <runner-name> \
+  --labels <comma-separated-runner-labels>
 exit
 ```
 
-Then install and start the service:
+Install the service:
 
 ```bash
 cd /home/github-runner/actions-runner
@@ -476,49 +306,20 @@ sudo ./svc.sh start
 sudo ./svc.sh status
 ```
 
-### Why The Labels Matter
+Verify:
 
-The workflow targets:
+- the runner appears `Online` in GitHub
+- the service is running on the host
 
-```yaml
-runs-on: [self-hosted, linux, sandbox, deploy]
-```
+## Step 9: Configure Optional GitHub Environment Values
 
-`self-hosted` and `linux` come from the runner platform.
-`sandbox` and `deploy` are the environment-specific selectors that make sure
-only the correct host accepts the deploy job.
-
-### Verify
-
-In GitHub:
-
-- the runner appears in the repository runner list
-- the runner status is `Online`
-
-On the server:
-
-```bash
-systemctl list-unit-files "actions.runner*" --no-pager
-systemctl status actions.runner.biabeogo147-mini-payment-gateway.sandbox-runner-01.service
-```
-
-## Step 10: Configure The GitHub Environment
-
-### Why This Step Exists
-
-The current workflow has sensible defaults, so this step is optional.
-It is still recommended because it makes environment-specific values visible and
-editable from GitHub without changing the workflow file.
-
-### Recommended GitHub Environment
-
-Create:
+Recommended environment:
 
 ```text
 Environment name: sandbox
 ```
 
-Recommended environment variables:
+Recommended variables:
 
 | Variable | Value |
 | --- | --- |
@@ -528,154 +329,42 @@ Recommended environment variables:
 | `SANDBOX_OPS_DASHBOARD_URL` | optional override; leave unset to derive from `.env` |
 | `SANDBOX_MERCHANT_DASHBOARD_URL` | optional override; leave unset to derive from `.env` |
 
-### Important Note
+## Step 10: Run The First Workflow Deploy
 
-The current topology does not require SSH secrets because the self-hosted
-runner is installed directly on the target host.
+Trigger either:
 
-## Step 11: Run The First Live Workflow Deploy
+1. a push to `main`
+2. `workflow_dispatch` for `Sandbox Deploy`
 
-### Why This Step Exists
+Success means:
 
-This is the final proof that the full DevOps system works:
+- `backend-tests` passes
+- `frontend-build` passes
+- `deploy-sandbox` passes
+- the host checkout advances to the intended commit
 
-- GitHub can run tests
-- GitHub can queue the deploy job
-- the self-hosted runner can receive the deploy job
-- the host can deploy itself successfully
+Verify with the same commands from Step 7.
 
-### How To Trigger It
-
-Use one of these methods:
-
-1. push a new commit to `main`
-2. open the GitHub Actions UI and run `Sandbox Deploy` manually with
-   `workflow_dispatch`
-
-### What Should Happen
-
-1. `backend-tests` starts on a GitHub-hosted runner
-2. `deploy-sandbox` waits for test success
-3. the self-hosted runner picks up `deploy-sandbox`
-4. the host runs `deploy/sandbox_deploy.sh`
-5. `/health` passes
-6. the Ops dashboard root responds successfully
-7. the Merchant Dashboard root responds successfully
-
-### Verify
-
-In GitHub:
-
-- `backend-tests` ends in `success`
-- `deploy-sandbox` ends in `success`
-
-On the server:
-
-Replace `<configured-host>` with the same host value used by your published
-bind addresses.
-
-```bash
-sudo -u github-runner bash -lc 'cd /opt/mini-payment-gateway && git rev-parse --short HEAD'
-sudo -u github-runner bash -lc 'cd /opt/mini-payment-gateway && docker compose -f docker-compose.sandbox.yml ps'
-curl -fsS http://<configured-host>:8000/health
-curl -fsS http://<configured-host>:4173/
-curl -fsS http://<configured-host>:4174/
-curl -fsS http://<configured-host>:8000/v1/internal/auth/bootstrap-status
-```
-
-Expected:
-
-- host checkout matches the deployed commit from `main`
-- `postgres` is healthy
-- `backend` is healthy or up
-- `ops-dashboard` is healthy or up
-- `merchant-dashboard` is healthy or up
-- health returns `{"status":"ok"}`
-- both dashboard roots return HTML
-- bootstrap status responds successfully
-
-## Step 12: Confirm The Host Matches The Architecture
-
-### Why This Step Exists
-
-The goal is not just "app runs". The goal is "the server now matches the
-current sandbox DevOps design with internal auth, the Ops dashboard, and the
-Merchant Dashboard".
-
-### Acceptance Checklist
+## Day-0 Acceptance Checklist
 
 You are done when all of these are true:
 
 - Docker is installed and running
 - `github-runner` exists and can use Docker
-- `/opt/mini-payment-gateway` exists and is owned by `github-runner`
+- the app checkout exists and is owned by `github-runner`
 - `.env` exists only on the host
-- `docker-compose.sandbox.yml` renders successfully
-- `deploy/sandbox_deploy.sh` works manually
-- the GitHub runner is `Online`
-- the runner service survives reboot
-- a full workflow deploy succeeds
-- `/health` returns `{"status":"ok"}`
-- the Ops dashboard is reachable on its configured local port
-- the Merchant Dashboard is reachable on its configured local port
-- `/v1/internal/auth/bootstrap-status` responds successfully
+- compose config renders successfully
+- manual deploy succeeds
+- the self-hosted runner is online
+- workflow deploy succeeds
+- backend health passes
+- both dashboard roots respond
 
-At that point, the host should match the model documented in
-`devops-architecture.md`.
+## Handoff After Day-0
 
-## Troubleshooting
+After the first successful workflow deploy:
 
-### Runner Is Online But Deploy Job Stays Queued
-
-Check:
-
-- labels match `self-hosted`, `linux`, `sandbox`, `deploy`
-- runner is attached to the correct repository
-- the `sandbox` environment allows the job to run
-
-### `git pull --ff-only` Fails On The Server
-
-This usually means:
-
-- the working tree is dirty; or
-- untracked files would be overwritten
-
-Inspect with:
-
-```bash
-sudo -u github-runner bash -lc 'cd /opt/mini-payment-gateway && git status --short'
-```
-
-### Health Check Fails
-
-Inspect:
-
-```bash
-sudo -u github-runner bash -lc 'cd /opt/mini-payment-gateway && docker compose -f docker-compose.sandbox.yml ps'
-sudo -u github-runner bash -lc 'cd /opt/mini-payment-gateway && docker compose -f docker-compose.sandbox.yml logs --tail 100 backend'
-sudo -u github-runner bash -lc 'cd /opt/mini-payment-gateway && docker compose -f docker-compose.sandbox.yml logs --tail 100 postgres'
-sudo -u github-runner bash -lc 'cd /opt/mini-payment-gateway && docker compose -f docker-compose.sandbox.yml logs --tail 100 ops-dashboard'
-sudo -u github-runner bash -lc 'cd /opt/mini-payment-gateway && docker compose -f docker-compose.sandbox.yml logs --tail 100 merchant-dashboard'
-```
-
-### Runner Service Fails
-
-Inspect:
-
-```bash
-journalctl -u actions.runner.* -n 200 --no-pager
-```
-
-## Why This Design Was Chosen
-
-This guide produces the architecture in `devops-architecture.md`, which
-intentionally favors:
-
-- simple topology over maximum isolation
-- outbound runner connectivity over inbound SSH exposure
-- host-local builds over registry promotion complexity
-- manual recoverability over advanced release orchestration
-
-That makes it a good fit for an internal sandbox where speed of setup,
-inspectability, and operational clarity matter more than production-grade
-platform sophistication.
+- use `sandbox-deployment.md` for day-2 operations
+- use `sandbox-access-inventory.md` for current host facts, ports, and secret
+  names
+- keep historical rollout notes in `archive/` and `docs/history/completions/`

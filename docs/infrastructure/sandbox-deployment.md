@@ -1,309 +1,64 @@
 # Sandbox Deployment
 
-This document is the day-2 deployment runbook for the sandbox environment.
+This is the day-2 operations runbook for the sandbox environment.
 
-Use it after the host has already been provisioned and the runner already
-exists. For first-time machine provisioning, use `sandbox-setup-from-zero.md`.
-For design rationale and topology, use `devops-architecture.md`.
+Use it when you need to:
 
-## What This Document Is For
+- deploy the latest `main` revision;
+- verify that the host is running the intended revision;
+- recover manually when GitHub Actions is unavailable;
+- troubleshoot deploy failures by symptom.
 
-Use this runbook when you need to:
+This file owns normal operations, verification, rollback, and troubleshooting.
+For current host facts, published ports, and secret names, use
+`sandbox-access-inventory.md`. For day-0 provisioning, use
+`sandbox-setup-from-zero.md`.
 
-- deploy the current `main` branch to the sandbox;
-- verify that the latest deploy actually reached the host;
-- run the same deploy flow manually during recovery;
-- troubleshoot deploy failures by symptom instead of guessing.
+## Before You Deploy
 
-This document is intentionally focused on repeated operations, not server
-bootstrap.
+Read the current host facts from `sandbox-access-inventory.md`.
 
-## Current Live Context
+Before a deploy, confirm:
 
-The original phase 10 rollout was verified on May 13, 2026 (Asia/Saigon).
-The merchant dashboard expansion was verified on June 15, 2026
-(Asia/Saigon). Use the commands in this runbook to confirm the current live
-SHA instead of relying on this document for the latest host revision.
+- the expected commit on `main`
+- the self-hosted runner is online
+- the host checkout is not dirty
+- `.env` has already been updated if the change includes compose, auth, port,
+  or runtime-key changes
 
-Known-good deployment context for the phase 10 rollout:
-
-- Host: `192.168.1.199` (`ubuntu24`)
-- App checkout: `/opt/mini-payment-gateway`
-- Runner name: `sandbox-runner-01`
-- Runner labels: `self-hosted`, `linux`, `sandbox`, `deploy`
-- Runner service:
-  `actions.runner.biabeogo147-mini-payment-gateway.sandbox-runner-01.service`
-- First verified merchant dashboard expansion deploy commit: `2411e6e`
-- Dashboard merchant portal migration: `20260609_0007_merchant_portal.py`
-- Verified backend health result: `{"status":"ok"}`
-- Verified Ops dashboard root response: HTML shell served on
-  `http://192.168.1.199:4173/`
-- Merchant Dashboard is served separately on `http://192.168.1.199:4174/`.
-- Verified internal auth bootstrap status:
-  `{"bootstrap_required":false}`
-
-Current LAN-published service model as of June 2, 2026:
-
-- PostgreSQL is published on `192.168.1.199:5432`
-- Backend is published on `192.168.1.199:8000`
-- Ops dashboard is published on `192.168.1.199:4173`
-- Merchant Dashboard is published on `192.168.1.199:4174`
-- `deploy/sandbox_deploy.sh` now derives its health-check URLs from the bind
-  addresses in `.env` unless explicit workflow overrides are supplied
-
-For account and secret-location handoff, use `sandbox-access-inventory.md`.
-
-## Operational Invariants
-
-These points should stay true during normal operations:
-
-- GitHub `main` is the deploy source of truth.
-- `backend-tests` and `frontend-build` must pass before deploy is allowed to
-  run.
-- The deploy runner lives on the target sandbox host.
-- The runner executes deploy commands locally on that host.
-- The app checkout path is `/opt/mini-payment-gateway`.
-- Runtime configuration is loaded from `/opt/mini-payment-gateway/.env`.
-- Runtime orchestration uses `docker-compose.sandbox.yml`.
-- A deploy is only considered successful if backend `/health`, the Ops
-  dashboard root, and the Merchant Dashboard root all pass.
-- The live sandbox currently binds all published service ports to
-  `192.168.1.199` so internal LAN clients can connect directly.
-
-If one of these assumptions changes, update this runbook and
-`devops-architecture.md` together.
-
-## Dashboard Release `.env` Check
-
-Before the first deploy that includes the Merchant Dashboard, confirm the server
-`.env` contains the database, dashboard auth, and port values from
-`.env.sandbox.example`:
-
-```bash
-sudo -u github-runner bash -lc 'cd /opt/mini-payment-gateway && grep -E "^(INTERNAL_AUTH_|MERCHANT_AUTH_|OPS_DASHBOARD_|MERCHANT_DASHBOARD_|DATABASE_URL=|POSTGRES_PASSWORD=)" .env'
-```
-
-Required runtime values:
-
-- `POSTGRES_PASSWORD`
-- `DATABASE_URL`
-- `INTERNAL_AUTH_SECRET`
-- `INTERNAL_AUTH_COOKIE_NAME`
-- `INTERNAL_AUTH_TTL_SECONDS`
-- `INTERNAL_AUTH_COOKIE_SECURE`
-- `MERCHANT_AUTH_SECRET`
-- `MERCHANT_AUTH_COOKIE_NAME`
-- `MERCHANT_AUTH_TTL_SECONDS`
-- `MERCHANT_AUTH_COOKIE_SECURE`
-
-Use different long random values for `INTERNAL_AUTH_SECRET` and
-`MERCHANT_AUTH_SECRET`. Do not leave either one at the example value.
-
-## Standard Deploy Paths
-
-There are two supported deploy paths.
-
-### Path 1: Automatic Deploy From GitHub Actions
-
-Use this for normal operations.
-
-Why this path exists:
-
-- it enforces test-before-deploy;
-- it keeps GitHub `main` as the single deploy source of truth;
-- it creates an auditable workflow history.
-
-Trigger:
-
-- push a commit to `main`; or
-- run the `Sandbox Deploy` workflow manually from the GitHub Actions UI.
-
-Expected result:
-
-- `backend-tests` finishes `success`;
-- `frontend-build` finishes `success`;
-- `deploy-sandbox` finishes `success`;
-- the sandbox host advances to the expected commit.
-
-### Path 2: Manual Deploy On The Host
-
-Use this when:
-
-- GitHub Actions is unavailable;
-- you need to reproduce a failure directly on the server;
-- you want to verify whether a problem is workflow-related or host-related.
-
-Command:
-
-```bash
-cd /opt/mini-payment-gateway
-bash deploy/sandbox_deploy.sh
-```
-
-Expected result:
-
-- the same build, migration, restart, and health sequence runs locally;
-- the host reaches the same runtime state the workflow would produce.
-
-## Normal Automatic Deployment Procedure
-
-This is the standard repeated deployment flow.
-
-### Step 1: Identify The Commit You Expect To Deploy
-
-Why:
-
-- you need a concrete target revision before verifying anything else.
-
-Command:
+Useful pre-checks:
 
 ```bash
 git rev-parse --short HEAD
+sudo -u github-runner bash -lc 'cd /opt/mini-payment-gateway && git status --short'
+systemctl status actions.runner.* --no-pager
 ```
 
-Success means:
+If a change includes new runtime keys or port changes, compare the host `.env`
+against `.env.sandbox.example` and the inventory doc before deploying.
 
-- you know the exact short SHA that should appear on the sandbox host after the
-  deploy.
+## Standard Deploy Paths
 
-### Step 2: Trigger Or Observe The Workflow Run
+### Automatic Deploy From GitHub Actions
 
-Why:
+Use this for normal operations.
 
-- the normal deploy path starts in GitHub, not on the host.
+Expected gate order:
 
-Action:
+1. `backend-tests`
+2. `frontend-build`
+3. `deploy-sandbox`
 
-- push to `main`; or
-- run `Sandbox Deploy` with `workflow_dispatch`.
+The deploy is successful only when backend health and both dashboard roots
+pass.
 
-Success means:
+### Manual Recovery Deploy
 
-- a workflow run appears in GitHub Actions for the intended commit.
+Use this when:
 
-### Step 3: Wait For Test And Build Gates
-
-Why:
-
-- this is the first safety gate and must pass before runtime changes are
-  allowed.
-
-Success means:
-
-- the `backend-tests` job ends with `success`;
-- the `frontend-build` job ends with `success`, including Ops typecheck/build
-  and Merchant typecheck/test/build.
-
-If it fails:
-
-- stop and fix the application or test issue;
-- do not proceed to runtime checks because deploy should not happen.
-
-### Step 4: Wait For `deploy-sandbox`
-
-Why:
-
-- this confirms the self-hosted runner accepted the deploy job and executed the
-  host-local deploy flow.
-
-Success means:
-
-- the `deploy-sandbox` job ends with `success`.
-
-### Step 5: Verify The Host Revision
-
-Why:
-
-- a green workflow should correspond to the expected checkout on the server.
-
-Command:
-
-```bash
-sudo -u github-runner bash -lc 'cd /opt/mini-payment-gateway && git rev-parse --short HEAD'
-```
-
-Success means:
-
-- the returned SHA matches the intended deployed commit.
-
-### Step 6: Verify Container State
-
-Why:
-
-- workflow success alone is not enough; the host runtime must actually be
-  healthy.
-
-Command:
-
-```bash
-sudo -u github-runner bash -lc 'cd /opt/mini-payment-gateway && docker compose -f docker-compose.sandbox.yml ps'
-```
-
-Success means:
-
-- `postgres` is `Up` and healthy;
-- `backend` is `Up` and healthy;
-- `ops-dashboard` is `Up` and healthy;
-- `merchant-dashboard` is `Up` and healthy.
-
-### Step 7: Verify Backend Health
-
-Why:
-
-- this is the primary application-level acceptance check.
-
-Command:
-
-```bash
-curl -fsS http://192.168.1.199:8000/health
-```
-
-Success means:
-
-- the endpoint returns `{"status":"ok"}` and exits successfully.
-
-### Step 8: Verify Dashboard Reachability
-
-Why:
-
-- the deploy now includes a separate internal UI container and proxy layer.
-
-Command:
-
-```bash
-curl -fsS http://192.168.1.199:4173/
-curl -fsS http://192.168.1.199:4174/
-curl -fsS http://192.168.1.199:8000/v1/internal/auth/bootstrap-status
-```
-
-Success means:
-
-- both dashboard roots return HTML successfully;
-- the auth bootstrap-status route responds successfully through the backend.
-
-## Manual Recovery Deploy Procedure
-
-Use this procedure when you need to rerun the deploy logic directly on the host.
-
-### Step 1: Confirm You Are On The Sandbox Host
-
-Command:
-
-```bash
-hostname
-pwd
-```
-
-Success means:
-
-- you are on the intended machine and ready to operate in the app directory.
-
-### Step 2: Run The Deploy Script As `github-runner`
-
-Why:
-
-- this keeps manual recovery behavior aligned with the ownership and trust model
-  used by the automated runner.
+- GitHub Actions is unavailable
+- deeper host-side debugging is needed
+- you want to reproduce the deploy flow directly on the server
 
 Command:
 
@@ -311,31 +66,80 @@ Command:
 sudo -u github-runner bash -lc 'cd /opt/mini-payment-gateway && bash deploy/sandbox_deploy.sh'
 ```
 
+## Normal Deployment Procedure
+
+Use the current host and port values from `sandbox-access-inventory.md` when
+replacing placeholders below.
+
+### Step 1: Identify The Target Revision
+
+```bash
+git rev-parse --short HEAD
+```
+
+Success means you know the exact commit that should appear on the sandbox host.
+
+### Step 2: Trigger Or Observe The Workflow
+
+- push to `main`; or
+- run `Sandbox Deploy` with `workflow_dispatch`
+
+Success means a GitHub Actions run exists for the intended revision.
+
+### Step 3: Wait For Verification Gates
+
 Success means:
 
-- the script completes without error and prints a successful health check.
+- `backend-tests` finished `success`
+- `frontend-build` finished `success`
 
-### Step 3: Repeat The Standard Verification Checks
+If either job fails, stop and fix the code or build issue before inspecting the
+host.
 
-Run:
+### Step 4: Wait For `deploy-sandbox`
+
+Success means the self-hosted runner accepted the job and the deploy job ended
+with `success`.
+
+### Step 5: Verify The Host Revision
 
 ```bash
 sudo -u github-runner bash -lc 'cd /opt/mini-payment-gateway && git rev-parse --short HEAD'
+```
+
+Success means the host SHA matches the intended deploy target.
+
+### Step 6: Verify Container State
+
+```bash
 sudo -u github-runner bash -lc 'cd /opt/mini-payment-gateway && docker compose -f docker-compose.sandbox.yml ps'
-curl -fsS http://192.168.1.199:8000/health
-curl -fsS http://192.168.1.199:4173/
-curl -fsS http://192.168.1.199:4174/
-curl -fsS http://192.168.1.199:8000/v1/internal/auth/bootstrap-status
 ```
 
 Success means:
 
-- commit, container state, backend health, and dashboard reachability all match
-  the expected deploy target.
+- `postgres` is healthy
+- `backend` is healthy
+- `ops-dashboard` is healthy
+- `merchant-dashboard` is healthy
+
+### Step 7: Verify Application Endpoints
+
+```bash
+curl -fsS http://<sandbox-host>:<backend-port>/health
+curl -fsS http://<sandbox-host>:<ops-dashboard-port>/
+curl -fsS http://<sandbox-host>:<merchant-dashboard-port>/
+curl -fsS http://<sandbox-host>:<backend-port>/v1/internal/auth/bootstrap-status
+```
+
+Success means:
+
+- `/health` returns `{"status":"ok"}`
+- both dashboard roots return HTML
+- internal auth bootstrap-status responds successfully
 
 ## Post-Deploy Verification Checklist
 
-After every deploy, verify all three layers:
+Treat the deploy as complete only when all three layers are true:
 
 ### Layer 1: Workflow
 
@@ -345,179 +149,53 @@ After every deploy, verify all three layers:
 
 ### Layer 2: Host Runtime
 
-- app checkout on host is the expected commit
-- `postgres` is healthy
-- `backend` is up
-- `ops-dashboard` is up
-- `merchant-dashboard` is up
+- host checkout is the expected commit
+- `postgres`, `backend`, `ops-dashboard`, and `merchant-dashboard` are healthy
 
 ### Layer 3: Application
 
-- `GET /health` returns `{"status":"ok"}`
-- `GET /` on port `4173` returns the Ops Dashboard HTML shell
-- `GET /` on port `4174` returns the Merchant Dashboard HTML shell
-- `GET /v1/internal/auth/bootstrap-status` responds successfully
-- port `5432` on `192.168.1.199` is reachable from internal clients when direct
-  DB access is expected
+- backend health endpoint responds successfully
+- Ops Dashboard root responds successfully
+- Merchant Dashboard root responds successfully
+- published PostgreSQL port is reachable when direct DB access is expected
 
-A deploy should not be treated as complete until all three layers are true.
+## Manual Recovery Procedure
 
-## Troubleshooting By Symptom
-
-### Symptom: Deploy Job Stays Queued
-
-What it usually means:
-
-- GitHub cannot find a matching online runner for the job labels.
-
-Check:
+### Step 1: Confirm The Host And App Directory
 
 ```bash
-systemctl status actions.runner.biabeogo147-mini-payment-gateway.sandbox-runner-01.service
-journalctl -u actions.runner.* -n 100 --no-pager
+hostname
+pwd
 ```
 
-Also verify in GitHub:
-
-- runner is `Online`
-- labels include `self-hosted`, `linux`, `sandbox`, `deploy`
-
-Typical fixes:
-
-- start the runner service;
-- correct runner labels;
-- confirm the job is targeting the right repository and environment.
-
-### Symptom: Runner Is Offline
-
-What it usually means:
-
-- the systemd service is stopped or the runner lost connectivity to GitHub.
-
-Check:
+### Step 2: Run The Deploy Script As `github-runner`
 
 ```bash
-systemctl status actions.runner.biabeogo147-mini-payment-gateway.sandbox-runner-01.service
-journalctl -u actions.runner.* -n 200 --no-pager
-curl -I https://github.com
+sudo -u github-runner bash -lc 'cd /opt/mini-payment-gateway && bash deploy/sandbox_deploy.sh'
 ```
 
-Typical fixes:
+### Step 3: Repeat The Standard Verification Checks
 
-- restart the runner service;
-- restore outbound HTTPS connectivity;
-- re-register the runner only if the existing registration is broken.
+Run the commands from:
 
-### Symptom: `git pull --ff-only` Fails
+- Step 5: Verify The Host Revision
+- Step 6: Verify Container State
+- Step 7: Verify Application Endpoints
 
-What it usually means:
+## Rollback Model
 
-- the host checkout is dirty; or
-- untracked files would be overwritten; or
-- the branch is no longer a simple fast-forward.
-
-Check:
-
-```bash
-sudo -u github-runner bash -lc 'cd /opt/mini-payment-gateway && git status --short'
-```
-
-Typical fixes:
-
-- remove stray untracked files that should not live on the host;
-- stop editing tracked files directly on the server;
-- keep the host checkout clean between deploys.
-
-Known first-run example:
-
-- the original phase 09 rollout failed once because
-  `.env.sandbox.example`, `docker-compose.sandbox.yml`, and
-  `deploy/sandbox_deploy.sh` had been copied to the host before Git tracked
-  them on `main`.
-
-### Symptom: Migration Step Fails
-
-What it usually means:
-
-- the database is unavailable; or
-- the migration code is broken for the current state.
-
-Check:
-
-```bash
-sudo -u github-runner bash -lc 'cd /opt/mini-payment-gateway && docker compose -f docker-compose.sandbox.yml ps'
-sudo -u github-runner bash -lc 'cd /opt/mini-payment-gateway && docker compose -f docker-compose.sandbox.yml logs --tail 100 postgres'
-```
-
-Typical fixes:
-
-- recover PostgreSQL first;
-- rerun the deploy script after database health is restored;
-- if the migration itself is bad, fix the code on `main` and redeploy.
-
-### Symptom: Backend Container Is Restarting Or Unhealthy
-
-What it usually means:
-
-- the app failed during startup; or
-- configuration is invalid; or
-- the database is reachable but the app cannot boot cleanly.
-
-Check:
-
-```bash
-sudo -u github-runner bash -lc 'cd /opt/mini-payment-gateway && docker compose -f docker-compose.sandbox.yml logs --tail 100 backend'
-sudo -u github-runner bash -lc 'cd /opt/mini-payment-gateway && docker compose -f docker-compose.sandbox.yml ps'
-```
-
-Typical fixes:
-
-- correct `.env` values;
-- fix the application code on `main`;
-- redeploy after the underlying issue is resolved.
-
-### Symptom: Health Check Fails
-
-What it usually means:
-
-- the backend did not finish startup; or
-- it is running but not healthy enough to answer `/health`.
-
-Check:
-
-```bash
-curl -v http://192.168.1.199:8000/health
-sudo -u github-runner bash -lc 'cd /opt/mini-payment-gateway && docker compose -f docker-compose.sandbox.yml logs --tail 100 backend'
-```
-
-Typical fixes:
-
-- inspect backend startup logs first;
-- then inspect postgres health and connectivity;
-- rerun the deploy manually only after the root cause is understood.
-
-## Recovery And Rollback
-
-### Preferred Recovery Model
-
-The preferred recovery path is:
+Preferred recovery path:
 
 1. fix or revert on `main`
 2. let the workflow redeploy
-3. verify host commit and health again
+3. verify revision and health again
 
-Why this is preferred:
+Why:
 
-- GitHub `main` remains the visible source of truth;
-- the host does not drift away from repository history;
-- the next operator can understand the state without guessing.
+- GitHub `main` stays the visible source of truth
+- the host does not drift away from repository history
 
-### Emergency Manual Rollback
-
-Only use this when service restoration is more urgent than GitHub workflow
-cleanliness.
-
-Possible emergency flow:
+Emergency manual rollback is still possible:
 
 ```bash
 sudo -u github-runner bash -lc '
@@ -528,62 +206,134 @@ sudo -u github-runner bash -lc '
 '
 ```
 
-Warning:
+Use this only as a short-lived recovery bridge.
 
-- this puts the host temporarily behind `main`;
-- the next normal deploy from `main` will move the host forward again.
+## Troubleshooting By Symptom
 
-Treat this as an emergency bridge, not the default operating model.
+### Deploy Job Stays Queued
 
-## Operational Warnings
+Usually means GitHub cannot find a matching online runner.
 
-- Do not edit tracked application files directly on the host during normal
-  operations.
-- Do not leave the host checkout dirty between deploys.
-- Do not store real runtime secrets in GitHub workflow files or logs.
-- Do not run the self-hosted runner as `root`.
-- Treat `github-runner` plus Docker access as privileged host-level access.
+Check:
+
+```bash
+systemctl status actions.runner.* --no-pager
+journalctl -u actions.runner.* -n 100 --no-pager
+```
+
+Confirm in GitHub:
+
+- runner is `Online`
+- labels match `self-hosted`, `linux`, `sandbox`, `deploy`
+
+### Runner Is Offline
+
+Usually means the service is stopped or outbound HTTPS to GitHub is broken.
+
+Check:
+
+```bash
+systemctl status actions.runner.* --no-pager
+journalctl -u actions.runner.* -n 200 --no-pager
+curl -I https://github.com
+```
+
+### `git pull --ff-only` Fails
+
+Usually means the host checkout is dirty or has conflicting untracked files.
+
+Check:
+
+```bash
+sudo -u github-runner bash -lc 'cd /opt/mini-payment-gateway && git status --short'
+```
+
+### Migration Step Fails
+
+Usually means PostgreSQL is unavailable or the migration does not match the
+current schema state.
+
+Check:
+
+```bash
+sudo -u github-runner bash -lc 'cd /opt/mini-payment-gateway && docker compose -f docker-compose.sandbox.yml ps'
+sudo -u github-runner bash -lc 'cd /opt/mini-payment-gateway && docker compose -f docker-compose.sandbox.yml logs --tail 100 postgres'
+```
+
+### Backend Container Is Restarting Or Unhealthy
+
+Usually means startup failed or runtime configuration is invalid.
+
+Check:
+
+```bash
+sudo -u github-runner bash -lc 'cd /opt/mini-payment-gateway && docker compose -f docker-compose.sandbox.yml logs --tail 100 backend'
+sudo -u github-runner bash -lc 'cd /opt/mini-payment-gateway && docker compose -f docker-compose.sandbox.yml ps'
+```
+
+### Dashboard Root Fails
+
+Usually means the dashboard container did not start correctly or the published
+port is wrong for the current `.env`.
+
+Check:
+
+```bash
+sudo -u github-runner bash -lc 'cd /opt/mini-payment-gateway && docker compose -f docker-compose.sandbox.yml logs --tail 100 ops-dashboard merchant-dashboard'
+sudo -u github-runner bash -lc 'cd /opt/mini-payment-gateway && docker compose -f docker-compose.sandbox.yml ps'
+```
+
+### Backend Health Fails
+
+Usually means the app did not finish startup or is unhealthy after boot.
+
+Check:
+
+```bash
+curl -v http://<sandbox-host>:<backend-port>/health
+sudo -u github-runner bash -lc 'cd /opt/mini-payment-gateway && docker compose -f docker-compose.sandbox.yml logs --tail 100 backend'
+```
 
 ## Reference Commands
 
-Check current host commit:
+Current host revision:
 
 ```bash
 sudo -u github-runner bash -lc 'cd /opt/mini-payment-gateway && git rev-parse --short HEAD'
 ```
 
-Check container state:
+Container state:
 
 ```bash
 sudo -u github-runner bash -lc 'cd /opt/mini-payment-gateway && docker compose -f docker-compose.sandbox.yml ps'
 ```
 
-Check backend logs:
+Backend logs:
 
 ```bash
 sudo -u github-runner bash -lc 'cd /opt/mini-payment-gateway && docker compose -f docker-compose.sandbox.yml logs --tail 100 backend'
 ```
 
-Check postgres logs:
+Dashboard logs:
+
+```bash
+sudo -u github-runner bash -lc 'cd /opt/mini-payment-gateway && docker compose -f docker-compose.sandbox.yml logs --tail 100 ops-dashboard merchant-dashboard'
+```
+
+PostgreSQL logs:
 
 ```bash
 sudo -u github-runner bash -lc 'cd /opt/mini-payment-gateway && docker compose -f docker-compose.sandbox.yml logs --tail 100 postgres'
 ```
 
-Run manual deploy:
+Manual deploy:
 
 ```bash
 sudo -u github-runner bash -lc 'cd /opt/mini-payment-gateway && bash deploy/sandbox_deploy.sh'
 ```
 
-Check runner service:
+Runner status:
 
 ```bash
-systemctl status actions.runner.biabeogo147-mini-payment-gateway.sandbox-runner-01.service
-```
-
-Check runner logs:
-
-```bash
-journalctl -u actions.runner.* -n 200 --no-pager
+systemctl status actions.runner.* --no-pager
 ```

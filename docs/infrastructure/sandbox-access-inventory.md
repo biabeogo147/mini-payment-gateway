@@ -1,62 +1,44 @@
 # Sandbox Access Inventory
 
-This document is the internal handoff inventory for sandbox CI/CD access,
-runtime secret locations, and the `github-runner` deployment account.
+This file is the single source of truth for current sandbox host facts.
 
-Use it when you need to answer:
+Use it when you need:
 
-- which Linux account owns the sandbox deploy flow;
-- where the self-hosted runner lives;
-- where runtime secrets are stored;
-- which secret names and ports currently exist on the sandbox host;
-- how to inspect the current values directly on the server.
+- the sandbox host and checkout path
+- the CI/CD runner account and service details
+- the published service endpoints
+- the canonical runtime key inventory
+- commands to inspect current values directly on the host
 
-This is an inventory and retrieval guide.
-It intentionally does **not** commit raw secret values into Git history.
+This file owns live facts only. It does **not** own setup steps, deploy
+procedure, or rollout history.
 
-## Current Host Inventory
+## Current Host Facts
 
-- Host: `192.168.1.199`
-- Repository checkout: `/opt/mini-payment-gateway`
-- Deploy branch: `main`
-- Runtime env file: `/opt/mini-payment-gateway/.env`
-- Runner account: `github-runner`
-- Runner home: `/home/github-runner`
-- Runner install directory: `/home/github-runner/actions-runner`
-- Runner name: `sandbox-runner-01`
-- Runner labels: `self-hosted`, `linux`, `sandbox`, `deploy`
-- Runner service:
+- sandbox host: `192.168.1.199`
+- app checkout: `/opt/mini-payment-gateway`
+- runtime env file: `/opt/mini-payment-gateway/.env`
+- compose file: `docker-compose.sandbox.yml`
+- deploy branch: `main`
+
+## CI/CD Runner Facts
+
+- deployment account: `github-runner`
+- runner home: `/home/github-runner`
+- runner install directory: `/home/github-runner/actions-runner`
+- runner name: `sandbox-runner-01`
+- runner labels: `self-hosted`, `linux`, `sandbox`, `deploy`
+- runner service:
   `actions.runner.biabeogo147-mini-payment-gateway.sandbox-runner-01.service`
 
-## `github-runner` Account
-
-The sandbox deploy model uses a dedicated non-root Linux account:
-
-- username: `github-runner`
-- primary role: own the checkout and execute deploy jobs
-- Docker access: yes, through membership in the `docker` group
-- systemd runner service owner: `github-runner`
-
-Why it matters:
-
-- automated deploys run as this user;
-- manual recovery should also be executed as this user;
-- anyone with effective control of this account plus Docker access has
-  privileged control of the sandbox host.
-
-## Current Published Service Endpoints
-
-The sandbox currently publishes all runtime services on the host LAN IP:
+## Published Endpoints
 
 - PostgreSQL: `192.168.1.199:5432`
 - Backend API: `192.168.1.199:8000`
 - Ops Dashboard: `192.168.1.199:4173`
 - Merchant Dashboard: `192.168.1.199:4174`
 
-## Secret And Runtime Variable Inventory
-
-The current sandbox `.env` is expected to contain at least these important
-values.
+## Runtime Key Inventory
 
 Database and runtime:
 
@@ -80,7 +62,7 @@ Merchant auth:
 - `MERCHANT_AUTH_TTL_SECONDS`
 - `MERCHANT_AUTH_COOKIE_SECURE`
 
-Published port and bind controls:
+Published bind and port controls:
 
 - `POSTGRES_BIND_ADDR`
 - `POSTGRES_PORT`
@@ -91,22 +73,16 @@ Published port and bind controls:
 - `MERCHANT_DASHBOARD_BIND_ADDR`
 - `MERCHANT_DASHBOARD_PORT`
 
-## Current Secret Storage Model
+## Secret Storage Model
 
-The current sandbox topology does **not** use GitHub SSH deploy keys or cloud
-secret managers for deploy execution.
+- runtime secrets live in `/opt/mini-payment-gateway/.env`
+- deploy execution is direct self-hosted runner execution on the target host
+- the workflow does not require SSH deploy secrets
+- raw secret values are intentionally server-local and not committed to Git
 
-Important notes:
+## Inspect Commands
 
-- deployment is direct self-hosted runner execution on the target host;
-- runtime secrets live in `/opt/mini-payment-gateway/.env`;
-- GitHub Actions only needs repository access and runner registration;
-- the workflow does not require SSH secrets because GitHub does not SSH into
-  the host.
-
-## Retrieve The Current Values On The Host
-
-Inspect the current `.env` directly on the sandbox host:
+Inspect current runtime keys:
 
 ```bash
 sudo -u github-runner bash -lc '
@@ -115,15 +91,20 @@ sudo -u github-runner bash -lc '
 '
 ```
 
-Inspect account and runner details:
+Inspect runner and account details:
 
 ```bash
 id github-runner
-systemctl status actions.runner.biabeogo147-mini-payment-gateway.sandbox-runner-01.service
+systemctl status actions.runner.biabeogo147-mini-payment-gateway.sandbox-runner-01.service --no-pager
+```
+
+Inspect current host revision:
+
+```bash
 sudo -u github-runner bash -lc 'cd /opt/mini-payment-gateway && git rev-parse --short HEAD'
 ```
 
-Inspect current container publish state:
+Inspect current published container state:
 
 ```bash
 sudo -u github-runner bash -lc '
@@ -131,17 +112,3 @@ sudo -u github-runner bash -lc '
   docker compose -f docker-compose.sandbox.yml ps
 '
 ```
-
-## Why Raw Secret Values Are Not In Git Docs
-
-This repository is still Git history, so once a raw password or secret is
-committed it becomes much harder to rotate and clean up safely later.
-
-The chosen compromise for this internal environment is:
-
-- document the host, account, paths, secret names, and retrieval commands in
-  Git;
-- keep the raw secret values server-local in `/opt/mini-payment-gateway/.env`.
-
-That gives DevOps a complete handoff without turning Git history into the
-secret store itself.

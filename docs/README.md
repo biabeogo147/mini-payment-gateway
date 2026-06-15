@@ -14,12 +14,14 @@ historical phase files.
 
 ## For Operators And Demo Runs
 
+- `infrastructure/README.md` - infrastructure entrypoint and source-of-truth
+  map for setup, operations, and infra-aware development.
 - `infrastructure/devops-architecture.md` - internal DevOps topology and
-  pipeline design for backend plus Ops dashboard runtime.
+  pipeline design for the backend and both internal dashboards.
 - `infrastructure/sandbox-setup-from-zero.md` - detailed setup guide from a
   fresh server to a live sandbox CI/CD host.
 - `infrastructure/sandbox-deployment.md` - sandbox CI/CD runner and deployment
-  runbook, including dashboard and internal-auth verification.
+  runbook for deploy, verify, rollback, and troubleshooting.
 - `infrastructure/sandbox-access-inventory.md` - sandbox account, runner,
   secret-location, and published-port inventory.
 - `getting-started/runbook.md` - smoke scripts and full demo flow.
