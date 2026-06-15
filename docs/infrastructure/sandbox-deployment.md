@@ -33,7 +33,7 @@ Known-good deployment context for the phase 10 rollout:
 - Runner labels: `self-hosted`, `linux`, `sandbox`, `deploy`
 - Runner service:
   `actions.runner.biabeogo147-mini-payment-gateway.sandbox-runner-01.service`
-- Latest verified deployed commit: `2411e6e`
+- First verified merchant dashboard expansion deploy commit: `2411e6e`
 - Dashboard merchant portal migration: `20260609_0007_merchant_portal.py`
 - Verified backend health result: `{"status":"ok"}`
 - Verified Ops dashboard root response: HTML shell served on
