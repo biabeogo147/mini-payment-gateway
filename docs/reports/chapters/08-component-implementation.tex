@@ -33,11 +33,10 @@ history remains understandable after the fact.
 
 \section{Merchant Dashboard Support}
 
-Merchant-facing implementation is intentionally separate from merchant
-integration access. Human merchant users sign in with a dedicated account model
-and receive a merchant-scoped session. After sign-in, the gateway derives
-merchant scope from that authenticated session rather than accepting merchant
-identity from request parameters.
+Merchant-facing implementation follows the architectural boundary already
+defined for separate merchant dashboard access. Human merchant users sign in
+with dedicated dashboard accounts, and post-login reads derive merchant scope
+from the authenticated session rather than from request parameters.
 
 This design supports the merchant dashboard in four ways:
 
@@ -54,8 +53,8 @@ This design supports the merchant dashboard in four ways:
 
 \section{Asynchronous Control Functions}
 
-The current system already includes the important control functions needed for
-time-based and retry-based behavior:
+The implementation wires the asynchronous design model into concrete control
+functions needed for time-based and retry-based behavior:
 
 \begin{itemize}
   \item expiration handling for overdue pending payments;
@@ -68,7 +67,6 @@ time-based and retry-based behavior:
   \item manual retry support for eligible failed merchant notifications.
 \end{itemize}
 
-These functions are intentionally separated from ordinary request handling. The
-result is a system in which payment state, refund state, notification delivery,
-and operational recovery remain understandable as related but distinct
-behaviors.
+These functions remain separate from ordinary request handling so payment
+outcomes, notification delivery, and operational recovery stay understandable
+as related but distinct behaviors.

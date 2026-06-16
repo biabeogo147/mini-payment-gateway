@@ -1,16 +1,57 @@
-\documentclass[11pt,a4paper,oneside]{report}
+\documentclass[11pt,a4paper,oneside]{article}
 
-\newcommand{\DocumentTitle}{Companion API Documentation}
-\newcommand{\DocumentSummary}{This companion document provides the detailed API reference for the Mini Payment Gateway. It expands the family IDs used in the main report into endpoint contracts, shared conventions, error behavior, security notes, and Postman scenario mapping.}
+\newcommand{\DocumentTitle}{Customer API Guide}
+\newcommand{\DocumentSummary}{This guide explains how merchants integrate with the Mini Payment Gateway, how callback and webhook flows behave, and which restricted internal endpoints may appear during onboarding, support, or operational recovery.}
 
 \input{shared/metadata.tex}
 \input{shared/preamble.tex}
 \input{shared/macros.tex}
+\lstset{
+  keepspaces=true,
+  showstringspaces=false,
+  breakatwhitespace=false,
+  aboveskip=1.2em,
+  belowskip=1em,
+  abovecaptionskip=0.4em,
+  belowcaptionskip=0.55em
+}
 
 \begin{document}
 
 \hypersetup{pageanchor=false}
-\makempgtitlepage
+\begin{titlepage}
+  \centering
+  \vspace*{0.5cm}
+  \IfFileExists{figures/Logo_DHBK_HN.png}{%
+    \includegraphics[height=3cm]{figures/Logo_DHBK_HN.png}\par
+    \vspace{0.8cm}
+  }{}
+  {\Large \InstitutionName \par}
+  \vspace{1.3cm}
+  {\Huge\bfseries \ProjectTitle \par}
+  \vspace{0.4cm}
+  {\LARGE \DocumentTitle \par}
+  \vspace{1cm}
+  {\Large \CourseName \par}
+  \vfill
+  \begin{tabular}{rl}
+    \textbf{Group:} & \GroupName \\
+    \textbf{Authors:} &
+      \begin{tabular}[t]{@{}l@{}}
+        Le Nguyen Phuoc Thanh \\
+        Hoang Van Nhan \\
+        Ngo Minh Quang \\
+        Vu Tran An Khanh \\
+        Do Hoang Nam Khanh
+      \end{tabular} \\
+    \textbf{Date:} & \SubmissionDate \\
+  \end{tabular}
+  \vfill
+  \begin{minipage}{0.82\textwidth}
+    \small
+    \DocumentSummary
+  \end{minipage}
+\end{titlepage}
 \clearpage
 \hypersetup{pageanchor=true}
 
@@ -27,13 +68,12 @@
 \input{api-sections/06-refund-api.tex}
 \input{api-sections/07-provider-callback-api.tex}
 \input{api-sections/08-outbound-webhook-contract.tex}
+\input{api-sections/12-merchant-portal-apis.tex}
 \input{api-sections/09-internal-auth-and-internal-user-apis.tex}
 \input{api-sections/10-ops-dashboard-and-merchant-management-apis.tex}
 \input{api-sections/11-merchant-portal-user-provisioning-apis.tex}
-\input{api-sections/12-merchant-portal-apis.tex}
 \input{api-sections/13-reconciliation-apis.tex}
 \input{api-sections/14-shared-error-model.tex}
 \input{api-sections/15-security-notes.tex}
-\input{api-sections/16-postman-scenario-mapping.tex}
 
 \end{document}

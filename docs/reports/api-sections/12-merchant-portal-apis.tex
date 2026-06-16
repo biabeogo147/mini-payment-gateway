@@ -1,32 +1,137 @@
-\chapter{Merchant Portal APIs}
+\section{Merchant Dashboard APIs}
 
-Merchant Portal APIs power the Merchant Dashboard. They are separate from
-merchant HMAC APIs: dashboard login uses portal users, not merchant API
-credentials.
+The Merchant Dashboard is an interactive read-oriented surface for human users.
+It is separate from the merchant backend API. Dashboard users sign in with a
+session account, not with HMAC credentials.
 
-\section{\apiid{AUTH-02--03} Merchant Portal Session Auth}
-
-\begin{longtable}{L{0.24\textwidth}L{0.66\textwidth}}
-\caption{AUTH-02--03 contract block}\\
+\begin{longtable}{@{}L{0.25\textwidth}L{0.65\textwidth}@{}}
+\caption{Merchant Dashboard API family summary}\\
 \toprule
-\textbf{Field} & \textbf{Contract} \\
+\textbf{Item} & \textbf{Details} \\
 \midrule
 \endfirsthead
 \toprule
-\textbf{Field} & \textbf{Contract} \\
+\textbf{Item} & \textbf{Details} \\
 \midrule
 \endhead
-Routes & \code{POST /v1/merchant-portal/auth/login}, \code{POST /v1/merchant-portal/auth/logout}, \code{GET /v1/merchant-portal/auth/me}, \code{POST /v1/merchant-portal/auth/change-password}. \\
-Actor and auth & Merchant portal user with HttpOnly portal session cookie. \\
-Key request fields & Login uses \code{merchant_id}, \code{email}, \code{password}; change-password uses \code{current_password} and \code{new_password}. \\
-Key response fields & Current user identity, role, status, and \code{merchant_status}. \\
-Important business rules & Invalid credentials return 401; inactive users return 403 with \code{MERCHANT_AUTH_INACTIVE}; password changes refresh the session and invalidate older credentials. \\
-Important error cases & Login failure, inactive user, missing or invalid session, validation errors. \\
-Related scenarios & Merchant Dashboard login, current-session, and password-change flows. \\
+Purpose & Let merchant staff review payments, refunds, webhooks, profile data,
+and analytics through a signed-in dashboard session. \\
+\bodyrowrule
+Intended audience & Merchant dashboard users. \\
+\bodyrowrule
+Authentication & Merchant dashboard session cookie. \\
+\bodyrowrule
+Reference IDs & \apiid{AUTH-02}, \apiid{AUTH-03}, \apiid{MP-01} to \apiid{MP-06}. \\
 \bottomrule
 \end{longtable}
 
-\begin{lstlisting}[language=json,caption={AUTH-02 merchant portal login response highlight}]
+\subsection{Session And Overview}
+
+\begin{longtable}{@{}L{0.33\textwidth}L{0.57\textwidth}@{}}
+\toprule
+\textbf{Endpoint} & \textbf{Purpose} \\
+\midrule
+\endfirsthead
+\toprule
+\textbf{Endpoint} & \textbf{Purpose} \\
+\midrule
+\endhead
+\routecell{\code{POST /v1/merchant-portal/auth/login}\\
+\code{POST /v1/merchant-portal/auth/logout}\\
+\code{GET /v1/merchant-portal/auth/me}\\
+\code{POST /v1/merchant-portal/auth/change-password}} & Manage dashboard
+session lifecycle for a merchant user. \\
+\bodyrowrule
+\routecell{\code{GET /v1/merchant-portal/dashboard/summary}\\
+\code{GET /v1/merchant-portal/dashboard/charts}} & Return merchant-scoped
+overview counters and chart series for the signed-in user. \\
+\bottomrule
+\end{longtable}
+
+\subsection{Analytics, Explorers, And Profile}
+
+\begin{longtable}{@{}L{0.33\textwidth}L{0.57\textwidth}@{}}
+\toprule
+\textbf{Endpoint} & \textbf{Purpose} \\
+\midrule
+\endfirsthead
+\toprule
+\textbf{Endpoint} & \textbf{Purpose} \\
+\midrule
+\endhead
+\code{GET /v1/merchant-portal/analytics?days=7|30|90} & Return merchant-scoped
+analytics for a selected reporting window. \\
+\bodyrowrule
+\routecell{\code{GET /v1/merchant-portal/payments}\\
+\code{GET /v1/merchant-portal/payments/{transaction_id}}} & List payments and
+open payment detail for the signed-in merchant. \\
+\bodyrowrule
+\routecell{\code{GET /v1/merchant-portal/refunds}\\
+\code{GET /v1/merchant-portal/refunds/{refund_transaction_id}}} & List refunds
+and open refund detail for the signed-in merchant. \\
+\bodyrowrule
+\routecell{\code{GET /v1/merchant-portal/webhooks}\\
+\code{GET /v1/merchant-portal/webhooks/{event_id}}} & List webhook events and
+open webhook detail for the signed-in merchant. \\
+\bodyrowrule
+\routecell{\code{GET /v1/merchant-portal/profile}\\
+\code{GET /v1/merchant-portal/credentials}} & Return read-only merchant profile
+metadata and credential metadata. \\
+\bottomrule
+\end{longtable}
+
+\apiblockheading{Business rules and usage notes.}
+\begin{itemize}
+  \item Dashboard session scope is tied to the signed-in user and their merchant
+  account. Clients do not send an extra merchant identifier to choose data
+  scope after login.
+  \item Analytics accepts only three reporting windows: 7, 30, and 90 days.
+  \item Zero-activity dates still appear in analytics responses so charts remain
+  visually stable across the selected range.
+  \item Detail routes return not found when a record does not belong to the
+  signed-in merchant, even if the identifier exists elsewhere in the system.
+  \item Credential metadata may be displayed, but raw credential secrets are
+  never returned by the dashboard APIs.
+\end{itemize}
+
+\apiblockheading{Likely error codes.}
+\begin{longtable}{@{}L{0.31\textwidth}L{0.59\textwidth}@{}}
+\toprule
+\textbf{Code} & \textbf{When it matters} \\
+\midrule
+\endfirsthead
+\toprule
+\textbf{Code} & \textbf{When it matters} \\
+\midrule
+\endhead
+\code{MERCHANT_AUTH_INVALID_CREDENTIALS} & The sign-in request uses an unknown
+merchant identifier, email, or password combination. \\
+\bodyrowrule
+\code{MERCHANT_AUTH_INACTIVE} & The dashboard account exists but is not
+currently active. \\
+\bodyrowrule
+\code{MERCHANT_AUTH_REQUIRED} or \code{MERCHANT_AUTH_INVALID_SESSION} & The
+request does not include a usable signed-in dashboard session. \\
+\bodyrowrule
+\code{INVALID_ANALYTICS_RANGE} & The analytics request asks for a reporting
+window other than 7, 30, or 90 days. \\
+\bodyrowrule
+\code{PAYMENT_NOT_FOUND}, \code{REFUND_NOT_FOUND}, \code{WEBHOOK_EVENT_NOT_FOUND}
+& A detail request refers to a record outside the user's merchant scope or to a
+record that does not exist. \\
+\bottomrule
+\end{longtable}
+
+\apiblockheading{Happy-path example.}
+\begin{lstlisting}[language=json,caption={Merchant dashboard login request example}]
+{
+  "merchant_id": "m_demo",
+  "email": "merchant@example.com",
+  "password": "temporary-or-user-password"
+}
+\end{lstlisting}
+
+\begin{lstlisting}[language=json,caption={Merchant dashboard login response example}]
 {
   "user": {
     "user_id": "uuid",
@@ -39,115 +144,3 @@ Related scenarios & Merchant Dashboard login, current-session, and password-chan
   "merchant_status": "ACTIVE"
 }
 \end{lstlisting}
-
-\section{\apiid{MP-01} Dashboard Summary And Charts}
-
-\begin{longtable}{L{0.24\textwidth}L{0.66\textwidth}}
-\caption{MP-01 contract block}\\
-\toprule
-\textbf{Field} & \textbf{Contract} \\
-\midrule
-\endfirsthead
-\toprule
-\textbf{Field} & \textbf{Contract} \\
-\midrule
-\endhead
-Routes & \code{GET /v1/merchant-portal/dashboard/summary} and \code{GET /v1/merchant-portal/dashboard/charts}. \\
-Actor and auth & Merchant portal session. \\
-Key request fields & No body. \\
-Key response fields & Merchant-scoped summary counters and compact chart series. \\
-Important business rules & Scope is derived from the session user, not from client-supplied merchant identity. \\
-Important error cases & Session failures. \\
-Related scenarios & Merchant Overview page. \\
-\bottomrule
-\end{longtable}
-
-\section{\apiid{MP-02} Analytics}
-
-\begin{longtable}{L{0.24\textwidth}L{0.66\textwidth}}
-\caption{MP-02 contract block}\\
-\toprule
-\textbf{Field} & \textbf{Contract} \\
-\midrule
-\endfirsthead
-\toprule
-\textbf{Field} & \textbf{Contract} \\
-\midrule
-\endhead
-Method and path & \code{GET /v1/merchant-portal/analytics?days=7|30|90} \\
-Actor and auth & Merchant portal session. \\
-Key request fields & \code{days}, default 30. \\
-Key response fields & \code{range}, \code{totals}, \code{series}, and \code{attention} objects with merchant-scoped analytics. \\
-Important business rules & Only 7, 30, or 90 are accepted; zero-activity days are returned explicitly so charts remain stable; internal reconciliation state is not exposed to merchants. \\
-Important error cases & Validation errors for invalid \code{days} values and session failures. \\
-Related scenarios & Analytics page, merchant analytics tests. \\
-\bottomrule
-\end{longtable}
-
-\begin{lstlisting}[language=json,caption={MP-02 analytics response highlight}]
-{
-  "range": {
-    "days": 30,
-    "start_date": "2026-05-12",
-    "end_date": "2026-06-10"
-  },
-  "totals": {
-    "payment_count": 5,
-    "successful_payment_amount": "1124000",
-    "success_rate": 40,
-    "refund_count": 1,
-    "refunded_amount": "125000",
-    "webhook_count": 3,
-    "webhook_delivery_rate": 33
-  },
-  "attention": {
-    "failed_or_expired_payments": 2,
-    "refund_failures": 0,
-    "open_webhooks": 2
-  }
-}
-\end{lstlisting}
-
-\section{\apiid{MP-03--05} Merchant Explorers}
-
-\begin{longtable}{L{0.24\textwidth}L{0.66\textwidth}}
-\caption{MP-03--05 contract block}\\
-\toprule
-\textbf{Field} & \textbf{Contract} \\
-\midrule
-\endfirsthead
-\toprule
-\textbf{Field} & \textbf{Contract} \\
-\midrule
-\endhead
-Routes & \code{GET /v1/merchant-portal/payments}, \code{GET /v1/merchant-portal/payments/{transaction_id}}, \code{GET /v1/merchant-portal/refunds}, \code{GET /v1/merchant-portal/refunds/{refund_transaction_id}}, \code{GET /v1/merchant-portal/webhooks}, \code{GET /v1/merchant-portal/webhooks/{event_id}}. \\
-Actor and auth & Merchant portal session. \\
-Key request fields & Status, date, order, transaction, refund, event-type, and event-id filters depending on the route. \\
-Key response fields & Merchant-scoped list and detail data for payments, refunds, and webhook events. \\
-Important business rules & Detail routes return 404 outside the logged-in merchant scope; internal audit and reconciliation state is not exposed. \\
-Important error cases & Record-not-found and session failures. \\
-Related scenarios & Merchant explorer pages and merchant portal tests. \\
-\bottomrule
-\end{longtable}
-
-\section{\apiid{MP-06} Profile And Credentials}
-
-\begin{longtable}{L{0.24\textwidth}L{0.66\textwidth}}
-\caption{MP-06 contract block}\\
-\toprule
-\textbf{Field} & \textbf{Contract} \\
-\midrule
-\endfirsthead
-\toprule
-\textbf{Field} & \textbf{Contract} \\
-\midrule
-\endhead
-Routes & \code{GET /v1/merchant-portal/profile} and \code{GET /v1/merchant-portal/credentials}. \\
-Actor and auth & Merchant portal session. \\
-Key request fields & No body. \\
-Key response fields & Read-only merchant identity, integration metadata, and credential metadata such as \code{access_key}, \code{secret_key_last4}, status, and timestamps. \\
-Important business rules & Raw credential secrets are never returned. \\
-Important error cases & Session failures. \\
-Related scenarios & Merchant profile and credentials pages. \\
-\bottomrule
-\end{longtable}

@@ -1,77 +1,207 @@
-\chapter{Ops Dashboard And Merchant Management APIs}
+\subsection{Operations Dashboard And Evidence Search}
 
-Ops APIs are internal-only. They are used by authenticated \apiid{ADMIN} and
-\apiid{OPS} users. Routes that change sensitive state require an audit reason.
-Controller logic normalizes actor role and actor id from the internal session;
-client-supplied actor identity is not trusted.
-
-\section{\apiid{OPS-01} Dashboard Read APIs}
-
-\begin{longtable}{L{0.24\textwidth}L{0.66\textwidth}}
-\caption{OPS-01 contract block}\\
+\begin{longtable}{@{}L{0.25\textwidth}L{0.65\textwidth}@{}}
+\caption{Operations dashboard and evidence family summary}\\
 \toprule
-\textbf{Field} & \textbf{Contract} \\
+\textbf{Item} & \textbf{Details} \\
 \midrule
 \endfirsthead
 \toprule
-\textbf{Field} & \textbf{Contract} \\
+\textbf{Item} & \textbf{Details} \\
 \midrule
 \endhead
-Routes & \code{GET /v1/ops/dashboard/summary} and \code{GET /v1/ops/dashboard/charts}. \\
-Actor and auth & Internal Admin/Ops session. \\
-Key request fields & No body; read filters are endpoint-specific where relevant. \\
-Key response fields & Operational counters, recent queue information, and chart series for the internal dashboard. \\
-Important business rules & These routes are read-only and feed the overview page of the Ops Dashboard. \\
-Important error cases & Session and RBAC failures. \\
-Related scenarios & Ops Dashboard overview and smoke flows. \\
+Purpose & Let internal operators review dashboard counters, merchants,
+payments, refunds, webhook activity, and audit evidence. \\
+\bodyrowrule
+Intended audience & Restricted / Internal operator. \\
+\bodyrowrule
+Authentication & Internal session cookie with role-based access. \\
+\bodyrowrule
+Reference IDs & \apiid{OPS-01}, \apiid{OPS-02}. \\
 \bottomrule
 \end{longtable}
 
-\section{\apiid{OPS-02} Read And Explore Operational Evidence}
-
-\begin{longtable}{L{0.24\textwidth}L{0.66\textwidth}}
-\caption{OPS-02 contract block}\\
+\apiblockheading{Endpoints.}
+\begin{longtable}{@{}L{0.35\textwidth}L{0.55\textwidth}@{}}
 \toprule
-\textbf{Field} & \textbf{Contract} \\
+\textbf{Endpoint group} & \textbf{Purpose} \\
 \midrule
 \endfirsthead
 \toprule
-\textbf{Field} & \textbf{Contract} \\
+\textbf{Endpoint group} & \textbf{Purpose} \\
 \midrule
 \endhead
-Routes & \code{GET /v1/ops/merchants}, \code{GET /v1/ops/merchants/{merchant_id}}, \code{GET /v1/ops/merchants/{merchant_id}/onboarding-case}, \code{GET /v1/ops/merchants/{merchant_id}/credentials}, \code{GET /v1/ops/payments}, \code{GET /v1/ops/payments/{transaction_id}}, \code{GET /v1/ops/refunds}, \code{GET /v1/ops/refunds/{refund_transaction_id}}, \code{GET /v1/ops/webhooks}, \code{GET /v1/ops/webhooks/{event_id}}, \code{GET /v1/ops/webhooks/{event_id}/attempts}, \code{GET /v1/ops/audit-logs}. \\
-Actor and auth & Internal Admin/Ops session. \\
-Key request fields & Query filters such as status, search terms, date range, and limits where supported by the route. \\
-Key response fields & Merchant detail, onboarding detail, credential metadata, explorer rows, webhook attempts, and audit evidence. \\
-Important business rules & Read APIs expose operational evidence without changing state and are scoped to internal roles only. \\
-Important error cases & Record-not-found cases and session or RBAC failures. \\
-Related scenarios & Ops Dashboard merchant, payment, refund, webhook, and audit explorer workflows. \\
+\routecell{\code{GET /v1/ops/dashboard/summary}\\
+\code{GET /v1/ops/dashboard/charts}} & Return operational counters, queue
+signals, and chart data for the internal dashboard. \\
+\bodyrowrule
+\routecell{\code{GET /v1/ops/merchants}\\
+\code{GET /v1/ops/merchants/{merchant_id}}\\
+\code{GET /v1/ops/merchants/{merchant_id}/onboarding-case}\\
+\code{GET /v1/ops/merchants/{merchant_id}/credentials}} & Explore merchant
+records, onboarding information, and credential metadata. \\
+\bodyrowrule
+\routecell{\code{GET /v1/ops/payments}\\
+\code{GET /v1/ops/payments/{transaction_id}}\\
+\code{GET /v1/ops/refunds}\\
+\code{GET /v1/ops/refunds/{refund_transaction_id}}} & Explore payment and
+refund records during operational support. \\
+\bodyrowrule
+\routecell{\code{GET /v1/ops/webhooks}\\
+\code{GET /v1/ops/webhooks/{event_id}}\\
+\code{GET /v1/ops/webhooks/{event_id}/attempts}\\
+\code{GET /v1/ops/audit-logs}} & Review webhook delivery history and audit
+evidence. \\
 \bottomrule
 \end{longtable}
 
-\section{\apiid{OPS-03} Merchant Creation}
+\apiblockheading{Business rules and usage notes.}
+\begin{itemize}
+  \item These routes are read-oriented and do not change business state.
+  \item Search and filter behavior varies by endpoint family, typically covering
+  identifiers, statuses, date ranges, and limits.
+  \item Records remain visible to operators even when a merchant has been
+  suspended or disabled.
+\end{itemize}
 
-\begin{longtable}{L{0.24\textwidth}L{0.66\textwidth}}
-\caption{OPS-03 contract block}\\
+\apiblockheading{Likely error codes.}
+\begin{longtable}{@{}L{0.31\textwidth}L{0.59\textwidth}@{}}
 \toprule
-\textbf{Field} & \textbf{Contract} \\
+\textbf{Code} & \textbf{When it matters} \\
 \midrule
 \endfirsthead
 \toprule
-\textbf{Field} & \textbf{Contract} \\
+\textbf{Code} & \textbf{When it matters} \\
 \midrule
 \endhead
-Method and path & \code{POST /v1/ops/merchants} \\
-Actor and auth & Internal Admin/Ops session. \\
-Key request fields & Nested \code{actor.reason} plus merchant id, profile, contact, webhook, and settlement fields. \\
-Key response fields & Merchant identity and initial \code{PENDING_REVIEW} status. \\
-Important business rules & Merchant creation writes audit evidence and initializes the merchant in review state. \\
-Important error cases & \code{MERCHANT_ALREADY_EXISTS}, validation errors. \\
-Related scenarios & \code{ONB-01}, \code{E2E-01}. \\
+\code{INTERNAL_AUTH_REQUIRED}, \code{INTERNAL_AUTH_INVALID_SESSION},
+\code{INTERNAL_AUTH_FORBIDDEN} & The operator is not signed in or lacks the
+required internal role. \\
+\bodyrowrule
+\code{MERCHANT_NOT_FOUND}, \code{PAYMENT_NOT_FOUND}, \code{REFUND_NOT_FOUND},
+\code{WEBHOOK_EVENT_NOT_FOUND} & A requested detail record does not exist or is
+not available through the chosen identifier. \\
+\bodyrowrule
+\code{ONBOARDING_CASE_NOT_FOUND} & The merchant exists, but no onboarding case
+record is currently available. \\
 \bottomrule
 \end{longtable}
 
-\begin{lstlisting}[language=json,caption={OPS-03 create merchant request body}]
+\apiblockheading{Happy-path example.}
+\begin{lstlisting}[language=json,caption={Operations dashboard summary response example}]
+{
+  "merchant_counts": {
+    "pending_review": 3,
+    "active": 12,
+    "suspended": 1
+  },
+  "payment_counts": {
+    "pending": 5,
+    "success": 42,
+    "failed": 2,
+    "expired": 4
+  }
+}
+\end{lstlisting}
+
+\subsection{Merchant Lifecycle, Onboarding, And Credentials}
+
+\begin{longtable}{@{}L{0.25\textwidth}L{0.65\textwidth}@{}}
+\caption{Merchant lifecycle family summary}\\
+\toprule
+\textbf{Item} & \textbf{Details} \\
+\midrule
+\endfirsthead
+\toprule
+\textbf{Item} & \textbf{Details} \\
+\midrule
+\endhead
+Purpose & Create merchants, manage onboarding decisions, activate or suspend
+merchant accounts, and create or rotate credentials. \\
+\bodyrowrule
+Intended audience & Restricted / Internal operator. \\
+\bodyrowrule
+Authentication & Internal session cookie; some actions are administrator-only. \\
+\bodyrowrule
+Reference IDs & \apiid{OPS-03}, \apiid{ONB-01}, \apiid{ONB-02}, \apiid{OPS-04},
+\apiid{OPS-05}. \\
+\bottomrule
+\end{longtable}
+
+\apiblockheading{Endpoints.}
+\begin{longtable}{@{}L{0.35\textwidth}L{0.55\textwidth}@{}}
+\toprule
+\textbf{Endpoint group} & \textbf{Purpose} \\
+\midrule
+\endfirsthead
+\toprule
+\textbf{Endpoint group} & \textbf{Purpose} \\
+\midrule
+\endhead
+\code{POST /v1/ops/merchants} & Register a new merchant in pending-review
+state. \\
+\bodyrowrule
+\routecell{\code{PUT /v1/ops/merchants/{merchant_id}/onboarding-case}\\
+\code{POST /v1/ops/merchants/{merchant_id}/onboarding-case/approve}\\
+\code{POST /v1/ops/merchants/{merchant_id}/onboarding-case/reject}} & Submit,
+approve, or reject the merchant's onboarding case. \\
+\bodyrowrule
+\routecell{\code{POST /v1/ops/merchants/{merchant_id}/activate}\\
+\code{POST /v1/ops/merchants/{merchant_id}/suspend}\\
+\code{POST /v1/ops/merchants/{merchant_id}/disable}} & Move a merchant through
+operational lifecycle states. \\
+\bodyrowrule
+\routecell{\code{POST /v1/ops/merchants/{merchant_id}/credentials}\\
+\code{POST /v1/ops/merchants/{merchant_id}/credentials/rotate}} & Create the
+first active credential or rotate the active credential set. \\
+\bottomrule
+\end{longtable}
+
+\apiblockheading{Business rules and usage notes.}
+\begin{itemize}
+  \item Merchant creation starts in \code{PENDING_REVIEW}.
+  \item Activation requires an approved onboarding case and an active
+  credential.
+  \item Credential rotation and merchant disable are restricted to
+  administrator-level access.
+  \item Operational write actions expect a human-readable reason so the action
+  can be audited later.
+  \item Raw credential secrets are accepted during create or rotate actions but
+  are not returned in metadata reads afterward.
+\end{itemize}
+
+\apiblockheading{Likely error codes.}
+\begin{longtable}{@{}L{0.31\textwidth}L{0.59\textwidth}@{}}
+\toprule
+\textbf{Code} & \textbf{When it matters} \\
+\midrule
+\endfirsthead
+\toprule
+\textbf{Code} & \textbf{When it matters} \\
+\midrule
+\endhead
+\code{MERCHANT_ALREADY_EXISTS} & The requested merchant identifier is already in
+use. \\
+\bodyrowrule
+\code{MERCHANT_NOT_FOUND} & The target merchant record does not exist. \\
+\bodyrowrule
+\code{ONBOARDING_CASE_NOT_FOUND} & An approval or rejection request refers to a
+merchant that has no onboarding case yet. \\
+\bodyrowrule
+\code{ONBOARDING_CASE_FINAL} & The onboarding case is already approved or
+rejected and cannot be overwritten. \\
+\bodyrowrule
+\code{ONBOARDING_CASE_NOT_APPROVED} & Activation was requested before the
+merchant passed onboarding review. \\
+\bodyrowrule
+\code{ACTIVE_CREDENTIAL_EXISTS}, \code{ACTIVE_CREDENTIAL_NOT_FOUND},
+\code{ACTIVE_CREDENTIAL_REQUIRED} & A credential action or activation request
+does not match the current credential state. \\
+\bottomrule
+\end{longtable}
+
+\apiblockheading{Happy-path example.}
+\begin{lstlisting}[language=json,caption={Create merchant request example}]
 {
   "actor": {
     "actor_type": "OPS",
@@ -84,51 +214,15 @@ Related scenarios & \code{ONB-01}, \code{E2E-01}. \\
   "contact_email": "ops@example.com",
   "webhook_url": "https://merchant.example.com/webhooks/payment-gateway",
   "settlement_account_name": "Demo Merchant LLC",
-  "settlement_account_number": "000111222",
+  "settlement_account_number": "123456789",
   "settlement_bank_code": "DEMO"
 }
 \end{lstlisting}
 
-\section{\apiid{ONB-01--02} Onboarding Case Submission And Decision}
-
-\begin{longtable}{L{0.24\textwidth}L{0.66\textwidth}}
-\caption{ONB-01--02 contract block}\\
-\toprule
-\textbf{Field} & \textbf{Contract} \\
-\midrule
-\endfirsthead
-\toprule
-\textbf{Field} & \textbf{Contract} \\
-\midrule
-\endhead
-Routes & \code{PUT /v1/ops/merchants/{merchant_id}/onboarding-case}, \code{POST /v1/ops/merchants/{merchant_id}/onboarding-case/approve}, \code{POST /v1/ops/merchants/{merchant_id}/onboarding-case/reject}. \\
-Actor and auth & Internal Admin/Ops session. \\
-Key request fields & Audit reason, onboarding payload JSON, review checks, decision note, optional reviewer. \\
-Key response fields & Onboarding case id, merchant id, status, reviewer, reviewed timestamp, decision note. \\
-Important business rules & Final approved or rejected cases cannot be overwritten; approval is required before merchant activation. \\
-Important error cases & \code{MERCHANT_NOT_FOUND}, \code{ONBOARDING_CASE_NOT_FOUND}, \code{ONBOARDING_CASE_FINAL}, \code{ONBOARDING_CASE_NOT_APPROVED}. \\
-Related scenarios & \code{ONB-02}, \code{ONB-03}, \code{E2E-01}. \\
-\bottomrule
-\end{longtable}
-
-\section{\apiid{OPS-04--05} Credentials And Merchant Lifecycle Actions}
-
-\begin{longtable}{L{0.24\textwidth}L{0.66\textwidth}}
-\caption{OPS-04--05 contract block}\\
-\toprule
-\textbf{Field} & \textbf{Contract} \\
-\midrule
-\endfirsthead
-\toprule
-\textbf{Field} & \textbf{Contract} \\
-\midrule
-\endhead
-Routes & \code{POST /v1/ops/merchants/{merchant_id}/credentials}, \code{POST /v1/ops/merchants/{merchant_id}/credentials/rotate}, \code{POST /v1/ops/merchants/{merchant_id}/activate}, \code{POST /v1/ops/merchants/{merchant_id}/suspend}, \code{POST /v1/ops/merchants/{merchant_id}/disable}. \\
-Actor and auth & Internal Admin/Ops session, with Admin-only enforcement for credential rotation and merchant disable. \\
-Key request fields & Audit reason and, for credential create or rotate, \code{access_key} plus \code{secret_key}. \\
-Key response fields & Credential metadata or merchant identity and new status. \\
-Important business rules & Activation requires approved onboarding and an active credential; raw secret is never returned; disable does not silently revoke historical data visibility. \\
-Important error cases & \code{MERCHANT_NOT_FOUND}, \code{ACTIVE_CREDENTIAL_EXISTS}, \code{ACTIVE_CREDENTIAL_NOT_FOUND}, \code{ACTIVE_CREDENTIAL_REQUIRED}. \\
-Related scenarios & \code{ONB-04}, \code{OPS-01}, \code{OPS-02}, \code{OPS-03}, \code{E2E-01}. \\
-\bottomrule
-\end{longtable}
+\begin{lstlisting}[language=json,caption={Create merchant response example}]
+{
+  "merchant_id": "m_demo",
+  "merchant_name": "Demo Merchant",
+  "status": "PENDING_REVIEW"
+}
+\end{lstlisting}

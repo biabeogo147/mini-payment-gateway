@@ -1,42 +1,248 @@
-\chapter{Shared Error Model}
+\section{Error Catalogue}
 
-All API errors use the same envelope shape:
+All API error responses use the same envelope:
 
 \begin{lstlisting}[language=json,caption={Shared error response shape}]
 {
   "error_code": "PAYMENT_ALREADY_SUCCESS",
   "message": "Payment already succeeded for this order.",
-  "request_id": "req_...",
+  "request_id": "req_01J...",
   "details": {}
 }
 \end{lstlisting}
 
-\begin{longtable}{L{0.24\textwidth}L{0.10\textwidth}L{0.56\textwidth}}
-\caption{Representative application error codes}\\
+\docbox{How to read the tables below}{%
+\begin{itemize}
+  \item \textbf{Meaning and common trigger} explains both what the code means
+  and the situation in which it usually appears.
+  \item \textbf{Retry?} answers whether sending the same request again is
+  normally useful.
+  \item \textbf{What to do next} points to the next action for the caller.
+  \item Callback endpoints sometimes return a normal HTTP response with
+  \code{processing_result = PENDING_REVIEW} instead of raising a hard error. In
+  those cases the callback was recorded as evidence but not applied
+  automatically.
+\end{itemize}
+}
+
+\subsection{Merchant Backend Authentication And Validation}
+
+{\footnotesize
+\setlength{\tabcolsep}{4pt}
+\begin{longtable}{@{}L{0.21\textwidth}L{0.07\textwidth}L{0.36\textwidth}L{0.08\textwidth}L{0.18\textwidth}@{}}
 \toprule
-\textbf{Code} & \textbf{HTTP} & \textbf{Meaning} \\
+\textbf{Code} & \textbf{HTTP} & \textbf{Meaning and common trigger} &
+\textbf{Retry?} & \textbf{What to do next} \\
 \midrule
 \endfirsthead
 \toprule
-\textbf{Code} & \textbf{HTTP} & \textbf{Meaning} \\
+\textbf{Code} & \textbf{HTTP} & \textbf{Meaning and common trigger} &
+\textbf{Retry?} & \textbf{What to do next} \\
 \midrule
 \endhead
-\texttt{VALIDATION\_ERROR} & 422 & Request shape or field validation failed. \\
-\texttt{AUTH\_MISSING\_HEADER} & 401 & Required merchant auth header is missing. \\
-\texttt{AUTH\_INVALID\_MERCHANT} & 401 & \code{X-Merchant-Id} does not identify a known merchant. \\
-\texttt{AUTH\_INVALID\_CREDENTIAL} & 401 & \code{X-Access-Key} is not active for the merchant. \\
-\texttt{AUTH\_TIMESTAMP\_EXPIRED} & 401 & \code{X-Timestamp} is outside the validity window. \\
-\texttt{AUTH\_INVALID\_SIGNATURE} & 401 & \code{X-Signature} does not match the canonical request signature. \\
-\texttt{MERCHANT\_NOT\_ACTIVE} & 403 & Merchant is not allowed to create payment or refund. \\
-\texttt{PAYMENT\_PENDING\_EXISTS} & 409 & A non-identical pending payment already exists for the order. \\
-\texttt{PAYMENT\_ALREADY\_SUCCESS} & 409 & The order already has a successful payment. \\
-\texttt{REFUND\_WINDOW\_EXPIRED} & 409 & Refund is outside the seven day window from \code{paid_at}. \\
-\texttt{REFUND\_AMOUNT\_NOT\_FULL} & 409 & Refund amount does not match the original payment amount. \\
-\texttt{WEBHOOK\_RETRY\_NOT\_ALLOWED} & 409 & Webhook event is not eligible for retry. \\
-\texttt{MERCHANT\_AUTH\_INACTIVE} & 403 & Merchant portal user is inactive. \\
-\texttt{RECONCILIATION\_ALREADY\_RESOLVED} & 409 & Reconciliation record has already been resolved. \\
+\code{VALIDATION_ERROR} & 422 & The request shape or a field value is invalid,
+typically because a required field is missing or an unsupported value was sent.
+& No & Correct the request and submit again. \\
+\bodyrowrule
+\code{AUTH_MISSING_HEADER} & 401 & A required HMAC header is missing from the
+merchant request. & No & Add the missing header and sign a fresh request. \\
+\bodyrowrule
+\code{AUTH_INVALID_MERCHANT} & 401 & The merchant identifier is unknown to the
+gateway. & No & Confirm the merchant id supplied during onboarding. \\
+\bodyrowrule
+\code{AUTH_INVALID_CREDENTIAL} & 401 & The access key is wrong, inactive, or
+belongs to another merchant. & No & Use the currently active credential set. \\
+\bodyrowrule
+\code{AUTH_TIMESTAMP_EXPIRED} & 401 & The signed timestamp is outside the
+allowed window, usually because of clock skew or replay of an old request. &
+Usually no & Synchronize the server clock and sign a new request. \\
+\bodyrowrule
+\code{AUTH_INVALID_SIGNATURE} & 401 & The signature does not match the gateway's
+calculation because the signed method, path, body, or secret differs from the
+actual request. & No & Rebuild the canonical signing string and sign again. \\
 \bottomrule
 \end{longtable}
+}
 
-The authoritative markdown source for this error list remains
-\code{docs/api/errors.md}.
+\subsection{Merchant Payment And Refund Business Rules}
+
+{\footnotesize
+\setlength{\tabcolsep}{4pt}
+\begin{longtable}{@{}L{0.21\textwidth}L{0.07\textwidth}L{0.36\textwidth}L{0.08\textwidth}L{0.18\textwidth}@{}}
+\toprule
+\textbf{Code} & \textbf{HTTP} & \textbf{Meaning and common trigger} &
+\textbf{Retry?} & \textbf{What to do next} \\
+\midrule
+\endfirsthead
+\toprule
+\textbf{Code} & \textbf{HTTP} & \textbf{Meaning and common trigger} &
+\textbf{Retry?} & \textbf{What to do next} \\
+\midrule
+\endhead
+\code{MERCHANT_NOT_ACTIVE} & 403 & The merchant is not currently allowed to
+transact because the account is still under review, suspended, or disabled. &
+No & Contact onboarding or support. \\
+\bodyrowrule
+\code{PAYMENT_PENDING_EXISTS} & 409 & A conflicting pending payment already
+exists for the order. & Usually no & Reuse or inspect the existing pending
+payment. \\
+\bodyrowrule
+\code{PAYMENT_ALREADY_SUCCESS} & 409 & The order has already been paid
+successfully and should not be reopened as a new payment. & No & Treat the
+order as paid and query the existing payment if needed. \\
+\bodyrowrule
+\code{PAYMENT_NOT_FOUND} & 404 & The payment lookup identifier is wrong or does
+not belong to the caller's merchant scope. & No & Recheck the payment
+identifier before retrying. \\
+\bodyrowrule
+\code{PAYMENT_NOT_REFUNDABLE} & 409 & The referenced payment is not in a state
+that can be refunded. & No & Query the payment state and confirm refund
+eligibility. \\
+\bodyrowrule
+\code{REFUND_WINDOW_EXPIRED} & 409 & The successful payment is older than the
+allowed seven-day refund window. & No & Resolve the case through support. \\
+\bodyrowrule
+\code{REFUND_AMOUNT_NOT_FULL} & 409 & The refund amount does not match the full
+original payment amount, which means a partial refund was attempted. & No &
+Submit a full refund or wait for a future phase that supports partial refunds. \\
+\bodyrowrule
+\code{REFUND_NOT_ALLOWED} & 409 & Another refund rule blocks the request, such
+as an incompatible existing refund flow. & Usually no & Query current refund
+state before trying another refund. \\
+\bodyrowrule
+\code{REFUND_NOT_FOUND} & 404 & The refund identifier is wrong or outside the
+caller's merchant scope. & No & Recheck the refund identifier before retrying. \\
+\bottomrule
+\end{longtable}
+}
+
+\subsection{Merchant Dashboard Session And Scope Errors}
+
+{\footnotesize
+\setlength{\tabcolsep}{4pt}
+\begin{longtable}{@{}L{0.21\textwidth}L{0.07\textwidth}L{0.36\textwidth}L{0.08\textwidth}L{0.18\textwidth}@{}}
+\toprule
+\textbf{Code} & \textbf{HTTP} & \textbf{Meaning and common trigger} &
+\textbf{Retry?} & \textbf{What to do next} \\
+\midrule
+\endfirsthead
+\toprule
+\textbf{Code} & \textbf{HTTP} & \textbf{Meaning and common trigger} &
+\textbf{Retry?} & \textbf{What to do next} \\
+\midrule
+\endhead
+\code{MERCHANT_AUTH_REQUIRED} & 401 & The dashboard request needs a signed-in
+session, but no session cookie was supplied. & Yes & Sign in and repeat the
+action. \\
+\bodyrowrule
+\code{MERCHANT_AUTH_INVALID_SESSION} & 401 & The dashboard session expired,
+was replaced, or is otherwise invalid. & Yes & Sign in again and retry. \\
+\bodyrowrule
+\code{MERCHANT_AUTH_INVALID_CREDENTIALS} & 401 & The merchant id, email, or
+password does not match an active dashboard user. & No & Recheck credentials or
+request a password reset. \\
+\bodyrowrule
+\code{MERCHANT_AUTH_INACTIVE} & 403 & The dashboard user exists but is not
+active. & No & Ask support to review the dashboard account status. \\
+\bodyrowrule
+\code{INVALID_ANALYTICS_RANGE} & 422 & The analytics request used a reporting
+window other than 7, 30, or 90 days. & No & Use one of the supported windows. \\
+\bottomrule
+\end{longtable}
+}
+
+\subsection{Restricted Internal And Operational Errors}
+
+{\footnotesize
+\setlength{\tabcolsep}{4pt}
+\begin{longtable}{@{}L{0.21\textwidth}L{0.07\textwidth}L{0.36\textwidth}L{0.08\textwidth}L{0.18\textwidth}@{}}
+\toprule
+\textbf{Code} & \textbf{HTTP} & \textbf{Meaning and common trigger} &
+\textbf{Retry?} & \textbf{What to do next} \\
+\midrule
+\endfirsthead
+\toprule
+\textbf{Code} & \textbf{HTTP} & \textbf{Meaning and common trigger} &
+\textbf{Retry?} & \textbf{What to do next} \\
+\midrule
+\endhead
+\code{INTERNAL_AUTH_REQUIRED} & 401 & A restricted endpoint was called without
+an internal operator session. & Yes & Sign in as an internal operator. \\
+\bodyrowrule
+\code{INTERNAL_AUTH_INVALID_SESSION} & 401 & The internal session expired, was
+replaced, or is malformed. & Yes & Sign in again before retrying. \\
+\bodyrowrule
+\code{INTERNAL_AUTH_INVALID_CREDENTIALS} & 401 & The internal operator sign-in
+credentials are incorrect. & No & Correct the credentials or reset the
+password. \\
+\bodyrowrule
+\code{INTERNAL_AUTH_INACTIVE} & 403 & The internal operator account exists but
+is disabled. & No & Ask an administrator to reactivate the account. \\
+\bodyrowrule
+\code{INTERNAL_AUTH_FORBIDDEN} & 403 & The signed-in operator lacks the role
+required for the action. & No & Use an account with the right role or hand the
+task to the proper operator. \\
+\bodyrowrule
+\code{INTERNAL_AUTH_BOOTSTRAP_DISABLED} & 409 & First-time bootstrap is already
+closed because an administrator exists. & No & Use normal internal sign-in. \\
+\bodyrowrule
+\code{INTERNAL_USER_ALREADY_EXISTS} & 409 & The internal user being created
+already exists. & No & Update the existing user instead. \\
+\bodyrowrule
+\code{INTERNAL_USER_NOT_FOUND} & 404 & The targeted internal user record does
+not exist. & No & Recheck the internal user identifier. \\
+\bodyrowrule
+\code{LAST_ACTIVE_ADMIN_REQUIRED} & 409 & The requested change would remove the
+final active administrator. & No & Keep at least one active administrator. \\
+\bodyrowrule
+\code{MERCHANT_ALREADY_EXISTS} & 409 & Merchant registration reused an existing
+merchant identifier. & No & Choose the correct existing merchant or a new
+identifier. \\
+\bodyrowrule
+\code{MERCHANT_NOT_FOUND} & 404 & The targeted merchant record does not exist.
+& No & Recheck the merchant identifier. \\
+\bodyrowrule
+\code{ONBOARDING_CASE_NOT_FOUND} & 404 & Approval, rejection, or detail read was
+attempted before an onboarding case existed. & No & Submit an onboarding case
+first. \\
+\bodyrowrule
+\code{ONBOARDING_CASE_FINAL} & 409 & The onboarding case is already approved or
+rejected and cannot be overwritten. & No & Review the existing decision
+instead. \\
+\bodyrowrule
+\code{ONBOARDING_CASE_NOT_APPROVED} & 409 & Merchant activation was requested
+before onboarding approval. & No & Complete onboarding review first. \\
+\bodyrowrule
+\code{ACTIVE_CREDENTIAL_EXISTS} & 409 & A merchant already has an active
+credential, so first-time credential creation is blocked. & No & Rotate or
+inspect the current credential instead. \\
+\bodyrowrule
+\code{ACTIVE_CREDENTIAL_NOT_FOUND} & 404 & Credential rotation was requested
+before any active credential existed. & No & Create the first active credential
+first. \\
+\bodyrowrule
+\code{ACTIVE_CREDENTIAL_REQUIRED} & 409 & Merchant activation needs an active
+credential, but none exists. & No & Create a credential before activating the
+merchant. \\
+\bodyrowrule
+\code{MERCHANT_PORTAL_USER_ALREADY_EXISTS} & 409 & The dashboard user already
+exists for the merchant. & No & Update the existing dashboard user instead. \\
+\bodyrowrule
+\code{MERCHANT_PORTAL_USER_NOT_FOUND} & 404 & The targeted dashboard user does
+not exist. & No & Recheck the dashboard user identifier. \\
+\bodyrowrule
+\code{RECONCILIATION_NOT_FOUND} & 404 & The reconciliation record identifier is
+unknown. & No & Recheck the reconciliation record identifier. \\
+\bodyrowrule
+\code{RECONCILIATION_ALREADY_RESOLVED} & 409 & The mismatch record is already
+closed. & No & Review the resolved record instead of resending the action. \\
+\bodyrowrule
+\code{WEBHOOK_EVENT_NOT_FOUND} & 404 & The webhook event record does not exist.
+& No & Recheck the webhook event identifier. \\
+\bodyrowrule
+\code{WEBHOOK_RETRY_NOT_ALLOWED} & 409 & The webhook event is not currently in a
+failed state and cannot be retried manually. & No & Inspect the webhook event
+status before retrying. \\
+\bottomrule
+\end{longtable}
+}

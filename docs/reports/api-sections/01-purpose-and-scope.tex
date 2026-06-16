@@ -1,31 +1,53 @@
-\chapter{Purpose And Scope}
+\section{Quickstart}
 
-This document is the companion API documentation for the Mini Payment Gateway
-report. The main report uses compact API family IDs when explaining the system
-design. This document expands those IDs into endpoint contracts, shared request
-and response conventions, error behavior, security notes, and Postman scenario
-mapping.
+This guide is written for teams that need to integrate with the Mini Payment
+Gateway without reading internal project materials. Public integration surfaces
+appear first. Restricted operational endpoints appear later so merchant teams
+can recognize them during onboarding, support, and recovery conversations.
 
-The contract covers implemented features only:
+\docbox{Recommended integration order}{%
+\begin{enumerate}[leftmargin=1.7em]
+  \item Receive your merchant identifier, active access key, and shared secret.
+  \item Implement HMAC request signing, then create and query payments.
+  \item Implement full-refund creation and refund status lookups.
+  \item Prepare to receive gateway webhooks for final payment and refund events.
+  \item If your environment simulates provider callbacks, connect the callback
+  source in the controlled environment agreed during onboarding.
+  \item Use the Merchant Dashboard only for human review, not for server-to-server
+  payment processing.
+\end{enumerate}
+}
 
-\begin{itemize}
-  \item merchant payment creation and lookup;
-  \item provider or simulator callbacks for payment and refund outcomes;
-  \item full refund creation and lookup;
-  \item outbound merchant webhook delivery and manual retry;
-  \item internal Ops APIs for auth, internal users, dashboard reads, merchant
-  lifecycle, onboarding, credentials, portal-user provisioning,
-  reconciliation, and audit-oriented recovery;
-  \item Merchant Dashboard auth, overview, analytics, explorers, profile, and
-  credentials.
-\end{itemize}
+\begin{longtable}{@{}L{0.24\textwidth}L{0.68\textwidth}@{}}
+\caption{Audience legend}\\
+\toprule
+\textbf{Audience} & \textbf{How this guide uses the term} \\
+\midrule
+\endfirsthead
+\toprule
+\textbf{Audience} & \textbf{How this guide uses the term} \\
+\midrule
+\endhead
+Merchant backend & The merchant-owned server or application that signs payment
+and refund API requests. \\
+\bodyrowrule
+Merchant dashboard user & A signed-in business user who reviews transactions,
+refunds, webhooks, and analytics in the Merchant Dashboard. \\
+\bodyrowrule
+Provider callback source & A bank, provider, or simulator that sends payment or
+refund result notifications into the gateway. \\
+\bodyrowrule
+Restricted / Internal operator & An internal support or operations user who
+handles onboarding, account provisioning, reconciliation, and recovery. \\
+\bottomrule
+\end{longtable}
 
-Out-of-scope features are intentionally not documented as completed APIs:
-settlement, disputes, export CSV, real-time polling, merchant self-service
-onboarding, and partial refunds.
+\apiblockheading{Implemented scope.}
+This guide covers payment creation, payment lookup, full refunds, provider
+result callbacks, outbound webhook delivery, Merchant Dashboard access, and the
+restricted operational endpoints that support onboarding and support recovery.
 
-The Postman collections under \code{postman/} provide runnable scenario
-evidence.
-Scenario IDs such as \apiid{PAY-01}, \apiid{CB-01}, \apiid{REF-01}, and
-\apiid{WH-10} are kept aligned with those collections where the scenario
-documents already define IDs.
+\apiblockheading{Out of scope in the current MVP.}
+The current product does not document settlement, dispute workflows, partial
+refunds, merchant-run onboarding, or real-time push streams beyond the
+documented webhook model.

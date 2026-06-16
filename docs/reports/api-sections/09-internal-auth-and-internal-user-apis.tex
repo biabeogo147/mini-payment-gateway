@@ -1,45 +1,207 @@
-\chapter{Internal Auth And Internal User APIs}
+\section{Restricted And Internal APIs}
 
-\section{\apiid{AUTH-01} Internal Session Authentication}
+\restrictedbox{These endpoints are for internal operators, support staff, and
+operational recovery workflows. Merchant teams usually encounter them only
+during onboarding, account provisioning, or support-led troubleshooting. They
+are not intended for direct merchant integration.}
 
-\begin{longtable}{L{0.24\textwidth}L{0.66\textwidth}}
-\caption{AUTH-01 contract block}\\
+\subsection{Internal Operator Accounts}
+
+\begin{longtable}{@{}L{0.25\textwidth}L{0.65\textwidth}@{}}
+\caption{Internal operator account family summary}\\
 \toprule
-\textbf{Field} & \textbf{Contract} \\
+\textbf{Item} & \textbf{Details} \\
 \midrule
 \endfirsthead
 \toprule
-\textbf{Field} & \textbf{Contract} \\
+\textbf{Item} & \textbf{Details} \\
 \midrule
 \endhead
-Routes & \code{GET /v1/internal/auth/bootstrap-status}, \code{POST /v1/internal/auth/bootstrap}, \code{POST /v1/internal/auth/login}, \code{POST /v1/internal/auth/logout}, \code{GET /v1/internal/auth/me}, \code{POST /v1/internal/auth/change-password}. \\
-Actor and auth & Internal Admin or Ops users using an HttpOnly session cookie. \\
-Key request fields & Bootstrap and login use \code{email} and \code{password}; change password uses \code{current_password} and \code{new_password}. \\
-Key response fields & Current session user, role, session validity, and bootstrap state. \\
-Important business rules & Bootstrap is used only to create the first internal admin; later auth uses session login; role checks are enforced server-side. \\
-Important error cases & Invalid credentials, inactive users, expired sessions, validation errors. \\
-Related scenarios & Internal dashboard login and bootstrap flows; frontend browser smoke in \code{docs/testing/README.md}. \\
+Purpose & Let internal operators bootstrap, sign in, manage their sessions, and
+change passwords. \\
+\bodyrowrule
+Intended audience & Restricted / Internal operator. \\
+\bodyrowrule
+Authentication & Internal session cookie. \\
+\bodyrowrule
+Reference IDs & \apiid{AUTH-01}. \\
 \bottomrule
 \end{longtable}
 
-\section{\apiid{OPS-06} Internal User Administration}
-
-\begin{longtable}{L{0.24\textwidth}L{0.66\textwidth}}
-\caption{OPS-06 contract block}\\
+\apiblockheading{Endpoints.}
+\begin{longtable}{@{}L{0.34\textwidth}L{0.56\textwidth}@{}}
 \toprule
-\textbf{Field} & \textbf{Contract} \\
+\textbf{Endpoint} & \textbf{Purpose} \\
 \midrule
 \endfirsthead
 \toprule
-\textbf{Field} & \textbf{Contract} \\
+\textbf{Endpoint} & \textbf{Purpose} \\
 \midrule
 \endhead
-Routes & \code{GET /v1/internal/users}, \code{POST /v1/internal/users}, \code{PATCH /v1/internal/users/{user_id}}, \code{POST /v1/internal/users/{user_id}/reset-password}. \\
-Actor and auth & Internal \code{ADMIN} session only. \\
-Key request fields & Create and update carry internal user identity fields; reset-password has no body. \\
-Key response fields & User identity, role, status, timestamps, and one-time generated password on create or reset. \\
-Important business rules & Internal user administration is Admin-only; generated passwords are returned once and not retrievable later. \\
-Important error cases & Auth and RBAC failures, validation errors, internal user lookup failures. \\
-Related scenarios & Ops Dashboard internal user management flows. \\
+\code{GET /v1/internal/auth/bootstrap-status} & Show whether the first
+internal administrator still needs to be created. \\
+\bodyrowrule
+\code{POST /v1/internal/auth/bootstrap} & Create the first internal
+administrator when bootstrap is still open. \\
+\bodyrowrule
+\routecell{\code{POST /v1/internal/auth/login}\\
+\code{POST /v1/internal/auth/logout}\\
+\code{GET /v1/internal/auth/me}\\
+\code{POST /v1/internal/auth/change-password}} & Standard session lifecycle for
+internal operators after bootstrap is closed. \\
 \bottomrule
 \end{longtable}
+
+\apiblockheading{Business rules and usage notes.}
+\begin{itemize}
+  \item Bootstrap is a one-time setup action for the first internal
+  administrator.
+  \item After bootstrap, all normal internal access uses session-based sign-in.
+  \item Permission checks are enforced on the server side according to the
+  signed-in operator role.
+  \item Password changes refresh the operator's own session and invalidate older
+  credentials.
+\end{itemize}
+
+\apiblockheading{Likely error codes.}
+\begin{longtable}{@{}L{0.31\textwidth}L{0.59\textwidth}@{}}
+\toprule
+\textbf{Code} & \textbf{When it matters} \\
+\midrule
+\endfirsthead
+\toprule
+\textbf{Code} & \textbf{When it matters} \\
+\midrule
+\endhead
+\code{INTERNAL_AUTH_BOOTSTRAP_DISABLED} & Someone has already created the first
+internal administrator, so bootstrap is no longer available. \\
+\bodyrowrule
+\code{INTERNAL_AUTH_INVALID_CREDENTIALS} & The sign-in credentials do not match
+an internal operator account. \\
+\bodyrowrule
+\code{INTERNAL_AUTH_REQUIRED} or \code{INTERNAL_AUTH_INVALID_SESSION} & The
+request does not include a usable internal session. \\
+\bodyrowrule
+\code{INTERNAL_AUTH_INACTIVE} & The internal operator account exists but is not
+currently active. \\
+\bottomrule
+\end{longtable}
+
+\apiblockheading{Happy-path example.}
+\begin{lstlisting}[language=json,caption={Internal operator login request example}]
+{
+  "email": "ops@example.com",
+  "password": "example-password"
+}
+\end{lstlisting}
+
+\begin{lstlisting}[language=json,caption={Internal operator login response example}]
+{
+  "user": {
+    "user_id": "uuid",
+    "email": "ops@example.com",
+    "full_name": "Operations User",
+    "role": "OPS",
+    "status": "ACTIVE"
+  }
+}
+\end{lstlisting}
+
+\subsection{Internal User Administration}
+
+\begin{longtable}{@{}L{0.25\textwidth}L{0.65\textwidth}@{}}
+\caption{Internal user administration family summary}\\
+\toprule
+\textbf{Item} & \textbf{Details} \\
+\midrule
+\endfirsthead
+\toprule
+\textbf{Item} & \textbf{Details} \\
+\midrule
+\endhead
+Purpose & Create, update, and reset internal operator accounts. \\
+\bodyrowrule
+Intended audience & Internal administrators only. \\
+\bodyrowrule
+Authentication & Internal session cookie with administrator role. \\
+\bodyrowrule
+Reference IDs & \apiid{OPS-06}. \\
+\bottomrule
+\end{longtable}
+
+\apiblockheading{Endpoints.}
+\begin{longtable}{@{}L{0.34\textwidth}L{0.56\textwidth}@{}}
+\toprule
+\textbf{Endpoint} & \textbf{Purpose} \\
+\midrule
+\endfirsthead
+\toprule
+\textbf{Endpoint} & \textbf{Purpose} \\
+\midrule
+\endhead
+\code{GET /v1/internal/users} & List internal operator accounts. \\
+\bodyrowrule
+\code{POST /v1/internal/users} & Create a new internal operator account. \\
+\bodyrowrule
+\code{PATCH /v1/internal/users/{user_id}} & Update the role, status, or profile
+of an internal operator account. \\
+\bodyrowrule
+\code{POST /v1/internal/users/{user_id}/reset-password} & Generate and return a
+new one-time password for an internal operator account. \\
+\bottomrule
+\end{longtable}
+
+\apiblockheading{Business rules and usage notes.}
+\begin{itemize}
+  \item This family is administrator-only.
+  \item Generated passwords are returned once on create or reset and are not
+  retrievable later.
+  \item The last active administrator cannot be deactivated by mistake.
+\end{itemize}
+
+\apiblockheading{Likely error codes.}
+\begin{longtable}{@{}L{0.31\textwidth}L{0.59\textwidth}@{}}
+\toprule
+\textbf{Code} & \textbf{When it matters} \\
+\midrule
+\endfirsthead
+\toprule
+\textbf{Code} & \textbf{When it matters} \\
+\midrule
+\endhead
+\code{INTERNAL_AUTH_FORBIDDEN} & The signed-in operator lacks administrator
+permission for internal user management. \\
+\bodyrowrule
+\code{INTERNAL_USER_ALREADY_EXISTS} & A create request duplicates an existing
+internal operator identity. \\
+\bodyrowrule
+\code{INTERNAL_USER_NOT_FOUND} & The requested internal operator record does
+not exist. \\
+\bodyrowrule
+\code{LAST_ACTIVE_ADMIN_REQUIRED} & The action would remove the final active
+administrator account. \\
+\bottomrule
+\end{longtable}
+
+\apiblockheading{Happy-path example.}
+\begin{lstlisting}[language=json,caption={Create internal operator request example}]
+{
+  "email": "auditor@example.com",
+  "full_name": "Audit User",
+  "role": "OPS",
+  "status": "ACTIVE"
+}
+\end{lstlisting}
+
+\begin{lstlisting}[language=json,caption={Create internal operator response example}]
+{
+  "user": {
+    "user_id": "uuid",
+    "email": "auditor@example.com",
+    "full_name": "Audit User",
+    "role": "OPS",
+    "status": "ACTIVE"
+  },
+  "generated_password": "one-time-password"
+}
+\end{lstlisting}

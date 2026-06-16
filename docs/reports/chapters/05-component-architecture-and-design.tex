@@ -6,25 +6,14 @@ The gateway follows a compact layered design. Each layer has one dominant
 responsibility so that request handling, business rules, data access, and
 persistent state remain understandable as separate concerns.
 
-\begin{figure}[H]
-\centering
-\begin{tikzpicture}[node distance=8mm]
-  \node[box, text width=44mm] (interface) {Interface layer\\access control and request handling};
-  \node[box, below=of interface, text width=44mm] (contracts) {Request and response contracts\\validated input and output structures};
-  \node[box, below=of contracts, text width=44mm] (services) {Application services\\business rules and workflow control};
-  \node[box, below=of services, text width=44mm] (dataaccess) {Data access layer\\lookup, list, and aggregation operations};
-  \node[box, below=of dataaccess, text width=44mm] (domain) {Domain entities and rules\\states, relationships, and invariants};
-  \node[db, below=of domain, text width=36mm] (storage) {Persistent\\storage};
+The stack also groups naturally into three bands. The upper band accepts
+requests and enforces access boundaries, the middle band converts validated
+requests into business decisions, and the lower band anchors those decisions in
+durable entities and long-lived state. Reading the architecture this way makes
+it clear where interface concerns stop and where business consistency begins.
 
-  \draw[arrow] (interface) -- (contracts);
-  \draw[arrow] (contracts) -- (services);
-  \draw[arrow] (services) -- (dataaccess);
-  \draw[arrow] (dataaccess) -- (domain);
-  \draw[arrow] (domain) -- (storage);
-\end{tikzpicture}
-\caption{Component layer stack. Higher layers coordinate interaction, while
-lower layers preserve business state and data consistency.}
-\end{figure}
+The visual stack in Figure 5.1 appears after the responsibility map so the
+reader can connect the abstract layers to their concrete roles in the system.
 
 \section{Component Responsibilities}
 
@@ -39,22 +28,51 @@ lower layers preserve business state and data consistency.}
 \midrule
 \endhead
 Internal operations dashboard & Supports merchant review, credential management, account administration, transaction investigation, reconciliation, audit inspection, and recovery actions. \\
+\bodyrowrule
 Merchant dashboard & Supports merchant-scoped overview, analytics, transaction exploration, credential visibility, and account self-service. \\
+\bodyrowrule
 Interface layer & Accepts incoming requests, applies access boundaries, validates high-level request intent, and shapes outward responses. \\
+\bodyrowrule
 Request and response contracts & Define the information each interaction accepts or returns so that system behavior remains predictable. \\
+\bodyrowrule
 Application services & Enforce merchant readiness, payment and refund rules, notification behavior, analytics preparation, reconciliation, and audit-aware state changes. \\
+\bodyrowrule
 Data access layer & Retrieves domain data, writes business state changes, and prepares filtered or aggregated views for dashboards and review workflows. \\
+\bodyrowrule
 Domain entities and rules & Define states, relationships, constraints, and invariants for merchants, transactions, notifications, accounts, and review records. \\
+\bodyrowrule
 Persistent storage & Holds durable operational and business evidence across all major workflows. \\
 \bottomrule
 \end{longtable}
+
+\begin{figure}[!htbp]
+\centering
+\scalebox{0.72}{%
+\begin{tikzpicture}[node distance=8mm]
+  \node[box, text width=44mm] (interface) {Interface layer\\access control and request handling};
+  \node[box, below=of interface, text width=44mm] (contracts) {Request and response contracts\\validated input and output structures};
+  \node[box, below=of contracts, text width=44mm] (services) {Application services\\business rules and workflow control};
+  \node[box, below=of services, text width=44mm] (dataaccess) {Data access layer\\lookup, list, and aggregation operations};
+  \node[box, below=of dataaccess, text width=44mm] (domain) {Domain entities and rules\\states, relationships, and invariants};
+  \node[db, below=of domain, text width=36mm] (storage) {Persistent\\storage};
+
+  \draw[arrow] (interface) -- (contracts);
+  \draw[arrow] (contracts) -- (services);
+  \draw[arrow] (services) -- (dataaccess);
+  \draw[arrow] (dataaccess) -- (domain);
+  \draw[arrow] (domain) -- (storage);
+\end{tikzpicture}%
+}
+\caption{Component layer stack. Higher layers coordinate interaction, while
+lower layers preserve business state and data consistency.}
+\end{figure}
 
 \section{Business Rules And State Models}
 
 The domain behavior is organized around explicit state models instead of
 implicit status changes hidden inside request handlers.
 
-\begin{table}[H]
+\begin{table}[!htbp]
 \centering
 \caption{Core state models}
 \begin{tabularx}{\textwidth}{L{0.24\textwidth}L{0.24\textwidth}Y}
@@ -62,8 +80,11 @@ implicit status changes hidden inside request handlers.
 \textbf{Domain object} & \textbf{Persisted states} & \textbf{Design note} \\
 \midrule
 Merchant operational status & Pending review, active, rejected, suspended, disabled & Merchant readiness and merchant operating status are related but not identical, so review outcomes and live operating state are tracked separately. \\
+\bodyrowrule
 Payment transaction & Pending, successful, failed, expired & Payment requests remain pending until confirmed by external evidence or time-based expiration handling. \\
+\bodyrowrule
 Refund transaction & Refund pending, refunded, refund failed & The system implements full refunds only, and final outcomes depend on external refund evidence. \\
+\bodyrowrule
 Webhook event & Pending, delivered, failed & Merchant notification delivery is tracked independently from payment and refund finality. \\
 \bottomrule
 \end{tabularx}

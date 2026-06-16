@@ -1,42 +1,39 @@
-\chapter{Shared Request And Response Conventions}
+\section{Common Conventions}
 
-\section{Versioning And Transport}
-
-All implemented endpoints use the \code{/v1} prefix. Requests and responses are JSON
-unless the route is an outbound webhook delivery performed by the gateway
-toward a merchant callback URL.
-
-\section{Time, Money, And Identifiers}
-
-\begin{longtable}{L{0.28\textwidth}L{0.62\textwidth}}
-\caption{Shared data conventions}\\
+\begin{longtable}{@{}L{0.27\textwidth}L{0.63\textwidth}@{}}
+\caption{Shared request and response conventions}\\
 \toprule
-\textbf{Item} & \textbf{Convention} \\
+\textbf{Topic} & \textbf{Convention} \\
 \midrule
 \endfirsthead
 \toprule
-\textbf{Item} & \textbf{Convention} \\
+\textbf{Topic} & \textbf{Convention} \\
 \midrule
 \endhead
-Timestamps & UTC ISO 8601 timestamps are used for API payloads and response fields. \\
-Amounts & Monetary amounts are represented as decimal strings rather than binary floating-point values. \\
-Merchant scope & Merchant-facing HMAC APIs derive merchant identity from auth headers; Merchant Portal APIs derive scope from the authenticated portal session. \\
-Audit reason & Internal write routes use a nested actor object so the human reason can be written to audit logs. \\
-Scenario IDs & Postman and testing scenarios reuse the same stable IDs documented here. \\
+Base path & All documented endpoints use the \code{/v1} prefix. \\
+\bodyrowrule
+Payload format & Requests and responses are JSON, except for outbound webhooks
+that the gateway delivers to the merchant's own endpoint. \\
+\bodyrowrule
+Timestamps & Time values use UTC ISO 8601 format. \\
+\bodyrowrule
+Amounts & Monetary values are decimal strings so clients do not depend on
+binary floating-point behavior. \\
+\bodyrowrule
+Idempotency & \code{X-Idempotency-Key} is optional for merchant requests that
+may be retried after network uncertainty. Business-level duplicate handling is
+still enforced even when this header is omitted. \\
+\bodyrowrule
+Error envelope & All error responses return an error code, a human-readable
+message, an optional request identifier, and structured details when useful. \\
 \bottomrule
 \end{longtable}
 
-\section{Merchant HMAC Headers}
-
-Merchant-facing payment and refund endpoints require:
-
-\begin{itemize}
-  \item \code{X-Merchant-Id}
-  \item \code{X-Access-Key}
-  \item \code{X-Timestamp}
-  \item \code{X-Signature}
-  \item \code{X-Idempotency-Key} when technical idempotency is desired
-\end{itemize}
+\apiblockheading{Merchant HMAC headers.}
+Merchant backend payment and refund requests require the following headers:
+\code{X-Merchant-Id}, \code{X-Access-Key}, \code{X-Timestamp}, and
+\code{X-Signature}. When technical request replay protection is desired,
+\code{X-Idempotency-Key} may also be included.
 
 Canonical signing string:
 
@@ -44,37 +41,21 @@ Canonical signing string:
 {timestamp}.{method}.{path}.{body_sha256_hex}
 \end{lstlisting}
 
-\section{Internal Write Payload Convention}
+Signature value:
 
-Many internal Ops write routes use the following nested actor shape so that the
-audit reason remains explicit:
-
-\begin{lstlisting}[language=json,caption={Internal actor payload fragment}]
-{
-  "actor": {
-    "actor_type": "OPS",
-    "actor_id": null,
-    "reason": "Operator note"
-  }
-}
+\begin{lstlisting}[caption={Merchant HMAC signature}]
+hex(hmac_sha256(secret_key, signing_string))
 \end{lstlisting}
 
-The backend treats \code{reason} as meaningful input, but it does not trust
-client-supplied identity blindly. Role and user identity are derived from the
-authenticated internal session.
-
-\section{Shared Error Envelope}
-
-All API errors use the same envelope shape:
-
-\begin{lstlisting}[language=json,caption={Shared error response shape}]
+\apiblockheading{Shared error response shape.}
+\begin{lstlisting}[language=json,caption={Error response example}]
 {
   "error_code": "PAYMENT_ALREADY_SUCCESS",
   "message": "Payment already succeeded for this order.",
-  "request_id": "req_...",
+  "request_id": "req_01J...",
   "details": {}
 }
 \end{lstlisting}
 
-The shared error model is summarized later in this document and corresponds to
-\code{docs/api/errors.md}.
+The full error catalogue later in this guide explains what each important code
+means, when retrying helps, and what the caller should do next.

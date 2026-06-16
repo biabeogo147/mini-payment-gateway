@@ -6,7 +6,7 @@ each actor and the expected system outcome.
 
 \section{Actor Overview}
 
-\begin{table}[H]
+\begin{table}[!htbp]
 \centering
 \caption{Implemented actors}
 \begin{tabularx}{\textwidth}{L{0.25\textwidth}Y}
@@ -15,14 +15,19 @@ each actor and the expected system outcome.
 \midrule
 Admin & Privileged internal user who manages internal accounts, merchant
 readiness, merchant credentials, and merchant dashboard accounts. \\
+\bodyrowrule
 Ops & Internal operations user who monitors transactions, investigates delivery
 issues, reviews evidence, and performs allowed recovery actions. \\
+\bodyrowrule
 Merchant backend & Merchant-owned application that creates payments and refunds
 through the gateway on behalf of the merchant business. \\
+\bodyrowrule
 Merchant dashboard user & Human merchant representative who signs in to inspect
 transactions, analytics, profile information, and credential metadata. \\
+\bodyrowrule
 Provider callback source & External payment-result source that confirms payment
 and refund outcomes. \\
+\bodyrowrule
 Scheduled trigger & Time-based trigger that activates expiration handling and
 webhook retry processing. \\
 \bottomrule
@@ -42,9 +47,13 @@ webhook retry processing. \\
 \midrule
 \endhead
 UC001 & Onboard and activate merchant & Admin or Ops & Merchant profile, review evidence, access credentials, and operational status are established before live transaction activity. \\
+\bodyrowrule
 UC002 & Create dynamic QR payment & Merchant backend & A pending payment request is created and a payment payload is returned for customer-facing checkout. \\
+\bodyrowrule
 UC003 & Process payment result callback & Provider callback source & Callback evidence is stored and the payment moves to a final state or to manual review when evidence is ambiguous. \\
+\bodyrowrule
 UC004 & Create full refund and process result & Merchant backend and provider callback source & A full refund request is created and later finalized from external confirmation. \\
+\bodyrowrule
 UC005 & Deliver webhook with retry and manual recovery & Scheduled trigger and internal operator & Merchant notification attempts are recorded, retries are controlled, and failed deliveries can be retried safely. \\
 \bottomrule
 \end{longtable}
@@ -53,7 +62,7 @@ The following diagram summarizes the core gateway use cases only. Dashboard
 screens are intentionally excluded so the diagram stays focused on the main
 money-flow and notification responsibilities of the gateway itself.
 
-\begin{figure}[H]
+\begin{figure}[!htbp]
 \centering
 \resizebox{\textwidth}{!}{%
 \begin{tikzpicture}[node distance=11mm and 12mm]
@@ -102,12 +111,19 @@ handling inside the gateway.}
 \midrule
 \endhead
 DUC001 & Sign in and view operations overview & Admin or Ops & Internal users access a consolidated operational view of merchants, transactions, delivery issues, and pending reviews. \\
+\bodyrowrule
 DUC002 & Manage merchant lifecycle & Admin or Ops & Internal users register merchants, review readiness information, manage credentials, and apply lifecycle decisions. \\
+\bodyrowrule
 DUC003 & Manage merchant dashboard accounts & Admin & Merchant-facing user accounts can be created, updated, deactivated, reactivated, or reset. \\
+\bodyrowrule
 DUC004 & Inspect operational evidence & Admin or Ops & Internal users review payments, refunds, webhook history, reconciliation items, and audit evidence. \\
+\bodyrowrule
 DUC005 & Sign in and maintain account access & Merchant dashboard user & Merchant representatives authenticate securely and can change their own password. \\
+\bodyrowrule
 DUC006 & View overview and analytics & Merchant dashboard user & Merchant representatives view summarized activity and trend information for a selected reporting window. \\
+\bodyrowrule
 DUC007 & Explore payment, refund, and webhook records & Merchant dashboard user & Merchant representatives review transaction and notification history that belongs only to their merchant account. \\
+\bodyrowrule
 DUC008 & View profile and credential metadata & Merchant dashboard user & Merchant representatives can read merchant profile information and masked credential details without seeing raw secrets. \\
 \bottomrule
 \end{longtable}

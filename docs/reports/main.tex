@@ -10,7 +10,39 @@
 \begin{document}
 
 \hypersetup{pageanchor=false}
-\makempgtitlepage
+\begin{titlepage}
+  \centering
+  \vspace*{0.5cm}
+  \IfFileExists{figures/Logo_DHBK_HN.png}{%
+    \includegraphics[height=3cm]{figures/Logo_DHBK_HN.png}\par
+    \vspace{0.8cm}
+  }{}
+  {\Large \InstitutionName \par}
+  \vspace{1.3cm}
+  {\Huge\bfseries \ProjectTitle \par}
+  \vspace{0.4cm}
+  {\LARGE \DocumentTitle \par}
+  \vspace{1cm}
+  {\Large \CourseName \par}
+  \vfill
+  \begin{tabular}{rl}
+    \textbf{Group:} & \GroupName \\
+    \textbf{Authors:} &
+      \begin{tabular}[t]{@{}l@{}}
+        Le Nguyen Phuoc Thanh \\
+        Hoang Van Nhan \\
+        Ngo Minh Quang \\
+        Vu Tran An Khanh \\
+        Do Hoang Nam Khanh
+      \end{tabular} \\
+    \textbf{Date:} & \SubmissionDate \\
+  \end{tabular}
+  \vfill
+  \begin{minipage}{0.82\textwidth}
+    \small
+    \DocumentSummary
+  \end{minipage}
+\end{titlepage}
 \clearpage
 \hypersetup{pageanchor=true}
 

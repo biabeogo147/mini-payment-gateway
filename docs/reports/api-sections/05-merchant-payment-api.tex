@@ -1,31 +1,106 @@
-\chapter{Merchant Payment API}
+\section{Merchant Backend APIs}
 
-Merchant payment APIs are called by a merchant backend, not by the Merchant
-Dashboard. They use HMAC headers and are scoped to the authenticated merchant.
+Merchant backend APIs are machine-to-machine endpoints. They are not used by
+human dashboard users. Every request in this section is signed with the
+merchant's HMAC credential set.
 
-\section{\apiid{PAY-01} Create Payment}
+\subsection{Payments}
 
-\begin{longtable}{L{0.24\textwidth}L{0.66\textwidth}}
-\caption{PAY-01 contract block}\\
+\begin{longtable}{@{}L{0.25\textwidth}L{0.65\textwidth}@{}}
+\caption{Payment API family summary}\\
 \toprule
-\textbf{Field} & \textbf{Contract} \\
+\textbf{Item} & \textbf{Details} \\
 \midrule
 \endfirsthead
 \toprule
-\textbf{Field} & \textbf{Contract} \\
+\textbf{Item} & \textbf{Details} \\
 \midrule
 \endhead
-Method and path & \code{POST /v1/payments} \\
-Actor and auth & Merchant backend with HMAC headers. \\
-Key request fields & \code{order_id}, \code{amount}, \code{description}, exactly one of \code{ttl_seconds} or \code{expire_at}, optional \code{metadata}. \\
-Key response fields & \code{transaction_id}, \code{order_id}, \code{merchant_id}, \code{qr_content}, \code{status}, \code{expire_at}. \\
-Important business rules & Merchant must be \code{ACTIVE}; duplicate pending create-payment is idempotent only when the semantic request is identical; successful prior payment blocks a new attempt for the same order. \\
-Important error cases & \code{MERCHANT_NOT_ACTIVE}, \code{PAYMENT_PENDING_EXISTS}, \code{PAYMENT_ALREADY_SUCCESS}, validation errors. \\
-Related scenarios & \code{PAY-01}, \code{PAY-04}, \code{PAY-05}, \code{PAY-06}, \code{PAY-07}, \code{PAY-08}, \code{PAY-10}. \\
+Purpose & Create payment intents and retrieve payment status for a merchant's
+own orders. \\
+\bodyrowrule
+Intended audience & Merchant backend. \\
+\bodyrowrule
+Authentication & Merchant HMAC headers. \\
+\bodyrowrule
+Reference IDs & \apiid{PAY-01}, \apiid{PAY-02}, \apiid{PAY-03}. \\
 \bottomrule
 \end{longtable}
 
-\begin{lstlisting}[language=json,caption={PAY-01 request body}]
+\apiblockheading{Endpoints.}
+\begin{longtable}{@{}L{0.31\textwidth}L{0.59\textwidth}@{}}
+\toprule
+\textbf{Endpoint} & \textbf{Purpose} \\
+\midrule
+\endfirsthead
+\toprule
+\textbf{Endpoint} & \textbf{Purpose} \\
+\midrule
+\endhead
+\code{POST /v1/payments} & Create a new pending payment and return the gateway
+payment reference plus QR payload information. \\
+\bodyrowrule
+\code{GET /v1/payments/{transaction_id}} & Retrieve a payment by gateway
+transaction identifier within the authenticated merchant scope. \\
+\bodyrowrule
+\code{GET /v1/payments/by-order/{order_id}} & Retrieve the latest payment
+attempt for the merchant's order identifier. \\
+\bottomrule
+\end{longtable}
+
+\apiblockheading{Important request fields.}
+The payment creation request requires \code{order_id}, \code{amount}, and
+\code{description}. The caller must send exactly one expiration strategy:
+\code{ttl_seconds} or \code{expire_at}. Optional business metadata may be
+attached in \code{metadata}.
+
+\apiblockheading{Important response fields.}
+The creation response highlights \code{transaction_id}, \code{order_id},
+\code{merchant_id}, \code{qr_content}, optional QR image fields, the current
+\code{status}, and \code{expire_at}.
+
+\apiblockheading{Business rules and usage notes.}
+\begin{itemize}
+  \item The merchant account must be active before a payment can be created.
+  \item The gateway stores a usable payment directly as \code{PENDING}; there is
+  no separate client-visible pre-pending state.
+  \item Only one active pending payment may exist for the same merchant order
+  at a time.
+  \item A semantically identical retry for the current pending order returns
+  the existing payment instead of creating a new one.
+  \item A different retry while a pending payment already exists is rejected.
+  \item A new payment is allowed after a previous attempt has failed or
+  expired.
+  \item A new payment is rejected after the order already has a successful
+  payment.
+\end{itemize}
+
+\apiblockheading{Likely error codes.}
+\begin{longtable}{@{}L{0.28\textwidth}L{0.62\textwidth}@{}}
+\toprule
+\textbf{Code} & \textbf{When it matters} \\
+\midrule
+\endfirsthead
+\toprule
+\textbf{Code} & \textbf{When it matters} \\
+\midrule
+\endhead
+\code{MERCHANT_NOT_ACTIVE} & The merchant is not currently allowed to create
+new payment or refund activity. \\
+\bodyrowrule
+\code{PAYMENT_PENDING_EXISTS} & The same order already has a different pending
+payment request that has not been resolved yet. \\
+\bodyrowrule
+\code{PAYMENT_ALREADY_SUCCESS} & The order has already been paid successfully
+and should not be opened again as a new payment. \\
+\bodyrowrule
+\code{PAYMENT_NOT_FOUND} & A lookup request does not match any payment visible
+to the authenticated merchant. \\
+\bottomrule
+\end{longtable}
+
+\apiblockheading{Happy-path example.}
+\begin{lstlisting}[language=json,caption={Create payment request example}]
 {
   "order_id": "ORDER-1001",
   "amount": "100000.00",
@@ -37,35 +112,15 @@ Related scenarios & \code{PAY-01}, \code{PAY-04}, \code{PAY-05}, \code{PAY-06}, 
 }
 \end{lstlisting}
 
-\begin{lstlisting}[language=json,caption={PAY-01 response highlight}]
+\begin{lstlisting}[language=json,caption={Create payment response example}]
 {
-  "transaction_id": "pay_...",
+  "transaction_id": "pay_01J...",
   "order_id": "ORDER-1001",
   "merchant_id": "m_demo",
-  "qr_content": "MINI_GATEWAY|merchant_id=m_demo|transaction_id=pay_...",
+  "qr_content": "MINI_GATEWAY|merchant_id=m_demo|transaction_id=pay_01J...",
+  "qr_image_url": null,
+  "qr_image_base64": null,
   "status": "PENDING",
   "expire_at": "2026-04-29T10:15:00Z"
 }
 \end{lstlisting}
-
-\section{\apiid{PAY-02--03} Query Payment}
-
-\begin{longtable}{L{0.24\textwidth}L{0.66\textwidth}}
-\caption{PAY-02--03 contract block}\\
-\toprule
-\textbf{Field} & \textbf{Contract} \\
-\midrule
-\endfirsthead
-\toprule
-\textbf{Field} & \textbf{Contract} \\
-\midrule
-\endhead
-Methods and paths & \code{GET /v1/payments/{transaction_id}} and \code{GET /v1/payments/by-order/{order_id}}. \\
-Actor and auth & Merchant backend with HMAC headers. \\
-Key request fields & Path selector only. \\
-Key response fields & Payment status plus transaction metadata owned by the authenticated merchant. \\
-Important business rules & Other-merchant records are not returned; order-based lookup returns the latest payment attempt for that merchant order. \\
-Important error cases & \code{PAYMENT_NOT_FOUND}, auth failures. \\
-Related scenarios & \code{PAY-02}, \code{PAY-03}, \code{PAY-09}. \\
-\bottomrule
-\end{longtable}

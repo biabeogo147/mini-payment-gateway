@@ -1,57 +1,118 @@
-\chapter{Refund API}
+\subsection{Refunds}
 
-Refund APIs are merchant HMAC APIs. The MVP implements full refunds only.
-Partial refunds are rejected by design.
-
-\section{\apiid{REF-01} Create Refund}
-
-\begin{longtable}{L{0.24\textwidth}L{0.66\textwidth}}
-\caption{REF-01 contract block}\\
+\begin{longtable}{@{}L{0.25\textwidth}L{0.65\textwidth}@{}}
+\caption{Refund API family summary}\\
 \toprule
-\textbf{Field} & \textbf{Contract} \\
+\textbf{Item} & \textbf{Details} \\
 \midrule
 \endfirsthead
 \toprule
-\textbf{Field} & \textbf{Contract} \\
+\textbf{Item} & \textbf{Details} \\
 \midrule
 \endhead
-Method and path & \code{POST /v1/refunds} \\
-Actor and auth & Merchant backend with HMAC headers. \\
-Key request fields & \code{refund_id}, \code{refund_amount}, \code{reason}, exactly one of \code{original_transaction_id} or \code{order_id}. \\
-Key response fields & \code{refund_transaction_id}, \code{original_transaction_id}, \code{refund_id}, \code{refund_amount}, \code{refund_status}. \\
-Important business rules & Merchant must be \code{ACTIVE}; original payment must be \code{SUCCESS}; refund amount must equal the original payment amount; refund window is seven days from \code{paid_at}; duplicate \code{refund_id} is idempotent per merchant. \\
-Important error cases & \code{MERCHANT_NOT_ACTIVE}, \code{PAYMENT_NOT_REFUNDABLE}, \code{REFUND_WINDOW_EXPIRED}, \code{REFUND_AMOUNT_NOT_FULL}, \code{REFUND_NOT_ALLOWED}. \\
-Related scenarios & \code{REF-01}, \code{REF-06}, \code{REF-07}, \code{REF-08}, \code{REF-09}. \\
+Purpose & Create full refunds and retrieve refund status for the authenticated
+merchant. \\
+\bodyrowrule
+Intended audience & Merchant backend. \\
+\bodyrowrule
+Authentication & Merchant HMAC headers. \\
+\bodyrowrule
+Reference IDs & \apiid{REF-01}, \apiid{REF-02}, \apiid{REF-03}. \\
 \bottomrule
 \end{longtable}
 
-\begin{lstlisting}[language=json,caption={REF-01 request body}]
+\apiblockheading{Endpoints.}
+\begin{longtable}{@{}L{0.31\textwidth}L{0.59\textwidth}@{}}
+\toprule
+\textbf{Endpoint} & \textbf{Purpose} \\
+\midrule
+\endfirsthead
+\toprule
+\textbf{Endpoint} & \textbf{Purpose} \\
+\midrule
+\endhead
+\code{POST /v1/refunds} & Create a refund request against a successful
+payment. \\
+\bodyrowrule
+\code{GET /v1/refunds/{refund_transaction_id}} & Retrieve a refund by gateway
+refund transaction identifier. \\
+\bodyrowrule
+\code{GET /v1/refunds/by-refund-id/{refund_id}} & Retrieve a refund by the
+merchant's own refund identifier. \\
+\bottomrule
+\end{longtable}
+
+\apiblockheading{Important request fields.}
+Refund creation requires \code{refund_id}, \code{refund_amount}, and
+\code{reason}. The original payment is selected with exactly one of
+\code{original_transaction_id} or \code{order_id}.
+
+\apiblockheading{Important response fields.}
+The gateway returns \code{refund_transaction_id},
+\code{original_transaction_id}, \code{refund_id}, \code{refund_amount}, and
+\code{refund_status}.
+
+\apiblockheading{Business rules and usage notes.}
+\begin{itemize}
+  \item Only full refunds are supported in the current MVP.
+  \item The original payment must already be successful before a refund can be
+  requested.
+  \item The refund amount must exactly match the original payment amount.
+  \item Refunds are allowed only within seven days from the payment's success
+  timestamp.
+  \item Reusing the same merchant refund identifier returns the existing refund
+  when it already belongs to the same merchant.
+  \item A pending or already successful refund prevents a second active refund
+  from being opened for the same completed payment.
+  \item A previously failed refund does not block a fresh refund request.
+\end{itemize}
+
+\apiblockheading{Likely error codes.}
+\begin{longtable}{@{}L{0.30\textwidth}L{0.60\textwidth}@{}}
+\toprule
+\textbf{Code} & \textbf{When it matters} \\
+\midrule
+\endfirsthead
+\toprule
+\textbf{Code} & \textbf{When it matters} \\
+\midrule
+\endhead
+\code{MERCHANT_NOT_ACTIVE} & The merchant is not currently allowed to create
+refund activity. \\
+\bodyrowrule
+\code{PAYMENT_NOT_REFUNDABLE} & The referenced payment is not in a state that
+can be refunded. \\
+\bodyrowrule
+\code{REFUND_WINDOW_EXPIRED} & The successful payment is older than the allowed
+refund window. \\
+\bodyrowrule
+\code{REFUND_AMOUNT_NOT_FULL} & The requested refund amount does not exactly
+match the original payment amount. \\
+\bodyrowrule
+\code{REFUND_NOT_ALLOWED} & The refund request violates another refund business
+rule, such as a conflicting existing refund. \\
+\bodyrowrule
+\code{REFUND_NOT_FOUND} & A refund lookup does not match any refund visible to
+the authenticated merchant. \\
+\bottomrule
+\end{longtable}
+
+\apiblockheading{Happy-path example.}
+\begin{lstlisting}[language=json,caption={Create refund request example}]
 {
-  "original_transaction_id": "pay_...",
+  "original_transaction_id": "pay_01J...",
   "refund_id": "REF-1001",
   "refund_amount": "100000.00",
   "reason": "Customer requested refund"
 }
 \end{lstlisting}
 
-\section{\apiid{REF-02--03} Query Refund}
-
-\begin{longtable}{L{0.24\textwidth}L{0.66\textwidth}}
-\caption{REF-02--03 contract block}\\
-\toprule
-\textbf{Field} & \textbf{Contract} \\
-\midrule
-\endfirsthead
-\toprule
-\textbf{Field} & \textbf{Contract} \\
-\midrule
-\endhead
-Methods and paths & \code{GET /v1/refunds/{refund_transaction_id}} and \code{GET /v1/refunds/by-refund-id/{refund_id}}. \\
-Actor and auth & Merchant backend with HMAC headers. \\
-Key request fields & Path selector only. \\
-Key response fields & Refund state and identifiers owned by the authenticated merchant. \\
-Important business rules & Merchant ownership is enforced on every read. \\
-Important error cases & \code{REFUND_NOT_FOUND}, auth failures. \\
-Related scenarios & \code{REF-02}, \code{REF-03}. \\
-\bottomrule
-\end{longtable}
+\begin{lstlisting}[language=json,caption={Create refund response example}]
+{
+  "refund_transaction_id": "rfnd_01J...",
+  "original_transaction_id": "pay_01J...",
+  "refund_id": "REF-1001",
+  "refund_amount": "100000.00",
+  "refund_status": "REFUND_PENDING"
+}
+\end{lstlisting}

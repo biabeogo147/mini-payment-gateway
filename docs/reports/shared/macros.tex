@@ -1,5 +1,18 @@
 \newcolumntype{Y}{>{\raggedright\arraybackslash}X}
 \newcolumntype{L}[1]{>{\raggedright\arraybackslash}p{#1}}
+\newcommand{\bodyrowrule}{\specialrule{0.3pt}{0.12em}{0.12em}}
+\newcommand{\docbox}[2]{%
+  \begingroup
+  \setlength{\fboxsep}{8pt}%
+  \noindent\fcolorbox{mpgTeal!65}{mpgMint}{%
+    \begin{minipage}{0.95\linewidth}
+      \textbf{#1}\par
+      #2
+    \end{minipage}%
+  }%
+  \endgroup
+}
+\newcommand{\restrictedbox}[1]{\docbox{Restricted / Internal Use}{#1}}
 
 \lstdefinestyle{mpglisting}{
   backgroundcolor=\color{codeBg},
@@ -83,43 +96,17 @@
 }
 
 \newcommand{\apiendpoint}[2]{\texttt{#1 #2}}
-\newcommand{\routecell}[1]{\begin{tabular}[t]{@{}l@{}}#1\end{tabular}}
+\newcommand{\routecell}[1]{\begin{minipage}[t]{\linewidth}\raggedright #1\end{minipage}}
 \newcommand{\apiid}[1]{\texttt{#1}}
-\newcommand{\code}[1]{\texttt{\detokenize{#1}}}
-\newcommand{\frontchapter}[1]{\chapter*{#1}\addcontentsline{toc}{chapter}{#1}}
-
-\newcommand{\makempgtitlepage}{
-\begin{titlepage}
-  \centering
-  \vspace*{0.5cm}
-  \IfFileExists{figures/Logo_DHBK_HN.png}{%
-    \includegraphics[height=3cm]{figures/Logo_DHBK_HN.png}\par
-    \vspace{0.8cm}
-  }{}
-  {\Large \InstitutionName \par}
-  \vspace{1.3cm}
-  {\Huge\bfseries \ProjectTitle \par}
-  \vspace{0.4cm}
-  {\LARGE \DocumentTitle \par}
-  \vspace{1cm}
-  {\Large \CourseName \par}
-  \vfill
-  \begin{tabular}{rl}
-    \textbf{Group:} & \GroupName \\
-    \textbf{Authors:} &
-      \begin{tabular}[t]{@{}l@{}}
-        Le Nguyen Phuoc Thanh \\
-        Hoang Van Nhan \\
-        Ngo Minh Quang \\
-        Vu Tran An Khanh \\
-        Do Hoang Nam Khanh
-      \end{tabular} \\
-    \textbf{Date:} & \SubmissionDate \\
-  \end{tabular}
-  \vfill
-  \begin{minipage}{0.82\textwidth}
-    \small
-    \DocumentSummary
-  \end{minipage}
-\end{titlepage}
+\newcommand{\code}[1]{\nolinkurl{#1}}
+\newcommand{\apiblockheading}[1]{%
+  \par\addvspace{0.85em}%
+  \noindent\textbf{#1}\par\smallskip%
+}
+\newcommand{\frontchapter}[1]{%
+  \ifcsname chapter\endcsname
+    \chapter*{#1}\addcontentsline{toc}{chapter}{#1}%
+  \else
+    \section*{#1}\addcontentsline{toc}{section}{#1}%
+  \fi
 }

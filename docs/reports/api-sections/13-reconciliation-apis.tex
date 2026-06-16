@@ -1,26 +1,177 @@
-\chapter{Reconciliation APIs}
+\subsection{Reconciliation Review}
 
-Reconciliation APIs support internal review when external provider evidence does
-not match internal state cleanly.
-
-\section{\apiid{REC-01--02} Reconciliation Review}
-
-\begin{longtable}{L{0.24\textwidth}L{0.66\textwidth}}
-\caption{REC-01--02 contract block}\\
+\begin{longtable}{@{}L{0.25\textwidth}L{0.65\textwidth}@{}}
+\caption{Reconciliation family summary}\\
 \toprule
-\textbf{Field} & \textbf{Contract} \\
+\textbf{Item} & \textbf{Details} \\
 \midrule
 \endfirsthead
 \toprule
-\textbf{Field} & \textbf{Contract} \\
+\textbf{Item} & \textbf{Details} \\
 \midrule
 \endhead
-Routes & \code{GET /v1/ops/reconciliation}, \code{GET /v1/ops/reconciliation/{record_id}}, \code{POST /v1/ops/reconciliation/{record_id}/resolve}. \\
-Actor and auth & Internal Admin/Ops session. \\
-Key request fields & Query filters such as \code{match_result}, \code{entity_type}, \code{entity_id}, and \code{limit}; resolve uses audit reason plus optional \code{reviewed_by} and \code{review_note}. \\
-Key response fields & Reconciliation record id, entity type, internal and external status, internal and external amounts, mismatch reason, review metadata, timestamps. \\
-Important business rules & Resolve marks the record as \code{RESOLVED}, writes review metadata, and records \code{RECONCILIATION_RESOLVED} in the audit log. \\
-Important error cases & \code{RECONCILIATION_NOT_FOUND}, \code{RECONCILIATION_ALREADY_RESOLVED}, session and RBAC failures. \\
-Related scenarios & \code{REC-01}, \code{REC-02}, \code{REC-02R}, \code{REC-03}, \code{REC-04}, \code{REC-05}, \code{E2E-03}. \\
+Purpose & Review mismatches between the gateway's internal records and external
+provider evidence. \\
+\bodyrowrule
+Intended audience & Restricted / Internal operator. \\
+\bodyrowrule
+Authentication & Internal session cookie with operational access. \\
+\bodyrowrule
+Reference IDs & \apiid{REC-01}, \apiid{REC-02}. \\
 \bottomrule
 \end{longtable}
+
+\apiblockheading{Endpoints.}
+\begin{longtable}{@{}L{0.34\textwidth}L{0.56\textwidth}@{}}
+\toprule
+\textbf{Endpoint} & \textbf{Purpose} \\
+\midrule
+\endfirsthead
+\toprule
+\textbf{Endpoint} & \textbf{Purpose} \\
+\midrule
+\endhead
+\code{GET /v1/ops/reconciliation} & List reconciliation records with optional
+filters such as result, entity type, entity identifier, and limit. \\
+\bodyrowrule
+\code{GET /v1/ops/reconciliation/{record_id}} & Open a single reconciliation
+record in detail. \\
+\bodyrowrule
+\code{POST /v1/ops/reconciliation/{record_id}/resolve} & Mark a reconciliation
+record as resolved and record the review note. \\
+\bottomrule
+\end{longtable}
+
+\apiblockheading{Business rules and usage notes.}
+\begin{itemize}
+  \item Reconciliation exists to preserve evidence when the gateway cannot
+  safely auto-apply an external update.
+  \item Resolution records the reviewer, the review note, and the final
+  resolved state for later audit.
+  \item Resolving a record acknowledges the review decision; it does not
+  retroactively hide the original mismatch evidence.
+\end{itemize}
+
+\apiblockheading{Likely error codes.}
+\begin{longtable}{@{}L{0.31\textwidth}L{0.59\textwidth}@{}}
+\toprule
+\textbf{Code} & \textbf{When it matters} \\
+\midrule
+\endfirsthead
+\toprule
+\textbf{Code} & \textbf{When it matters} \\
+\midrule
+\endhead
+\code{RECONCILIATION_NOT_FOUND} & The requested reconciliation record does not
+exist. \\
+\bodyrowrule
+\code{RECONCILIATION_ALREADY_RESOLVED} & The record has already been closed and
+cannot be resolved again. \\
+\bodyrowrule
+\code{INTERNAL_AUTH_REQUIRED}, \code{INTERNAL_AUTH_INVALID_SESSION},
+\code{INTERNAL_AUTH_FORBIDDEN} & The operator is not signed in or lacks the
+required operational access. \\
+\bottomrule
+\end{longtable}
+
+\apiblockheading{Happy-path example.}
+\begin{lstlisting}[language=json,caption={Resolve reconciliation request example}]
+{
+  "actor": {
+    "actor_type": "OPS",
+    "actor_id": null,
+    "reason": "Provider evidence reviewed."
+  },
+  "reviewed_by": null,
+  "review_note": "Provider evidence reviewed and accepted."
+}
+\end{lstlisting}
+
+\subsection{Manual Webhook Retry}
+
+\begin{longtable}{@{}L{0.25\textwidth}L{0.65\textwidth}@{}}
+\caption{Manual webhook retry family summary}\\
+\toprule
+\textbf{Item} & \textbf{Details} \\
+\midrule
+\endfirsthead
+\toprule
+\textbf{Item} & \textbf{Details} \\
+\midrule
+\endhead
+Purpose & Retry a webhook event that has already exhausted or failed automatic
+delivery. \\
+\bodyrowrule
+Intended audience & Restricted / Internal operator. \\
+\bodyrowrule
+Authentication & Internal session cookie with operational access. \\
+\bodyrowrule
+Reference IDs & \apiid{WH-10}. \\
+\bottomrule
+\end{longtable}
+
+\apiblockheading{Endpoint.}
+\begin{longtable}{@{}L{0.34\textwidth}L{0.56\textwidth}@{}}
+\toprule
+\textbf{Endpoint} & \textbf{Purpose} \\
+\midrule
+\endfirsthead
+\toprule
+\textbf{Endpoint} & \textbf{Purpose} \\
+\midrule
+\endhead
+\code{POST /v1/ops/webhooks/{event_id}/retry} & Trigger a manual delivery retry
+for a failed webhook event and record the operator's reason when supplied. \\
+\bottomrule
+\end{longtable}
+
+\apiblockheading{Business rules and usage notes.}
+\begin{itemize}
+  \item Manual retry is allowed only when the webhook event is already marked as
+  failed.
+  \item A successful manual retry changes the delivery status to delivered.
+  \item A failed manual retry keeps the event in failed state for further
+  support action.
+  \item Retrying a webhook does not change the underlying payment or refund
+  outcome.
+\end{itemize}
+
+\apiblockheading{Likely error codes.}
+\begin{longtable}{@{}L{0.31\textwidth}L{0.59\textwidth}@{}}
+\toprule
+\textbf{Code} & \textbf{When it matters} \\
+\midrule
+\endfirsthead
+\toprule
+\textbf{Code} & \textbf{When it matters} \\
+\midrule
+\endhead
+\code{WEBHOOK_EVENT_NOT_FOUND} & The requested webhook event does not exist. \\
+\bodyrowrule
+\code{WEBHOOK_RETRY_NOT_ALLOWED} & The event is not currently in a failed state
+and therefore is not eligible for manual retry. \\
+\bodyrowrule
+\code{INTERNAL_AUTH_REQUIRED}, \code{INTERNAL_AUTH_INVALID_SESSION},
+\code{INTERNAL_AUTH_FORBIDDEN} & The operator is not signed in or lacks the
+required operational access. \\
+\bottomrule
+\end{longtable}
+
+\apiblockheading{Happy-path example.}
+\begin{lstlisting}[language=json,caption={Manual webhook retry request example}]
+{
+  "actor_type": "OPS",
+  "actor_id": null,
+  "reason": "Retry after merchant endpoint recovered."
+}
+\end{lstlisting}
+
+\begin{lstlisting}[language=json,caption={Manual webhook retry response example}]
+{
+  "event_id": "evt_01J...",
+  "status": "DELIVERED",
+  "attempt_count": 5,
+  "last_attempt_result": "SUCCESS",
+  "next_retry_at": null
+}
+\end{lstlisting}

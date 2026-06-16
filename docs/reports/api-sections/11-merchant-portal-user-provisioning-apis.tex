@@ -1,28 +1,101 @@
-\chapter{Merchant Portal User Provisioning APIs}
+\subsection{Merchant Dashboard User Provisioning}
 
-Merchant portal user management belongs to the Ops surface and is
-\apiid{ADMIN}-only. \apiid{OPS} users can continue operational workflows but
-cannot create merchant portal users, change portal roles or status, or reset
-portal passwords.
-
-\section{\apiid{MPU-01--04} Portal User Administration}
-
-\begin{longtable}{L{0.24\textwidth}L{0.66\textwidth}}
-\caption{MPU-01--04 contract block}\\
+\begin{longtable}{@{}L{0.25\textwidth}L{0.65\textwidth}@{}}
+\caption{Merchant dashboard user provisioning family summary}\\
 \toprule
-\textbf{Field} & \textbf{Contract} \\
+\textbf{Item} & \textbf{Details} \\
 \midrule
 \endfirsthead
 \toprule
-\textbf{Field} & \textbf{Contract} \\
+\textbf{Item} & \textbf{Details} \\
 \midrule
 \endhead
-Routes & \code{GET /v1/ops/merchants/{merchant_id}/portal-users}, \code{POST /v1/ops/merchants/{merchant_id}/portal-users}, \code{PATCH /v1/ops/merchants/{merchant_id}/portal-users/{user_id}}, \code{POST /v1/ops/merchants/{merchant_id}/portal-users/{user_id}/reset-password}. \\
-Actor and auth & Internal Admin session. \\
-Key request fields & \code{email}, \code{full_name}, \code{role}, \code{status} for create; optional \code{full_name}, \code{role}, \code{status} for update; reset-password has no body. \\
-Key response fields & Portal user identity and timestamps, plus \code{generated_password} on create and reset. \\
-Important business rules & Plaintext passwords are returned once only; they are never persisted or retrievable later. \\
-Important error cases & Auth and RBAC failures, validation errors, merchant lookup failures, portal user lookup failures. \\
-Related scenarios & Merchant portal user create, update, reset, deactivate, and reactivate flows in the Ops Dashboard. \\
+Purpose & Create and maintain Merchant Dashboard user accounts for a merchant. \\
+\bodyrowrule
+Intended audience & Internal administrators during onboarding or support. \\
+\bodyrowrule
+Authentication & Internal session cookie with administrator role. \\
+\bodyrowrule
+Reference IDs & \apiid{MPU-01} to \apiid{MPU-04}. \\
 \bottomrule
 \end{longtable}
+
+\apiblockheading{Endpoints.}
+\begin{longtable}{@{}L{0.34\textwidth}L{0.56\textwidth}@{}}
+\toprule
+\textbf{Endpoint} & \textbf{Purpose} \\
+\midrule
+\endfirsthead
+\toprule
+\textbf{Endpoint} & \textbf{Purpose} \\
+\midrule
+\endhead
+\code{GET /v1/ops/merchants/{merchant_id}/portal-users} & List dashboard user
+accounts for the merchant. \\
+\bodyrowrule
+\code{POST /v1/ops/merchants/{merchant_id}/portal-users} & Create a dashboard
+user account and return a one-time password. \\
+\bodyrowrule
+\code{PATCH /v1/ops/merchants/{merchant_id}/portal-users/{user_id}} & Update a
+dashboard user's profile, role, or status. \\
+\bodyrowrule
+\code{POST /v1/ops/merchants/{merchant_id}/portal-users/{user_id}/reset-password}
+& Generate and return a new one-time password for a dashboard user. \\
+\bottomrule
+\end{longtable}
+
+\apiblockheading{Business rules and usage notes.}
+\begin{itemize}
+  \item This family is administrator-only.
+  \item Generated passwords are shown once on create or reset and are not
+  retrievable later.
+  \item Standard operations users can continue merchant support workflows, but
+  they cannot provision or manage Merchant Dashboard user accounts.
+\end{itemize}
+
+\apiblockheading{Likely error codes.}
+\begin{longtable}{@{}L{0.31\textwidth}L{0.59\textwidth}@{}}
+\toprule
+\textbf{Code} & \textbf{When it matters} \\
+\midrule
+\endfirsthead
+\toprule
+\textbf{Code} & \textbf{When it matters} \\
+\midrule
+\endhead
+\code{INTERNAL_AUTH_FORBIDDEN} & The signed-in operator does not have
+administrator permission for dashboard user provisioning. \\
+\bodyrowrule
+\code{MERCHANT_NOT_FOUND} & The target merchant record does not exist. \\
+\bodyrowrule
+\code{MERCHANT_PORTAL_USER_ALREADY_EXISTS} & The requested dashboard user
+identity already exists for the merchant. \\
+\bodyrowrule
+\code{MERCHANT_PORTAL_USER_NOT_FOUND} & The targeted dashboard user account does
+not exist. \\
+\bottomrule
+\end{longtable}
+
+\apiblockheading{Happy-path example.}
+\begin{lstlisting}[language=json,caption={Create Merchant Dashboard user request example}]
+{
+  "email": "merchant@example.com",
+  "full_name": "Merchant Admin",
+  "role": "MERCHANT_ADMIN",
+  "status": "ACTIVE"
+}
+\end{lstlisting}
+
+\begin{lstlisting}[language=json,caption={Create Merchant Dashboard user response example}]
+{
+  "user": {
+    "user_id": "uuid",
+    "merchant_id": "m_demo",
+    "email": "merchant@example.com",
+    "full_name": "Merchant Admin",
+    "role": "MERCHANT_ADMIN",
+    "status": "ACTIVE"
+  },
+  "generated_password": "one-time-password"
+}
+\end{lstlisting}

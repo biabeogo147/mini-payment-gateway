@@ -18,14 +18,14 @@ usable.
 
 The dashboard work revealed an architectural constraint that strongly shaped the
 project. A merchant-facing dashboard cannot safely be implemented as frontend
-screens alone. It requires a separate portal authentication model, merchant-
-scoped read APIs, a dedicated merchant-user account model, and internal provisioning
-flows. Without these boundaries, the system would either misuse merchant API
-credentials for human login or risk cross-merchant data exposure.
+screens alone. It requires a separate merchant-facing access model, merchant-
+scoped read capability, and internal provisioning support. Without these
+boundaries, the system would either misuse merchant integration credentials for
+human login or risk cross-merchant data exposure.
 
 \section{Implemented Scope And Non-Goals}
 
-\begin{table}[H]
+\begin{table}[!htbp]
 \centering
 \caption{Implemented system scope}
 \begin{tabularx}{\textwidth}{L{0.24\textwidth}Y}
@@ -33,11 +33,17 @@ credentials for human login or risk cross-merchant data exposure.
 \textbf{Area} & \textbf{Implemented capability} \\
 \midrule
 Merchant lifecycle & Create merchants, submit and review onboarding evidence, create or rotate credentials, activate, suspend, and disable merchants. \\
+\bodyrowrule
 Payments & Create dynamic QR payments, enforce semantic idempotency, query by transaction id or order id, and process provider payment result callbacks. \\
+\bodyrowrule
 Refunds & Create full refunds, enforce refund rules, query refund state, and process provider refund result callbacks. \\
+\bodyrowrule
 Webhooks & Create durable signed outbound webhook events, store delivery attempts, apply retry policy, and support internal manual retry. \\
+\bodyrowrule
 Ops Dashboard & Internal operator interface for auth, RBAC, merchant workflows, evidence inspection, reconciliation, audit, internal users, and portal-user provisioning. \\
+\bodyrowrule
 Merchant Dashboard & Merchant-scoped read-only interface for overview, analytics, payments, refunds, webhooks, profile, credentials, and password change. \\
+\bodyrowrule
 Testing & Automated business-rule checks, end-to-end transaction scenarios, dashboard validation, and browser-based usability review. \\
 \bottomrule
 \end{tabularx}
@@ -68,10 +74,15 @@ The following items are intentionally out of scope for the implemented MVP:
 \midrule
 \endhead
 Merchant lifecycle & Merchant statuses are pending review, active, rejected, suspended, and disabled. & Merchant readiness review and merchant operating status are tracked separately so approval outcome and live operating state do not become confused. \\
+\bodyrowrule
 Payment creation & One active payment is allowed per merchant and order. & A pending payment is reused only when the duplicate request is semantically identical; a completed successful payment blocks a new attempt. \\
+\bodyrowrule
 Payment states & Persisted states are pending, successful, failed, and expired. & External outcome evidence finalizes pending payments, while late or mismatched evidence is routed to reconciliation. \\
+\bodyrowrule
 Refunds & Only full refunds are implemented; refund eligibility expires after a limited business window. & Refund records move through pending, refunded, and refund failed states. Partial refunds are rejected by design. \\
+\bodyrowrule
 Webhooks & Successful merchant acknowledgement marks delivery success; failed delivery activates controlled retry. & Delivery attempts are preserved as evidence; exhausted events become failed and can later be retried by internal operators when eligible. \\
+\bodyrowrule
 Dashboards & Ops and Merchant users require different surfaces. & Ops Dashboard is internal and mutable; Merchant Dashboard is read-only except password change. \\
 \bottomrule
 \end{longtable}
@@ -107,7 +118,6 @@ responses and audit snapshots.
 
 The merchant-facing dashboard must help merchants inspect their own data without
 seeing internal reconciliation workflows, raw credential secrets, or data owned
-by other merchants. This requirement directly drives the dedicated merchant
-portal authentication model and the rule that Merchant Dashboard APIs never
-accept a client-supplied merchant identifier as the source of read scope after
-login.
+by other merchants. This requirement drives the separate merchant-facing access
+boundary and the rule that post-login dashboard reads never rely on a
+client-supplied merchant identifier as the source of scope.

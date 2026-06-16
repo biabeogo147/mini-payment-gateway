@@ -11,42 +11,53 @@ Detailed request and response contracts are maintained in a separate API
 reference. This chapter focuses on the boundary design decisions that shape the
 overall interface.
 
+Three interface rules drive the design:
+
+\begin{itemize}
+  \item each actor group receives an access surface that matches its real
+  operational role rather than being forced through one generic API;
+  \item state-changing integration flows remain separate from human dashboard
+  visibility and internal control flows;
+  \item delayed callbacks and outbound notifications are treated as durable
+  event exchanges rather than incidental side effects.
+\end{itemize}
+
 \section{API Families And Access Boundaries}
 
-\begin{table}[H]
-\centering
-\caption{API families and access boundaries}
-\begin{tabularx}{\textwidth}{L{0.18\textwidth}L{0.22\textwidth}L{0.22\textwidth}Y}
+The family map below makes that split explicit by pairing each surface with its
+primary actor, its trust model, and its design purpose.
+
+\begin{longtable}{L{0.17\textwidth}L{0.19\textwidth}L{0.20\textwidth}L{0.34\textwidth}}
+\caption{API families and access boundaries}\\
 \toprule
 \textbf{API family} & \textbf{Primary actor} & \textbf{Authentication model} & \textbf{Design purpose} \\
 \midrule
+\endfirsthead
+\toprule
+\textbf{API family} & \textbf{Primary actor} & \textbf{Authentication model} & \textbf{Design purpose} \\
+\midrule
+\endhead
 Internal authentication and administration & Admin or Ops user & Internal session authentication & Supports internal sign-in, account management, and operational access control. \\
+\bodyrowrule
 Merchant transaction APIs & Merchant backend & Signed merchant integration credentials & Supports payment creation, payment lookup, refund creation, and refund lookup for merchant systems. \\
+\bodyrowrule
 Provider callback APIs & Provider callback source & Controlled external callback trust model & Accepts external outcome evidence for payments and refunds. \\
+\bodyrowrule
 Internal operations APIs & Admin or Ops user & Internal session authentication & Supports merchant management, evidence review, reconciliation, notification recovery, and dashboard reads. \\
+\bodyrowrule
 Merchant dashboard APIs & Merchant dashboard user & Merchant session authentication & Supports merchant-scoped overview, analytics, record exploration, profile views, and credential metadata views. \\
+\bodyrowrule
 Outbound notification contract & Merchant callback endpoint & Signed gateway-to-merchant notification model & Delivers final payment and refund events to merchant-owned callback destinations. \\
 \bottomrule
-\end{tabularx}
-\end{table}
+\end{longtable}
 
 \section{Authentication Model Split}
 
-The system uses three separate authentication models because the actors carry
-three different risk profiles:
-
-\begin{itemize}
-  \item merchant backends use signed integration credentials for machine-to-
-  machine transaction requests;
-  \item internal users use session-based authentication for review and
-  administration workflows;
-  \item merchant dashboard users use a separate merchant-scoped session model
-  for human access to merchant data.
-\end{itemize}
-
-This split prevents two common design problems: using human dashboard login for
-machine integration, and using merchant integration credentials for interactive
-dashboard access.
+As established by the system architecture, the interface preserves three access
+boundaries: merchant integration requests, internal operational sessions, and
+merchant-facing dashboard sessions. This split prevents two common design
+problems: using human dashboard login for machine integration, and using
+merchant integration credentials for interactive dashboard access.
 
 \section{Asynchronous API And Event Design}
 

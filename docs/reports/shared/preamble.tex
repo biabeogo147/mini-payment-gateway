@@ -9,8 +9,10 @@
 \usepackage{tabularx}
 \usepackage{longtable}
 \usepackage{array}
+\usepackage{etoolbox}
 \usepackage{enumitem}
 \usepackage{float}
+\usepackage[section]{placeins}
 \usepackage{caption}
 \usepackage{subcaption}
 \usepackage{listings}
@@ -42,12 +44,38 @@
 \setlist[itemize]{leftmargin=1.5em,itemsep=0.2em,topsep=0.2em}
 \setlist[enumerate]{leftmargin=1.7em,itemsep=0.2em,topsep=0.2em}
 \renewcommand{\arraystretch}{1.18}
-\setlength{\parskip}{0.45em}
+\setlength{\parskip}{0.38em}
 \setlength{\parindent}{0pt}
+\setlength{\LTpre}{0.35em}
+\setlength{\LTpost}{0.35em}
 \setcounter{tocdepth}{2}
 \setcounter{secnumdepth}{2}
+\setcounter{topnumber}{3}
+\setcounter{totalnumber}{4}
+\renewcommand{\topfraction}{0.9}
+\renewcommand{\textfraction}{0.08}
+\renewcommand{\floatpagefraction}{0.8}
+\setlength{\textfloatsep}{12pt plus 2pt minus 4pt}
+\setlength{\floatsep}{10pt plus 2pt minus 2pt}
+\setlength{\intextsep}{10pt plus 2pt minus 2pt}
+\emergencystretch=1.5em
+\Urlmuskip=0mu plus 1mu
+
+% Keep chapter openings compact so early section content is not stranded on the
+% following page.
+\makeatletter
+\@ifundefined{@makechapterhead}{}{%
+  \patchcmd{\@makechapterhead}{\vspace*{50\p@}}{\vspace*{22\p@}}{}{}
+  \patchcmd{\@makechapterhead}{\vskip 40\p@}{\vskip 22\p@}{}{}
+}
+\@ifundefined{@makeschapterhead}{}{%
+  \patchcmd{\@makeschapterhead}{\vspace*{50\p@}}{\vspace*{22\p@}}{}{}
+  \patchcmd{\@makeschapterhead}{\vskip 40\p@}{\vskip 22\p@}{}{}
+}
+\makeatother
 
 \captionsetup{
   font=small,
-  labelfont=bf
+  labelfont=bf,
+  skip=4pt
 }

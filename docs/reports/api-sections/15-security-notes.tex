@@ -1,25 +1,55 @@
-\chapter{Security Notes}
+\section{Security And Go-Live Notes}
 
-The implemented API surface applies several important security controls even in
-its MVP form:
-
-\begin{itemize}
-  \item merchant payment and refund APIs require HMAC authentication;
-  \item internal Ops APIs and Merchant Portal APIs use separate session systems;
-  \item merchant-scoped portal routes derive tenant scope from session context
-  rather than trusting client-supplied merchant ids;
-  \item raw merchant credential secrets are not returned by metadata APIs;
-  \item generated merchant portal and internal user passwords are returned only
-  on create or reset;
-  \item audit snapshots mask secret-like fields recursively;
-  \item manual operational actions capture an audit reason.
-\end{itemize}
-
-Security limitations that remain outside the MVP:
+\subsection{Security Controls Already Enforced}
 
 \begin{itemize}
-  \item provider-grade signing for callback routes;
-  \item stronger secret management beyond environment-local storage;
-  \item broader production hardening for externally reachable dashboards or
-  APIs.
+  \item Merchant backend payment and refund APIs require HMAC authentication.
+  \item Merchant Dashboard sessions and restricted internal sessions are
+  separated from each other and from HMAC credentials.
+  \item Merchant Dashboard data scope is derived from the signed-in dashboard
+  account instead of trusting a client-supplied merchant selector.
+  \item Raw merchant credential secrets are not returned by read APIs after
+  issuance.
+  \item Generated passwords for dashboard users and internal users are returned
+  only during create or reset actions.
+  \item Operational write actions preserve a human reason for later audit.
+  \item Callback evidence is preserved even when the gateway cannot safely apply
+  the requested update automatically.
 \end{itemize}
+
+\subsection{Go-Live Expectations}
+
+\begin{itemize}
+  \item Protect the merchant shared secret and access key as production-grade
+  credentials.
+  \item Verify outbound webhook signatures and timestamps before accepting
+  events.
+  \item Make webhook receivers idempotent because delivery is at-least-once.
+  \item Keep the provider callback source in a controlled private environment
+  unless additional internet-facing hardening is added later.
+  \item Establish an operational process for webhook recovery and reconciliation
+  review so ambiguous cases are handled consistently.
+  \item Treat the Merchant Dashboard as a human review surface rather than as a
+  substitute for server-to-server payment integration.
+\end{itemize}
+
+\docbox{Merchant go-live checklist}{%
+\begin{enumerate}[leftmargin=1.7em]
+  \item Confirm the merchant identifier, access key, and shared secret were
+  received securely.
+  \item Verify the merchant backend can generate valid HMAC signatures for
+  payment and refund requests.
+  \item Confirm the merchant webhook endpoint returns HTTP 2xx only after the
+  event is durably accepted.
+  \item Test duplicate webhook handling and payment-query fallback logic.
+  \item Confirm the Merchant Dashboard account can sign in and that the portal
+  password has been rotated away from any temporary onboarding value.
+  \item Align with internal support on who handles failed webhook recovery and
+  reconciliation review.
+\end{enumerate}
+}
+
+The current MVP deliberately keeps provider callback trust inside controlled
+environments and keeps several advanced operational hardening steps outside the
+documented scope. Teams preparing for a broader production launch should plan a
+separate hardening review before exposing these flows to open internet traffic.

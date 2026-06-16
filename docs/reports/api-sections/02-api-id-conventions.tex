@@ -1,38 +1,50 @@
-\chapter{API ID Conventions}
+\section{Reference IDs}
 
-\begin{longtable}{@{}L{0.16\textwidth}L{0.28\textwidth}L{0.46\textwidth}@{}}
-\caption{API ID prefix convention}\\
+Reference IDs such as \apiid{PAY-01} or \apiid{WH-10} are stable support labels.
+They help merchants, implementation teams, and operators talk about the same
+API family without repeating long endpoint lists in every discussion.
+
+\begin{longtable}{@{}L{0.14\textwidth}L{0.26\textwidth}L{0.52\textwidth}@{}}
+\caption{Reference ID prefixes}\\
 \toprule
-\textbf{Prefix} & \textbf{Surface} & \textbf{Meaning} \\
+\textbf{Prefix} & \textbf{API family} & \textbf{Typical use} \\
 \midrule
 \endfirsthead
 \toprule
-\textbf{Prefix} & \textbf{Surface} & \textbf{Meaning} \\
+\textbf{Prefix} & \textbf{API family} & \textbf{Typical use} \\
 \midrule
 \endhead
-\apiid{AUTH} & Session authentication & Internal Ops auth and Merchant Portal auth families. \\
-\apiid{PAY} & Merchant API & Merchant backend payment creation and payment lookup. \\
-\apiid{REF} & Merchant API and refund callback flow & Merchant refund creation, refund lookup, and refund callback scenarios. \\
-\apiid{CB} & Provider callback API & Provider or simulator payment callback scenarios. \\
-\apiid{WH} & Webhook delivery & Outbound merchant webhook events, delivery attempts, retry policy, and manual retry. \\
-\apiid{OPS} & Internal Ops API & Internal dashboard reads, merchant management, credentials, lifecycle actions, and internal user administration. \\
-\apiid{ONB} & Internal onboarding API & Onboarding case submission and review decisions. \\
-\apiid{MPU} & Ops portal-user API & Admin-only provisioning of Merchant Dashboard users. \\
-\apiid{MP} & Merchant Portal API & Merchant Dashboard read APIs after merchant portal login. \\
-\apiid{REC} & Internal reconciliation API & Reconciliation record listing, detail, and resolution. \\
+\apiid{AUTH} & Session authentication & Sign-in, sign-out, current-session,
+and password-change flows for interactive users. \\
+\bodyrowrule
+\apiid{PAY} & Merchant payment APIs & Payment creation and payment status
+lookup from the merchant backend. \\
+\bodyrowrule
+\apiid{REF} & Refund APIs & Refund creation, refund status lookup, and refund
+result callback flows. \\
+\bodyrowrule
+\apiid{CB} & Provider callback APIs & Payment result callbacks from a bank,
+provider, or simulator. \\
+\bodyrowrule
+\apiid{WH} & Webhook delivery & Outbound event delivery to the merchant's
+webhook endpoint and operational retry actions. \\
+\bodyrowrule
+\apiid{OPS} & Restricted operations APIs & Internal dashboard reads, merchant
+lifecycle actions, credential management, and support operations. \\
+\bodyrowrule
+\apiid{ONB} & Onboarding APIs & Submission and review of merchant onboarding
+cases. \\
+\bodyrowrule
+\apiid{MPU} & Merchant dashboard user provisioning & Creation and maintenance
+of Merchant Dashboard user accounts by internal operators. \\
+\bodyrowrule
+\apiid{MP} & Merchant dashboard APIs & Dashboard summary, analytics,
+explorers, profile, and credential metadata. \\
+\bodyrowrule
+\apiid{REC} & Reconciliation APIs & Review and resolution of mismatches
+between internal records and external evidence. \\
 \bottomrule
 \end{longtable}
 
-The IDs are designed to be stable across:
-
-\begin{itemize}
-  \item the academic report;
-  \item this companion API document;
-  \item \code{docs/api/*.md};
-  \item \code{docs/testing/scenarios/*.md};
-  \item Postman scenario collections.
-\end{itemize}
-
-New IDs should only be introduced when the implemented API surface grows. They
-should not be renumbered casually because the same IDs are reused in testing and
-presentation material.
+These IDs are intended as reader-friendly labels. They do not change request
+paths, response payloads, or authentication rules.
