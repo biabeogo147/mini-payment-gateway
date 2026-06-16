@@ -2,30 +2,60 @@
 
 \section{System Context}
 
+The Mini Payment Gateway is built around one central gateway core service. That
+service coordinates merchant transaction requests, provider outcome evidence,
+merchant notifications, and internal operational review. Two separate
+dashboards sit around the core: one for internal operations and one for
+merchant-facing visibility.
+
 \begin{figure}[H]
 \centering
-\includegraphics[width=\linewidth]{figures/system-context-diagram.png}
-\caption{System context diagram for the implemented Mini Payment Gateway.}
+\resizebox{\textwidth}{!}{%
+\begin{tikzpicture}[node distance=12mm and 18mm]
+  \node[actor] (merchantBackend) {Merchant backend};
+  \node[actor, below=of merchantBackend] (provider) {Provider callback\\source};
+  \node[actor, below=6mm of provider] (trigger) {Scheduled\\trigger};
+
+  \node[box, right=34mm of provider, text width=38mm] (gateway) {Gateway core service};
+  \node[box, left=of gateway, text width=32mm, yshift=-26mm] (opsDashboard) {Internal operations dashboard};
+  \node[box, below=of opsDashboard, text width=32mm] (merchantDashboard) {Merchant dashboard};
+  \node[actor, left=of opsDashboard, yshift=-8mm] (opsUser) {Admin / Ops user};
+  \node[actor, left=of merchantDashboard] (merchantUser) {Merchant dashboard\\user};
+  \node[db, right=of gateway] (store) {Persistent\\data store};
+  \node[box, below=of store, text width=34mm] (webhookTarget) {Merchant callback\\endpoint};
+
+  \draw[arrow] (merchantBackend.east) -- (gateway.west);
+  \draw[arrow] (provider.east) -- (gateway.west);
+  \draw[arrow] (trigger.east) -- (gateway.west);
+  \draw[arrow] (opsUser.east) -- (opsDashboard.west);
+  \draw[arrow] (merchantUser.east) -- (merchantDashboard.west);
+  \draw[arrow] (opsDashboard.east) -- (gateway.west);
+  \draw[arrow] (merchantDashboard.east) -- (gateway.west);
+  \draw[arrow] (gateway.east) -- (store.west);
+  \draw[arrow] (gateway.east) to[out=10,in=180] (webhookTarget.west);
+\end{tikzpicture}
+}
+\caption{Logical system context. The gateway core service sits between merchant
+requests, provider evidence, scheduled processing, dashboard access, and
+merchant notification delivery.}
 \end{figure}
 
-The implemented system consists of four main runtime components: a FastAPI
-backend, PostgreSQL, the internal Ops Dashboard, and the Merchant Dashboard.
-The dashboards are not presentation-only shells. Each depends on dedicated API
-surfaces, access boundaries, and data representations that match its actor.
-
-\section{Runtime Topology}
+\section{Logical Components}
 
 \begin{table}[H]
 \centering
-\caption{Runtime components and responsibilities}
-\begin{tabularx}{\textwidth}{L{0.22\textwidth}L{0.24\textwidth}Y}
+\caption{Logical components and responsibilities}
+\begin{tabularx}{\textwidth}{L{0.24\textwidth}L{0.22\textwidth}Y}
 \toprule
-\textbf{Component} & \textbf{Runtime shape} & \textbf{Responsibility} \\
+\textbf{Component} & \textbf{Role} & \textbf{Primary responsibility} \\
 \midrule
-FastAPI backend & Application service & Exposes merchant APIs, provider callbacks, internal Ops APIs, internal auth, merchant portal auth, analytics, and recovery endpoints. \\
-PostgreSQL & Persistent database & Stores merchant, transaction, refund, webhook, callback, reconciliation, audit, internal user, and merchant user data. \\
-Ops Dashboard & Separate frontend application & Supports internal monitoring, merchant operations, user administration, and evidence review. \\
-Merchant Dashboard & Separate frontend application & Supports merchant-scoped overview, analytics, explorers, profile, credentials, and password change. \\
+Gateway core service & Central application service & Handles payment and refund requests, processes external outcome evidence, creates merchant notifications, and exposes internal and merchant-facing data views. \\
+Persistent data store & Durable data layer & Stores merchant profiles, transaction state, callback evidence, notification history, reconciliation items, audit history, and user-account information. \\
+Internal operations dashboard & Internal user interface & Supports merchant review, credential management, transaction investigation, reconciliation handling, and operational recovery workflows. \\
+Merchant dashboard & Merchant user interface & Supports merchant-scoped visibility into payments, refunds, notifications, profile information, credentials, and analytics. \\
+Merchant backend & External integration client & Sends payment and refund requests on behalf of merchant business workflows. \\
+Provider callback source & External evidence source & Confirms payment and refund outcomes after external processing. \\
+Scheduled trigger & Time-based orchestrator & Activates expiration handling and due notification retry processing. \\
 \bottomrule
 \end{tabularx}
 \end{table}
@@ -34,75 +64,64 @@ Merchant Dashboard & Separate frontend application & Supports merchant-scoped ov
 
 \begin{table}[H]
 \centering
-\caption{Actor and authentication matrix}
+\caption{Trust boundaries and access models}
 \begin{tabularx}{\textwidth}{L{0.20\textwidth}L{0.21\textwidth}L{0.24\textwidth}Y}
 \toprule
-\textbf{Actor} & \textbf{API surface} & \textbf{Authentication} & \textbf{Scope source} \\
+\textbf{Actor} & \textbf{Access surface} & \textbf{Authentication model} & \textbf{Scope source} \\
 \midrule
-Merchant backend & Merchant API & HMAC headers & Authenticated merchant credential. \\
-Admin/Ops user & Ops API & Internal HttpOnly session cookie & Internal user role \texttt{ADMIN} or \texttt{OPS}. \\
-Admin user & Ops portal-user API & Internal HttpOnly session cookie & Internal \texttt{ADMIN} role. \\
-Merchant portal user & Merchant Portal API & Merchant HttpOnly session cookie & \texttt{merchant\_users.merchant\_db\_id}. \\
-Provider simulator & Provider callback API & Environment-local simulator trust in MVP & Callback payload references existing payment or refund rows. \\
+Merchant backend & Merchant transaction API & Signed merchant integration credentials & The authenticated merchant integration identity. \\
+Admin or Ops user & Internal operations API & Internal session authentication & The authenticated internal role and permissions. \\
+Admin user & Account-administration functions & Internal session authentication & The authenticated internal role with elevated administrative permissions. \\
+Merchant dashboard user & Merchant dashboard API & Merchant session authentication & The merchant account associated with the signed-in dashboard user. \\
+Provider callback source & Outcome callback surface & Controlled external callback trust model & The referenced payment or refund evidence carried in the callback payload. \\
 \bottomrule
 \end{tabularx}
 \end{table}
 
 \begin{figure}[H]
 \centering
+\resizebox{0.92\textwidth}{!}{%
 \begin{tikzpicture}[node distance=14mm and 18mm]
   \node[actor] (merchantBackend) {Merchant backend};
-  \node[actor, below=of merchantBackend] (opsUser) {Admin / Ops};
-  \node[actor, below=of opsUser] (portalUser) {Merchant portal user};
-  \node[box, right=34mm of opsUser, text width=33mm] (api) {FastAPI backend};
-  \node[db, right=of api] (db) {PostgreSQL};
+  \node[actor, below=of merchantBackend] (opsUser) {Admin / Ops user};
+  \node[actor, below=of opsUser] (merchantUser) {Merchant dashboard\\user};
+  \node[box, right=34mm of opsUser, text width=36mm] (gateway) {Gateway core service};
+  \node[db, right=of gateway] (store) {Persistent\\data store};
 
   \node[boundary, fit=(merchantBackend), label=above:{Merchant integration boundary}] {};
   \node[boundary, fit=(opsUser), label=above:{Internal operations boundary}] {};
-  \node[boundary, fit=(portalUser), label=below:{Merchant portal boundary}] {};
+  \node[boundary, fit=(merchantUser), label=below:{Merchant dashboard boundary}] {};
 
-  \draw[autharrow] (merchantBackend) -- node[above,sloped,font=\scriptsize,fill=white,inner sep=1pt]{HMAC headers} (api);
-  \draw[autharrow] (opsUser) -- node[above,sloped,font=\scriptsize,fill=white,inner sep=1pt]{internal session cookie} (api);
-  \draw[autharrow] (portalUser) -- node[below,sloped,font=\scriptsize,fill=white,inner sep=1pt]{merchant session cookie} (api);
-  \draw[arrow] (api) -- (db);
+  \draw[autharrow] (merchantBackend) -- node[above,sloped,font=\scriptsize,fill=white,inner sep=1pt]{signed integration request} (gateway);
+  \draw[autharrow] (opsUser) -- node[above,sloped,font=\scriptsize,fill=white,inner sep=1pt]{internal session} (gateway);
+  \draw[autharrow] (merchantUser) -- node[below,sloped,font=\scriptsize,fill=white,inner sep=1pt]{merchant session} (gateway);
+  \draw[arrow] (gateway) -- (store);
 \end{tikzpicture}
-\caption{Trust boundaries and authentication mechanisms. Merchant API
-credentials are not reused for dashboard login.}
+}
+\caption{Trust boundaries. Merchant integration credentials are intentionally
+separate from internal access and merchant dashboard login.}
 \end{figure}
 
-This separation is one of the project's core architectural decisions. Merchant
-Portal APIs never accept a client-supplied \texttt{merchant\_id} after login.
-The backend derives scope from the authenticated merchant portal user to prevent
-cross-merchant reads.
+This separation is one of the system's key architectural choices. After a
+merchant dashboard user signs in, the system derives merchant scope from the
+authenticated session rather than from user-supplied identifiers. This prevents
+cross-merchant access through manipulated requests.
 
 \section{Key Request Flows}
 
-The report focuses on three flows that illustrate the main design decisions:
+Three request flows illustrate the main design decisions in the system:
 
 \begin{enumerate}
-  \item \textbf{Merchant creates a payment}: merchant backend sends
-  \apiendpoint{POST}{/v1/payments}; backend verifies merchant readiness, creates
-  or reuses a payment row, generates QR content, and returns the transaction.
-  \item \textbf{Admin provisions merchant portal user}: Admin uses Ops Dashboard
-  to call \apiendpoint{POST}{/v1/ops/merchants/\{merchant\_id\}/portal-users};
-  backend requires an internal \texttt{ADMIN} session, stores a password hash,
-  writes audit evidence, and returns a generated password once.
-  \item \textbf{Merchant reads analytics}: Merchant Dashboard calls
-  \apiendpoint{GET}{/v1/merchant-portal/analytics?days=30}; backend
-  authenticates the merchant session, aggregates payment, refund, and webhook
-  rows by day, returns zero-filled buckets, and never accepts a client-supplied
-  merchant scope.
+  \item \textbf{Merchant creates a payment}: the merchant backend submits a
+  signed payment request. The gateway checks merchant readiness, creates a new
+  pending payment or reuses an equivalent pending request, and returns payment
+  data for checkout.
+  \item \textbf{Internal operator prepares merchant access}: an internal user
+  registers the merchant, reviews readiness information, issues credentials,
+  and, when needed, provisions merchant dashboard access for human merchant
+  representatives.
+  \item \textbf{Merchant reads analytics}: a signed-in merchant dashboard user
+  requests analytics for a selected reporting window. The gateway aggregates
+  merchant-owned payment, refund, and notification data and returns a scoped
+  analytical view.
 \end{enumerate}
-
-\section{Operational And Deployment Overview}
-
-The deployed sandbox uses a high-level split between verification and runtime
-execution. GitHub-hosted checks validate backend and frontend changes, while a
-self-hosted runner on the sandbox host executes the deploy job locally against a
-persistent checkout and Docker Compose runtime.
-
-This report intentionally keeps deployment discussion at architecture level
-only. The operational runbooks, host facts, and recovery commands are maintained
-in \code{docs/infrastructure/}, while the report captures only the reason the
-topology exists: small-scope CI/CD, host-local runtime secrets, and a direct
-mapping between the implemented codebase and the running sandbox environment.

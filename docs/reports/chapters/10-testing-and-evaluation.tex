@@ -2,91 +2,80 @@
 
 \section{Testing Strategy}
 
-Testing is layered around business risk. Unit and service tests cover isolated
-rules such as HMAC verification, merchant readiness, payment idempotency,
-refund eligibility, expiration handling, webhook retry policy, and
-reconciliation. Route tests cover FastAPI contracts and status codes. End-to-
-end tests cover complete business journeys through controllers and services.
-Frontend tests cover transforms, rendering, route behavior, type safety, and
-build correctness.
+The evaluation approach is organized around business risk rather than around
+implementation layers alone. The most important questions are whether the
+gateway preserves correct transaction state, protects access boundaries, keeps
+merchant data scoped correctly, and records enough evidence for operational
+review.
 
-\begin{longtable}{L{0.22\textwidth}L{0.34\textwidth}L{0.34\textwidth}}
+\begin{longtable}{L{0.22\textwidth}L{0.36\textwidth}L{0.32\textwidth}}
 \caption{Testing and evaluation matrix}\\
 \toprule
-\textbf{Category} & \textbf{Coverage} & \textbf{Evidence} \\
+\textbf{Category} & \textbf{Coverage} & \textbf{Evidence type} \\
 \midrule
 \endfirsthead
 \toprule
-\textbf{Category} & \textbf{Coverage} & \textbf{Evidence} \\
+\textbf{Category} & \textbf{Coverage} & \textbf{Evidence type} \\
 \midrule
 \endhead
-Backend unit and service & Auth, readiness, payment, refund, expiration, callback, webhook, reconciliation, audit. & Python \texttt{unittest} suite under \code{backend/tests/}. \\
-Backend route & Merchant APIs, provider callbacks, Ops APIs, Merchant Portal APIs, internal auth, internal users. & FastAPI controller and route tests. \\
-Backend E2E & Onboarding to payment, refund, webhook, late callback reconciliation, and manual webhook retry. & \code{test_e2e_payment_refund_webhook.py}. \\
-Merchant Portal scope & Auth, inactive user rejection, profile and credential secrecy, merchant-specific explorers, analytics ranges and zero buckets. & Merchant portal route and analytics tests. \\
-Frontend Merchant Dashboard & Analytics transforms, chart render, route behavior, login accessibility, typecheck, build. & Vitest, TypeScript, and Vite build. \\
-Frontend Ops Dashboard & Typecheck and production build. & TypeScript and Vite build. \\
-Deployment configuration & Compose syntax and sandbox env requirements. & Docker Compose config validation. \\
-Browser smoke & Login, dashboards, list and detail pages, analytics, mobile layout, and overflow checks. & Manual checklist in \code{docs/testing/README.md}. \\
+Business rule validation & Merchant readiness, duplicate handling, refund eligibility, expiration, notification retry, reconciliation, and audit-aware state changes. & Automated business rule checks. \\
+End-to-end scenario validation & Merchant onboarding, payment creation, callback processing, refund finalization, notification delivery, late evidence handling, and manual recovery. & Automated end-to-end transaction scenarios. \\
+Internal operations validation & Internal sign-in, merchant lifecycle actions, review workflows, reconciliation handling, and evidence exploration. & Automated operational workflow checks and manual review walkthroughs. \\
+Merchant dashboard validation & Merchant sign-in, analytics windows, scoped list and detail views, profile visibility, credential metadata visibility, and password maintenance. & Automated dashboard interaction tests and scoped data checks. \\
+Manual usability review & Readability, layout stability, chart clarity, mobile behavior, and operator usability. & Manual browser review. \\
 \bottomrule
 \end{longtable}
 
-\section{Verification Commands}
+\section{Business Rule Evaluation}
 
-\begin{lstlisting}[language=bash,caption={Backend verification}]
-cd backend
-python -m unittest discover tests -v
-python -m unittest tests.test_e2e_payment_refund_webhook -v
-\end{lstlisting}
+The strongest part of the evaluation is the coverage of transaction rules and
+state transitions. Payment creation, refund eligibility, callback handling,
+notification retry, and reconciliation behavior are all checked through
+automated scenarios that focus on expected business outcomes rather than only on
+technical success responses.
 
-\begin{lstlisting}[language=bash,caption={Frontend and compose verification}]
-npm run merchant-dashboard:typecheck
-npm run merchant-dashboard:test
-npm run merchant-dashboard:build
-npm run ops-dashboard:typecheck
-npm run ops-dashboard:build
-docker compose -f docker-compose.yml config --quiet
-docker compose --env-file .env.sandbox.example -f docker-compose.sandbox.yml config --quiet
-\end{lstlisting}
+This is important because the system is not merely a request router. It must
+decide when a merchant is ready, when a duplicate payment may be reused, when a
+refund is allowed, when a delayed callback becomes suspicious, and when a
+failed notification is safe to retry.
 
-Historical pass counts and deploy verification snapshots are maintained in
-\code{docs/history/completions/}. The report keeps the verification commands and test
-coverage model in the foreground, while exact rollout-specific results stay in
-the completion records.
+\section{Dashboard And Access Evaluation}
 
-\section{Manual Browser Smoke}
+The report also evaluates whether the two human-facing dashboards enforce the
+correct boundaries. Internal users must be able to review and recover
+operational issues, while merchant users must only see records that belong to
+their own merchant account.
 
-Manual smoke testing validates what automated tests cannot fully express:
-layout, readable charts, responsive behavior, and practical operator workflows.
-The smoke checklist includes:
+Dashboard evaluation therefore focuses on:
 
 \begin{itemize}
-  \item Ops login, overview, merchant list and detail, lifecycle action,
-  portal-user create or reset or deactivate, payments, refunds, webhooks,
-  reconciliation, and audit;
-  \item Merchant login, overview, analytics range switching, drill-down links,
-  payments, refunds, webhooks, profile, credentials, password change, and
-  logout;
-  \item UI regressions such as horizontal overflow, clipped badges, unreadable
-  charts, unstable status panels, and unreadable data tables.
+  \item sign-in and session behavior for internal and merchant-facing users;
+  \item merchant-scoped visibility for analytics and record exploration;
+  \item visibility of useful metadata without exposure of raw secret material;
+  \item practical usability for review, investigation, and account maintenance
+  tasks.
 \end{itemize}
 
-\section{Evaluation Summary}
+\section{Manual Review And Overall Assessment}
 
-The current testing approach matches the system's main risks well:
+Manual browser review complements the automated evaluation by checking visual
+and operational qualities that are difficult to reduce to pure rule-based
+tests. These checks include page readability, table overflow, chart clarity,
+mobile behavior, and general workflow stability.
+
+Overall, the evaluation indicates that the Mini Payment Gateway covers its MVP
+goals well:
 
 \begin{itemize}
-  \item merchant-facing business rules are covered at both service and route
-  levels;
-  \item asynchronous callback and webhook behavior is validated with focused
-  service tests and end-to-end scenarios;
-  \item dashboard correctness is supported by frontend build checks, targeted
-  tests, and manual browser smoke;
-  \item deployment wiring is validated separately through compose checks and
-  sandbox deployment verification.
+  \item money-flow rules are protected by explicit validation and state control;
+  \item external evidence and merchant notification behavior are preserved as
+  durable reviewable events;
+  \item internal and merchant-facing access boundaries are treated as separate
+  security concerns;
+  \item both dashboards support the operational and merchant visibility goals of
+  the project.
 \end{itemize}
 
-The remaining evaluation gap is typical for an MVP: browser smoke and internal
-deployment verification still complement the automated suite because layout,
-operational readability, and sandbox-specific runtime integration are not fully
-captured by unit tests alone.
+The main remaining limitation is typical for an MVP system: some usability and
+layout quality still depend on manual review in addition to automated
+validation.

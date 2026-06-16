@@ -1,35 +1,34 @@
 \chapter{Component Architecture and Design}
 
-\section{Backend Layering}
+\section{Layered Design}
 
-The backend follows a compact layered architecture. It is intentionally simpler
-than full domain-driven design, but it still keeps HTTP handling, schemas,
-business rules, persistence, and database concerns separated so that each layer
-has one main responsibility.
+The gateway follows a compact layered design. Each layer has one dominant
+responsibility so that request handling, business rules, data access, and
+persistent state remain understandable as separate concerns.
 
 \begin{figure}[H]
 \centering
 \begin{tikzpicture}[node distance=8mm]
-  \node[box, text width=44mm] (controllers) {Controllers\\FastAPI routers and dependencies};
-  \node[box, below=of controllers, text width=44mm] (schemas) {Schemas\\request and response DTOs};
-  \node[box, below=of schemas, text width=44mm] (services) {Services\\business rules and workflows};
-  \node[box, below=of services, text width=44mm] (repos) {Repositories\\SQLAlchemy queries};
-  \node[box, below=of repos, text width=44mm] (models) {Models\\entities, enums, constraints};
-  \node[db, below=of models, text width=36mm] (database) {PostgreSQL\\Alembic-managed schema};
+  \node[box, text width=44mm] (interface) {Interface layer\\access control and request handling};
+  \node[box, below=of interface, text width=44mm] (contracts) {Request and response contracts\\validated input and output structures};
+  \node[box, below=of contracts, text width=44mm] (services) {Application services\\business rules and workflow control};
+  \node[box, below=of services, text width=44mm] (dataaccess) {Data access layer\\lookup, list, and aggregation operations};
+  \node[box, below=of dataaccess, text width=44mm] (domain) {Domain entities and rules\\states, relationships, and invariants};
+  \node[db, below=of domain, text width=36mm] (storage) {Persistent\\storage};
 
-  \draw[arrow] (controllers) -- (schemas);
-  \draw[arrow] (schemas) -- (services);
-  \draw[arrow] (services) -- (repos);
-  \draw[arrow] (repos) -- (models);
-  \draw[arrow] (models) -- (database);
+  \draw[arrow] (interface) -- (contracts);
+  \draw[arrow] (contracts) -- (services);
+  \draw[arrow] (services) -- (dataaccess);
+  \draw[arrow] (dataaccess) -- (domain);
+  \draw[arrow] (domain) -- (storage);
 \end{tikzpicture}
-\caption{Backend component layer stack. Lower layers do not depend on FastAPI
-route objects.}
+\caption{Component layer stack. Higher layers coordinate interaction, while
+lower layers preserve business state and data consistency.}
 \end{figure}
 
 \section{Component Responsibilities}
 
-\begin{longtable}{L{0.25\textwidth}L{0.65\textwidth}}
+\begin{longtable}{L{0.26\textwidth}L{0.64\textwidth}}
 \caption{Component responsibilities}\\
 \toprule
 \textbf{Component} & \textbf{Responsibility} \\
@@ -39,21 +38,21 @@ route objects.}
 \textbf{Component} & \textbf{Responsibility} \\
 \midrule
 \endhead
-Ops Dashboard & Internal workflow UI for merchant lifecycle, credentials, portal-user provisioning, payments, refunds, webhooks, reconciliation, audit, and internal users. \\
-Merchant Dashboard & Merchant-scoped portal for overview, analytics, explorers, profile, credentials, and password change. \\
-Controllers & Define routes, dependencies, access boundaries, HTTP errors, and response models. \\
-Schemas & Define request and response contracts plus typed auth and session context objects. \\
-Services & Enforce state transitions, merchant readiness, refund rules, RBAC, audit, portal scoping, webhook retry, and analytics aggregation. \\
-Repositories & Encapsulate focused SQLAlchemy lookup and aggregate queries. \\
-Models & Define tables, relationships, enum values, indexes, and constraints. \\
-Alembic migrations & Apply database schema changes in a controlled sequence before runtime restart. \\
+Internal operations dashboard & Supports merchant review, credential management, account administration, transaction investigation, reconciliation, audit inspection, and recovery actions. \\
+Merchant dashboard & Supports merchant-scoped overview, analytics, transaction exploration, credential visibility, and account self-service. \\
+Interface layer & Accepts incoming requests, applies access boundaries, validates high-level request intent, and shapes outward responses. \\
+Request and response contracts & Define the information each interaction accepts or returns so that system behavior remains predictable. \\
+Application services & Enforce merchant readiness, payment and refund rules, notification behavior, analytics preparation, reconciliation, and audit-aware state changes. \\
+Data access layer & Retrieves domain data, writes business state changes, and prepares filtered or aggregated views for dashboards and review workflows. \\
+Domain entities and rules & Define states, relationships, constraints, and invariants for merchants, transactions, notifications, accounts, and review records. \\
+Persistent storage & Holds durable operational and business evidence across all major workflows. \\
 \bottomrule
 \end{longtable}
 
-\section{Business Rules And State Machines}
+\section{Business Rules And State Models}
 
-The domain behavior is centered on explicit state transitions rather than
-implicit status changes inside controllers.
+The domain behavior is organized around explicit state models instead of
+implicit status changes hidden inside request handlers.
 
 \begin{table}[H]
 \centering
@@ -62,10 +61,10 @@ implicit status changes inside controllers.
 \toprule
 \textbf{Domain object} & \textbf{Persisted states} & \textbf{Design note} \\
 \midrule
-Merchant operational status & \texttt{PENDING\_REVIEW}, \texttt{ACTIVE}, \texttt{REJECTED}, \texttt{SUSPENDED}, \texttt{DISABLED} & Operational status remains on \texttt{merchants}, while onboarding approval state is tracked separately on \texttt{merchant\_onboarding\_cases}. \\
-Payment transaction & \texttt{PENDING}, \texttt{SUCCESS}, \texttt{FAILED}, \texttt{EXPIRED} & Provider callbacks finalize pending payments, but late or conflicting outcomes create reconciliation evidence instead of reviving invalid state. \\
-Refund transaction & \texttt{REFUND\_PENDING}, \texttt{REFUNDED}, \texttt{REFUND\_FAILED} & Only full refunds are implemented; state changes depend on refund rules and provider callback outcomes. \\
-Webhook event & \texttt{PENDING}, \texttt{DELIVERED}, \texttt{FAILED} & Delivery success is independent from payment or refund final state. Retry metadata is stored on the event and attempt history is stored separately. \\
+Merchant operational status & Pending review, active, rejected, suspended, disabled & Merchant readiness and merchant operating status are related but not identical, so review outcomes and live operating state are tracked separately. \\
+Payment transaction & Pending, successful, failed, expired & Payment requests remain pending until confirmed by external evidence or time-based expiration handling. \\
+Refund transaction & Refund pending, refunded, refund failed & The system implements full refunds only, and final outcomes depend on external refund evidence. \\
+Webhook event & Pending, delivered, failed & Merchant notification delivery is tracked independently from payment and refund finality. \\
 \bottomrule
 \end{tabularx}
 \end{table}
@@ -73,34 +72,32 @@ Webhook event & \texttt{PENDING}, \texttt{DELIVERED}, \texttt{FAILED} & Delivery
 Two design choices are especially important:
 
 \begin{itemize}
-  \item payment expiration does not silently disappear; it creates a durable
-  state transition and can emit a webhook event;
-  \item ambiguous provider evidence creates a reconciliation record rather than
+  \item payment expiration creates a durable business outcome instead of simply
+  removing an old pending request;
+  \item ambiguous external evidence produces a reconciliation record instead of
   forcing a risky automatic correction.
 \end{itemize}
 
 \section{Asynchronous Event Lifecycle And Recovery}
 
-The project contains implemented asynchronous service operations even though it
-does not yet run a standalone long-running worker process. Expiration and
-due-webhook delivery are represented as explicit service operations that can be
-invoked by a scheduler or worker trigger.
+Although the project does not yet rely on a permanently running background
+worker, it already contains the core asynchronous control functions needed for
+time-based and retry-based behavior.
 
 \begin{enumerate}
-  \item Merchant payment creation stores a pending payment with expiration
+  \item A merchant payment request creates a pending payment with expiration
   metadata.
-  \item Provider callbacks update payments or refunds, store callback evidence,
-  and create durable webhook events when final states are reached.
-  \item Expiration service marks overdue pending payments as expired and can
-  create \texttt{payment.expired} webhook events.
-  \item Webhook delivery service sends signed payloads, stores each HTTP attempt,
-  and applies the retry schedule of 1, 5, and 15 minutes before final failure.
-  \item Failed or mismatched external evidence produces reconciliation records
-  for manual internal review.
-  \item Internal users can manually retry eligible failed webhook events without
-  mutating the already-final payment or refund state.
+  \item External payment or refund evidence is stored before the system applies
+  state transitions.
+  \item Final money-flow outcomes create merchant notification events.
+  \item Scheduled processing expires overdue pending payments and continues
+  delivery attempts for due notifications.
+  \item Delivery failures and ambiguous outcomes are preserved as operational
+  evidence rather than being hidden.
+  \item Internal users can retry eligible failed notifications without
+  changing already-final payment or refund outcomes.
 \end{enumerate}
 
-This separation makes the design easier to test. Business rules live in service
-functions and repositories, while the future scheduler or worker integration can
-remain thin and orchestration-focused.
+This separation keeps the architecture testable. Core business decisions remain
+inside focused application services, while any future scheduling layer can stay
+thin and orchestration-oriented.

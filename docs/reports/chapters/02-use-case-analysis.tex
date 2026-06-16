@@ -1,72 +1,113 @@
 \chapter{Use-Case Analysis}
 
+This chapter describes the actors that interact with the Mini Payment Gateway
+and the main use cases the system supports. The focus is the business role of
+each actor and the expected system outcome.
+
 \section{Actor Overview}
 
 \begin{table}[H]
 \centering
 \caption{Implemented actors}
-\begin{tabularx}{\textwidth}{L{0.23\textwidth}Y}
+\begin{tabularx}{\textwidth}{L{0.25\textwidth}Y}
 \toprule
 \textbf{Actor} & \textbf{Role in the system} \\
 \midrule
-Admin & Privileged internal user who can manage merchants, internal users, credentials, and merchant portal users. \\
-Ops & Day-to-day internal operations user who can inspect operational evidence and execute allowed lifecycle and recovery workflows. \\
-Merchant backend & Merchant-owned server application that calls payment and refund APIs using HMAC credentials. \\
-Merchant portal user & Human merchant user who logs into Merchant Dashboard using merchant id, email, and password. \\
-Provider simulator & Simulated external provider that sends payment and refund result callbacks. \\
-Scheduler/worker trigger & External trigger that invokes implemented expiration and due-webhook delivery services. \\
+Admin & Privileged internal user who manages internal accounts, merchant
+readiness, merchant credentials, and merchant dashboard accounts. \\
+Ops & Internal operations user who monitors transactions, investigates delivery
+issues, reviews evidence, and performs allowed recovery actions. \\
+Merchant backend & Merchant-owned application that creates payments and refunds
+through the gateway on behalf of the merchant business. \\
+Merchant dashboard user & Human merchant representative who signs in to inspect
+transactions, analytics, profile information, and credential metadata. \\
+Provider callback source & External payment-result source that confirms payment
+and refund outcomes. \\
+Scheduled trigger & Time-based trigger that activates expiration handling and
+webhook retry processing. \\
 \bottomrule
 \end{tabularx}
 \end{table}
 
 \section{Core Gateway Use Cases}
 
-\begin{longtable}{L{0.11\textwidth}L{0.24\textwidth}L{0.19\textwidth}L{0.36\textwidth}}
-\caption{Core implemented use cases}\\
+\begin{longtable}{L{0.11\textwidth}L{0.25\textwidth}L{0.18\textwidth}L{0.34\textwidth}}
+\caption{Core gateway use cases}\\
 \toprule
-\textbf{ID} & \textbf{Use case} & \textbf{Primary actor} & \textbf{Result} \\
+\textbf{ID} & \textbf{Use case} & \textbf{Primary actor} & \textbf{System outcome} \\
 \midrule
 \endfirsthead
 \toprule
-\textbf{ID} & \textbf{Use case} & \textbf{Primary actor} & \textbf{Result} \\
+\textbf{ID} & \textbf{Use case} & \textbf{Primary actor} & \textbf{System outcome} \\
 \midrule
 \endhead
-UC001 & Onboard and activate merchant & Admin/Ops & Merchant profile, onboarding case, credential, activation status, and audit trail are created. \\
-UC002 & Create dynamic QR payment & Merchant backend & A pending payment and QR payload are created or an identical pending payment is reused. \\
-UC003 & Process payment result callback & Provider simulator & Callback evidence is stored; the pending payment becomes success or failed, or reconciliation evidence is created. \\
-UC004 & Create full refund and process result & Merchant backend and provider simulator & A full refund is created and later finalized from provider evidence. \\
-UC005 & Deliver webhook with retry and manual recovery & Scheduler/worker trigger, Admin/Ops & Webhook attempts are persisted, retries are scheduled, and failed events can be recovered manually. \\
+UC001 & Onboard and activate merchant & Admin or Ops & Merchant profile, review evidence, access credentials, and operational status are established before live transaction activity. \\
+UC002 & Create dynamic QR payment & Merchant backend & A pending payment request is created and a payment payload is returned for customer-facing checkout. \\
+UC003 & Process payment result callback & Provider callback source & Callback evidence is stored and the payment moves to a final state or to manual review when evidence is ambiguous. \\
+UC004 & Create full refund and process result & Merchant backend and provider callback source & A full refund request is created and later finalized from external confirmation. \\
+UC005 & Deliver webhook with retry and manual recovery & Scheduled trigger and internal operator & Merchant notification attempts are recorded, retries are controlled, and failed deliveries can be retried safely. \\
 \bottomrule
 \end{longtable}
 
-\section{Dashboard Use Cases}
-
-\begin{longtable}{L{0.12\textwidth}L{0.28\textwidth}L{0.20\textwidth}L{0.30\textwidth}}
-\caption{Implemented dashboard use cases}\\
-\toprule
-\textbf{ID} & \textbf{Use case} & \textbf{Actor} & \textbf{Implemented behavior} \\
-\midrule
-\endfirsthead
-\toprule
-\textbf{ID} & \textbf{Use case} & \textbf{Actor} & \textbf{Implemented behavior} \\
-\midrule
-\endhead
-DUC001 & Login and view operations overview & Admin/Ops & Internal users authenticate and inspect operational metrics. \\
-DUC002 & Manage merchant lifecycle & Admin/Ops & Users create merchants, inspect onboarding and credentials, and apply allowed lifecycle actions. \\
-DUC003 & Provision merchant portal users & Admin & Admin creates, updates, deactivates or reactivates, and resets merchant portal users. \\
-DUC004 & Inspect operational evidence & Admin/Ops & Users inspect payments, refunds, webhooks, reconciliation, and audit logs. \\
-DUC005 & Login and change password & Merchant portal user & Merchant users authenticate with a portal session and can change their own password. \\
-DUC006 & View overview and analytics & Merchant portal user & Users view scoped summary metrics and 7, 30, or 90 day analytics. \\
-DUC007 & Explore payments, refunds, and webhooks & Merchant portal user & Users browse and inspect records owned by their merchant only. \\
-DUC008 & View profile and credentials & Merchant portal user & Users read merchant profile and credential metadata without raw secrets. \\
-\bottomrule
-\end{longtable}
-
-\section{Use-Case Diagram}
+The following diagram summarizes the core gateway use cases only. Dashboard
+screens are intentionally excluded so the diagram stays focused on the main
+money-flow and notification responsibilities of the gateway itself.
 
 \begin{figure}[H]
 \centering
-\includegraphics[width=\linewidth]{figures/general-usecase.png}
-\caption{Implemented use-case overview. Operational dashboard use cases are
-separated from merchant money-flow use cases.}
+\resizebox{\textwidth}{!}{%
+\begin{tikzpicture}[node distance=11mm and 12mm]
+  \node[actor] (admin) {Admin / Ops};
+  \node[actor, below=of admin] (merchant) {Merchant backend};
+  \node[actor, below=of merchant] (provider) {Provider callback\\source};
+  \node[actor, below=of provider] (trigger) {Scheduled\\trigger};
+
+  \node[boundary, right=28mm of merchant, minimum width=45mm, minimum height=31mm, label=above:{Merchant readiness}] (readinessBox) {};
+  \node[boundary, right=of readinessBox, minimum width=55mm, minimum height=68mm, label=above:{Money movement lifecycle}] (moneyBox) {};
+  \node[boundary, below right=4mm and 6mm of moneyBox, minimum width=58mm, minimum height=39mm, label=above:{Notification and evidence}] (notifyBox) {};
+
+  \node[box] at ([yshift=2mm]readinessBox.center) (onboard) {Onboard and activate merchant};
+  \node[box] at ([yshift=16mm]moneyBox.center) (pay) {Create dynamic QR payment};
+  \node[box] at ([yshift=-1mm]moneyBox.center) (callback) {Process payment result callback};
+  \node[box] at ([yshift=-18mm]moneyBox.center) (refund) {Create full refund and\\process refund result};
+  \node[box] at ([yshift=8mm]notifyBox.center) (webhook) {Deliver webhook with retry\\and manual recovery};
+  \node[box] at ([yshift=-13mm]notifyBox.center) (review) {Review audit and\\reconciliation evidence};
+
+  \draw[arrow] (admin.east) -- (onboard.west);
+  \draw[arrow] (admin.east) to[out=8,in=170] (review.west);
+  \draw[arrow] (merchant.east) -- (pay.west);
+  \draw[arrow] (merchant.east) to[out=6,in=182] (refund.west);
+  \draw[arrow] (provider.east) -- (callback.west);
+  \draw[arrow] (provider.east) to[out=3,in=192] (refund.west);
+  \draw[arrow] (trigger.east) to[out=5,in=205] (webhook.west);
+  \draw[arrow] (callback.east) -- ++(11mm,0) |- (webhook.west);
+  \draw[arrow] (refund.east) -- ++(11mm,0) |- (webhook.west);
+\end{tikzpicture}
+}
+\caption{Core gateway use-case diagram. The diagram focuses on merchant
+readiness, payment or refund state changes, and notification or evidence
+handling inside the gateway.}
 \end{figure}
+
+\section{Dashboard Use Cases}
+
+\begin{longtable}{L{0.11\textwidth}L{0.26\textwidth}L{0.18\textwidth}L{0.27\textwidth}}
+\caption{Dashboard use cases}\\
+\toprule
+\textbf{ID} & \textbf{Use case} & \textbf{Actor} & \textbf{System outcome} \\
+\midrule
+\endfirsthead
+\toprule
+\textbf{ID} & \textbf{Use case} & \textbf{Actor} & \textbf{System outcome} \\
+\midrule
+\endhead
+DUC001 & Sign in and view operations overview & Admin or Ops & Internal users access a consolidated operational view of merchants, transactions, delivery issues, and pending reviews. \\
+DUC002 & Manage merchant lifecycle & Admin or Ops & Internal users register merchants, review readiness information, manage credentials, and apply lifecycle decisions. \\
+DUC003 & Manage merchant dashboard accounts & Admin & Merchant-facing user accounts can be created, updated, deactivated, reactivated, or reset. \\
+DUC004 & Inspect operational evidence & Admin or Ops & Internal users review payments, refunds, webhook history, reconciliation items, and audit evidence. \\
+DUC005 & Sign in and maintain account access & Merchant dashboard user & Merchant representatives authenticate securely and can change their own password. \\
+DUC006 & View overview and analytics & Merchant dashboard user & Merchant representatives view summarized activity and trend information for a selected reporting window. \\
+DUC007 & Explore payment, refund, and webhook records & Merchant dashboard user & Merchant representatives review transaction and notification history that belongs only to their merchant account. \\
+DUC008 & View profile and credential metadata & Merchant dashboard user & Merchant representatives can read merchant profile information and masked credential details without seeing raw secrets. \\
+\bottomrule
+\end{longtable}

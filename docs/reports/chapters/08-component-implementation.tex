@@ -1,88 +1,74 @@
 \chapter{Component Implementation}
 
-\section{Backend Implementation}
+\section{Gateway Transaction Handling}
 
-The backend implementation is organized by API surface and business workflow.
-Controllers define endpoint paths and dependencies. Services enforce business
-rules such as merchant readiness, payment idempotency, refund eligibility,
-webhook retry policy, RBAC, audit, and merchant portal scoping. Repositories
-hold focused persistence and aggregation queries.
+The implemented gateway centers on controlled transaction state changes. A
+merchant payment request becomes a pending payment only after merchant access is
+validated. A refund request is accepted only when the original payment is
+eligible for a full refund. External payment and refund evidence is stored
+before the gateway applies final state transitions so that business outcomes are
+always supported by durable evidence.
 
-Important implementation points include:
-
-\begin{itemize}
-  \item internal auth and merchant portal auth are implemented as separate
-  session systems;
-  \item merchant-scoped read APIs derive scope from authenticated context rather
-  than trusting request parameters;
-  \item callback processing and reconciliation are implemented as explicit
-  service logic instead of ad hoc controller branches;
-  \item write actions that matter operationally emit audit rows with masked
-  before and after state snapshots.
-\end{itemize}
-
-The Merchant Portal feature introduced a dedicated portal account model,
-\texttt{merchant\_users}, and a separate session-auth service. This avoids the
-anti-pattern of using HMAC API credentials for human dashboard login. Internal
-\texttt{ADMIN} users create and reset merchant portal users from the Ops
-Dashboard; generated passwords are returned once and only password hashes are
-stored.
-
-\section{Frontend Implementation}
-
-The Ops Dashboard and Merchant Dashboard are separate React, Vite, and
-TypeScript applications. Both use React Router for navigation and TanStack
-Query for server state. The Merchant Dashboard analytics page uses Recharts for
-interactive charts, tooltips, and compact visual summaries.
-
-Important frontend implementation details include:
+Three implementation decisions are especially important:
 
 \begin{itemize}
-  \item list and detail layouts for operational scanning on desktop;
-  \item responsive one-column behavior on smaller screens;
-  \item loading, error, and empty states for async data;
-  \item scrollable long lists for recent payments, audit logs, portal users,
-  webhooks, credentials, and chart data tables;
-  \item stable status and session panels so context does not jump between pages;
-  \item explicit label associations on the merchant login form for
-  accessibility.
+  \item merchant readiness is checked before live transaction creation;
+  \item payment creation uses business-aware duplicate handling so that
+  equivalent pending requests can be reused safely;
+  \item ambiguous external evidence creates a manual-review path instead of
+  silently overriding internal state.
 \end{itemize}
 
-\section{Asynchronous Service Implementation}
+\section{Internal Operations Support}
 
-The current implementation includes the key asynchronous business operations as
-callable application services:
+Internal operations functions are implemented as explicit support workflows
+rather than as incidental administrative tools. Internal users can register
+merchants, review readiness information, issue or rotate merchant credentials,
+inspect transactions, review audit history, and resolve operational incidents.
+
+Sensitive internal actions are traceable. When an internal user changes
+merchant access, resolves reconciliation issues, or performs recovery actions,
+the system preserves the action reason and related evidence so the operational
+history remains understandable after the fact.
+
+\section{Merchant Dashboard Support}
+
+Merchant-facing implementation is intentionally separate from merchant
+integration access. Human merchant users sign in with a dedicated account model
+and receive a merchant-scoped session. After sign-in, the gateway derives
+merchant scope from that authenticated session rather than accepting merchant
+identity from request parameters.
+
+This design supports the merchant dashboard in four ways:
 
 \begin{itemize}
-  \item payment expiration service for overdue pending payments;
-  \item webhook event factory for payment and refund final states;
-  \item webhook delivery service with retry scheduling and attempt persistence;
-  \item reconciliation services for mismatched or late provider evidence;
-  \item internal manual retry endpoint for failed webhook events.
+  \item overview and analytics views can summarize merchant activity for a
+  selected reporting window;
+  \item detail views can expose payments, refunds, and notification history
+  without leaking data across merchants;
+  \item profile and credential screens can show useful metadata while keeping
+  raw secrets hidden;
+  \item password maintenance remains a user-facing self-service workflow rather
+  than an operational workaround.
 \end{itemize}
 
-However, the project does not yet include a standalone long-running scheduler or
-worker runtime as part of the deployed stack. The implemented services are
-ready to be invoked by a scheduler or worker trigger, and this boundary is
-tested in the backend suite.
+\section{Asynchronous Control Functions}
 
-\section{Demo Data Implementation}
+The current system already includes the important control functions needed for
+time-based and retry-based behavior:
 
-The demo seed script is explicit and idempotent. It creates a demo merchant,
-portal user, credential metadata, payments, refund rows, webhooks, delivery
-attempts, and callback evidence. The script does not run automatically on
-deploy because production-like deployments should not silently create demo
-users.
+\begin{itemize}
+  \item expiration handling for overdue pending payments;
+  \item creation of merchant notification events after final payment or refund
+  outcomes;
+  \item notification delivery processing with retry awareness and delivery
+  history;
+  \item reconciliation support for late, mismatched, or otherwise ambiguous
+  external evidence;
+  \item manual retry support for eligible failed merchant notifications.
+\end{itemize}
 
-\begin{lstlisting}[language=bash,caption={Manual demo seed command}]
-cd backend
-python scripts/seed_dashboard_demo.py
-\end{lstlisting}
-
-For sandbox container deployment, the equivalent command is:
-
-\begin{lstlisting}[language=bash,caption={Sandbox demo seed command}]
-cd /opt/mini-payment-gateway
-docker compose -f docker-compose.sandbox.yml run --rm backend \
-  python scripts/seed_dashboard_demo.py
-\end{lstlisting}
+These functions are intentionally separated from ordinary request handling. The
+result is a system in which payment state, refund state, notification delivery,
+and operational recovery remain understandable as related but distinct
+behaviors.

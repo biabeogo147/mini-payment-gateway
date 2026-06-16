@@ -19,7 +19,7 @@ usable.
 The dashboard work revealed an architectural constraint that strongly shaped the
 project. A merchant-facing dashboard cannot safely be implemented as frontend
 screens alone. It requires a separate portal authentication model, merchant-
-scoped read APIs, a dedicated merchant user table, and internal provisioning
+scoped read APIs, a dedicated merchant-user account model, and internal provisioning
 flows. Without these boundaries, the system would either misuse merchant API
 credentials for human login or risk cross-merchant data exposure.
 
@@ -38,7 +38,7 @@ Refunds & Create full refunds, enforce refund rules, query refund state, and pro
 Webhooks & Create durable signed outbound webhook events, store delivery attempts, apply retry policy, and support internal manual retry. \\
 Ops Dashboard & Internal operator interface for auth, RBAC, merchant workflows, evidence inspection, reconciliation, audit, internal users, and portal-user provisioning. \\
 Merchant Dashboard & Merchant-scoped read-only interface for overview, analytics, payments, refunds, webhooks, profile, credentials, and password change. \\
-Testing & Backend unit, route, and E2E tests; frontend typecheck, test, and build; compose validation; and browser smoke procedures. \\
+Testing & Automated business-rule checks, end-to-end transaction scenarios, dashboard validation, and browser-based usability review. \\
 \bottomrule
 \end{tabularx}
 \end{table}
@@ -67,30 +67,30 @@ The following items are intentionally out of scope for the implemented MVP:
 \textbf{Requirement group} & \textbf{Rule} & \textbf{Implemented decision} \\
 \midrule
 \endhead
-Merchant lifecycle & Merchant statuses are \texttt{PENDING\_REVIEW}, \texttt{ACTIVE}, \texttt{REJECTED}, \texttt{SUSPENDED}, and \texttt{DISABLED}. & Onboarding approval is stored on \texttt{merchant\_onboarding\_cases}; operational status remains on \texttt{merchants}. \\
-Payment creation & One active payment is allowed per merchant and order. & A \texttt{PENDING} payment is reused only when the duplicate request is semantically identical; success blocks a new attempt. \\
-Payment states & Persisted states are \texttt{PENDING}, \texttt{SUCCESS}, \texttt{FAILED}, and \texttt{EXPIRED}. & Provider callbacks finalize pending payments, while late or mismatched evidence is routed to reconciliation. \\
-Refunds & Only full refunds are implemented; refund window is seven days from \texttt{paid\_at}. & Refund records use \texttt{REFUND\_PENDING}, \texttt{REFUNDED}, and \texttt{REFUND\_FAILED}. Partial refunds are rejected by design. \\
-Webhooks & HTTP 2xx means delivered; retry schedule is 1, 5, and 15 minutes after the first failure. & Delivery attempts are persisted; exhausted events become \texttt{FAILED}; internal Ops can manually retry eligible failed events. \\
+Merchant lifecycle & Merchant statuses are pending review, active, rejected, suspended, and disabled. & Merchant readiness review and merchant operating status are tracked separately so approval outcome and live operating state do not become confused. \\
+Payment creation & One active payment is allowed per merchant and order. & A pending payment is reused only when the duplicate request is semantically identical; a completed successful payment blocks a new attempt. \\
+Payment states & Persisted states are pending, successful, failed, and expired. & External outcome evidence finalizes pending payments, while late or mismatched evidence is routed to reconciliation. \\
+Refunds & Only full refunds are implemented; refund eligibility expires after a limited business window. & Refund records move through pending, refunded, and refund failed states. Partial refunds are rejected by design. \\
+Webhooks & Successful merchant acknowledgement marks delivery success; failed delivery activates controlled retry. & Delivery attempts are preserved as evidence; exhausted events become failed and can later be retried by internal operators when eligible. \\
 Dashboards & Ops and Merchant users require different surfaces. & Ops Dashboard is internal and mutable; Merchant Dashboard is read-only except password change. \\
 \bottomrule
 \end{longtable}
 
-\section{Technical Requirements}
+\section{Security And Data Requirements}
 
-The backend protects each boundary with the correct authentication mechanism.
-Merchant backend integrations use HMAC headers:
-\texttt{X-Merchant-Id}, \texttt{X-Access-Key}, \texttt{X-Timestamp}, and
-\texttt{X-Signature}. Internal users authenticate through an HttpOnly session
-cookie. Merchant portal users authenticate through a separate HttpOnly session
-cookie with merchant scope derived from the authenticated portal account.
+Each access boundary uses a matching authentication model. Merchant backends use
+signed integration credentials. Internal users authenticate through an internal
+session model. Merchant dashboard users authenticate through a separate
+merchant-scoped session model. This separation prevents human-facing access from
+reusing merchant integration secrets and keeps merchant visibility within the
+correct tenant boundary.
 
 The system also enforces persistence rules where practical:
 
 \begin{itemize}
   \item one active credential per merchant;
   \item one pending payment per merchant and order;
-  \item one logical refund per merchant and refund id;
+  \item one logical refund per merchant refund reference;
   \item at most one successful full refund per payment;
   \item positive monetary values and non-negative attempt counters;
   \item merchant-scoped analytics indexes for payment, refund, and webhook
@@ -109,4 +109,5 @@ The merchant-facing dashboard must help merchants inspect their own data without
 seeing internal reconciliation workflows, raw credential secrets, or data owned
 by other merchants. This requirement directly drives the dedicated merchant
 portal authentication model and the rule that Merchant Dashboard APIs never
-accept a client-supplied \texttt{merchant\_id} for read scope after login.
+accept a client-supplied merchant identifier as the source of read scope after
+login.
