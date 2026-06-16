@@ -6,13 +6,13 @@ from sqlalchemy.orm import Session
 
 from app.core.errors import AppError
 from app.core.time import utc_now
-from app.models.enums import PaymentStatus
+from app.models.enums import PaymentStatus, QrProvider
 from app.models.payment_transaction import PaymentTransaction
-from app.repositories import order_reference_repository, payment_repository
+from app.repositories import merchant_qr_account_repository, order_reference_repository, payment_repository
 from app.schemas.auth import AuthenticatedMerchant
 from app.schemas.payment import CreatePaymentRequest, PaymentResponse, PaymentStatusResponse
 from app.services.merchant_readiness_service import assert_can_create_payment
-from app.services.qr_service import generate_qr_content
+from app.services.qr_service import generate_qr_reference, generate_vietqr_payment_qr
 
 
 def create_payment(
@@ -24,6 +24,7 @@ def create_payment(
 ) -> PaymentResponse:
     merchant = authenticated_merchant.merchant
     assert_can_create_payment(merchant)
+    _assert_vietqr_supported_amount(request)
 
     normalized_now = now or utc_now()
     expire_at = request.resolve_expire_at(normalized_now)
@@ -61,11 +62,23 @@ def create_payment(
         order_reference = order_reference_repository.create(db, merchant.id, request.order_id)
 
     transaction_id = _new_transaction_id()
-    qr_content = generate_qr_content(
-        merchant_id=authenticated_merchant.merchant_id,
-        transaction_id=transaction_id,
+    qr_account = merchant_qr_account_repository.get_active_by_merchant_provider(
+        db,
+        merchant.id,
+        QrProvider.VIETQR,
+    )
+    if qr_account is None:
+        raise AppError(
+            error_code="ACTIVE_QR_ACCOUNT_REQUIRED",
+            message="An active QR receiving account is required before creating VietQR payments.",
+            status_code=409,
+            details={"merchant_id": authenticated_merchant.merchant_id, "provider": QrProvider.VIETQR.value},
+        )
+    qr_reference = generate_qr_reference(transaction_id)
+    generated_qr = generate_vietqr_payment_qr(
+        qr_account=qr_account,
         amount=request.amount,
-        currency=request.currency,
+        qr_reference=qr_reference,
     )
     payment = payment_repository.create(
         db,
@@ -76,7 +89,9 @@ def create_payment(
         amount=request.amount,
         currency=request.currency,
         description=request.description,
-        qr_content=qr_content,
+        qr_reference=qr_reference,
+        qr_content=generated_qr.qr_content,
+        qr_image_base64=generated_qr.qr_image_base64,
         expire_at=expire_at,
         idempotency_key=idempotency_key,
     )
@@ -126,6 +141,16 @@ def _is_semantically_identical(
 
 def _new_transaction_id() -> str:
     return f"pay_{uuid4().hex}"
+
+
+def _assert_vietqr_supported_amount(request: CreatePaymentRequest) -> None:
+    if request.currency != "VND" or request.amount != request.amount.to_integral_value():
+        raise AppError(
+            error_code="VIETQR_REQUIRES_WHOLE_VND",
+            message="VietQR pilot payments require whole VND amounts.",
+            status_code=422,
+            details={"currency": request.currency, "amount": str(request.amount)},
+        )
 
 
 def _payment_not_found(**details: str) -> AppError:

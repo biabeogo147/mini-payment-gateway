@@ -28,6 +28,22 @@ cd backend
 python -m uvicorn app.main:app --host 127.0.0.1 --port 8000
 ```
 
+## Start The Worker
+
+The pilot worker expires overdue payments and delivers due webhook retries.
+
+```bash
+cd backend
+python -m app.worker.main
+```
+
+Useful worker env vars:
+
+- `WORKER_LOOP_INTERVAL_SECONDS=15`
+- `PAYMENT_EXPIRATION_BATCH_LIMIT=200`
+- `WEBHOOK_DELIVERY_BATCH_LIMIT=100`
+- `WORKER_HEARTBEAT_PATH=/tmp/worker.heartbeat`
+
 Health and OpenAPI checks:
 
 - `GET http://127.0.0.1:8000/health`
@@ -65,15 +81,23 @@ reconciliation record, and prints a JSON summary.
 3. Approve onboarding with
    `POST /v1/ops/merchants/{merchant_id}/onboarding-case/approve`.
 4. Create credential with `POST /v1/ops/merchants/{merchant_id}/credentials`.
-5. Activate merchant with `POST /v1/ops/merchants/{merchant_id}/activate`.
-6. Create a signed payment with `POST /v1/payments`.
-7. Mark payment success with `POST /v1/provider/callbacks/payment`.
-8. Create a signed full refund with `POST /v1/refunds`.
-9. Mark refund success with `POST /v1/provider/callbacks/refund`.
-10. Deliver or retry webhook events through the webhook delivery service or
-    `POST /v1/ops/webhooks/{event_id}/retry` for failed events.
+5. Configure an active VietQR account with
+   `POST /v1/ops/merchants/{merchant_id}/qr-accounts`.
+6. Activate merchant with `POST /v1/ops/merchants/{merchant_id}/activate`.
+7. Create a signed VND payment with `POST /v1/payments`; response includes
+   `qr_reference`, VietQR `qr_content`, and PNG `qr_image_base64`.
+8. Mark payment success with a signed
+   `POST /v1/provider/callbacks/payment`.
+9. Create a signed full refund with `POST /v1/refunds`.
+10. Mark refund success with a signed
+    `POST /v1/provider/callbacks/refund`.
+11. Let `python -m app.worker.main` deliver due webhook events, or use
+    `POST /v1/ops/webhooks/{event_id}/retry` for manual failed-event retry.
 
 Request/response details live in `docs/api/`.
+
+For an instructor-facing VietQR walkthrough with dashboard, Newman/Postman, and
+sandbox commands, use `docs/getting-started/vietqr-pilot-demo.md`.
 
 ## Inspecting Operations
 
@@ -87,6 +111,7 @@ Request/response details live in `docs/api/`.
 ## Related Docs
 
 - `docs/api/README.md`
+- `docs/getting-started/vietqr-pilot-demo.md`
 - `docs/testing/e2e.md`
 - `docs/architecture/diagrams/payment-flow.puml`
 - `docs/architecture/diagrams/refund-flow.puml`

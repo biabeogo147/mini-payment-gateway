@@ -35,6 +35,15 @@ class CredentialStatus(str, enum.Enum):
     ROTATED = "ROTATED"
 
 
+class QrProvider(str, enum.Enum):
+    VIETQR = "VIETQR"
+
+
+class MerchantQrAccountStatus(str, enum.Enum):
+    ACTIVE = "ACTIVE"
+    INACTIVE = "INACTIVE"
+
+
 class PaymentStatus(str, enum.Enum):
     PENDING = "PENDING"
     SUCCESS = "SUCCESS"
@@ -104,6 +113,7 @@ class EntityType(str, enum.Enum):
     RECONCILIATION = "RECONCILIATION"
     INTERNAL_USER = "INTERNAL_USER"
     MERCHANT_USER = "MERCHANT_USER"
+    MERCHANT_QR_ACCOUNT = "MERCHANT_QR_ACCOUNT"
 
 
 class ActorType(str, enum.Enum):

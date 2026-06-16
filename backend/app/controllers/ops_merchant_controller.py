@@ -6,13 +6,16 @@ from app.models.internal_user import InternalUser
 from app.schemas.ops import (
     CreateCredentialRequest,
     CreateMerchantRequest,
+    CreateQrAccountRequest,
     CredentialOpsResponse,
     MerchantOpsResponse,
     OnboardingCaseResponse,
     OpsReasonRequest,
+    QrAccountOpsResponse,
     ReviewOnboardingCaseRequest,
     RotateCredentialRequest,
     SubmitOnboardingCaseRequest,
+    UpdateQrAccountRequest,
 )
 from app.services import merchant_ops_service
 
@@ -102,6 +105,72 @@ def rotate_credential(
     return merchant_ops_service.rotate_credential(
         db=db,
         merchant_id=merchant_id,
+        request=request,
+        actor=build_ops_actor(current_user, request.actor),
+    )
+
+
+@router.post("/{merchant_id}/qr-accounts", response_model=QrAccountOpsResponse)
+def create_qr_account(
+    merchant_id: str,
+    request: CreateQrAccountRequest,
+    db: Session = Depends(get_db),
+    current_user: InternalUser = Depends(require_ops_user),
+) -> QrAccountOpsResponse:
+    return merchant_ops_service.create_qr_account(
+        db=db,
+        merchant_id=merchant_id,
+        request=request,
+        actor=build_ops_actor(current_user, request.actor),
+    )
+
+
+@router.patch("/{merchant_id}/qr-accounts/{qr_account_id}", response_model=QrAccountOpsResponse)
+def update_qr_account(
+    merchant_id: str,
+    qr_account_id: str,
+    request: UpdateQrAccountRequest,
+    db: Session = Depends(get_db),
+    current_user: InternalUser = Depends(require_ops_user),
+) -> QrAccountOpsResponse:
+    return merchant_ops_service.update_qr_account(
+        db=db,
+        merchant_id=merchant_id,
+        qr_account_id=qr_account_id,
+        request=request,
+        actor=build_ops_actor(current_user, request.actor),
+    )
+
+
+@router.post("/{merchant_id}/qr-accounts/{qr_account_id}/activate", response_model=QrAccountOpsResponse)
+def activate_qr_account(
+    merchant_id: str,
+    qr_account_id: str,
+    request: OpsReasonRequest,
+    db: Session = Depends(get_db),
+    current_user: InternalUser = Depends(require_ops_user),
+) -> QrAccountOpsResponse:
+    return merchant_ops_service.activate_qr_account(
+        db=db,
+        merchant_id=merchant_id,
+        qr_account_id=qr_account_id,
+        request=request,
+        actor=build_ops_actor(current_user, request.actor),
+    )
+
+
+@router.post("/{merchant_id}/qr-accounts/{qr_account_id}/deactivate", response_model=QrAccountOpsResponse)
+def deactivate_qr_account(
+    merchant_id: str,
+    qr_account_id: str,
+    request: OpsReasonRequest,
+    db: Session = Depends(get_db),
+    current_user: InternalUser = Depends(require_ops_user),
+) -> QrAccountOpsResponse:
+    return merchant_ops_service.deactivate_qr_account(
+        db=db,
+        merchant_id=merchant_id,
+        qr_account_id=qr_account_id,
         request=request,
         actor=build_ops_actor(current_user, request.actor),
     )

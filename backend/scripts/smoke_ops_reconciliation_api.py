@@ -2,16 +2,23 @@ import json
 import subprocess
 import sys
 from datetime import datetime, timezone
+from pathlib import Path
 from urllib.request import Request, urlopen
 from uuid import UUID, uuid4
 
+sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
+
 from sqlalchemy import select
 
+from app.core.config import get_settings
+from app.core.internal_auth import build_internal_session_token, hash_password, internal_session_version
+from app.core.time import utc_now
 from app.db.session import SessionLocal
 from app.models.audit_log import AuditLog
-from app.models.enums import ReconciliationStatus
+from app.models.enums import InternalUserRole, InternalUserStatus, ReconciliationStatus
+from app.models.internal_user import InternalUser
 from app.models.reconciliation_record import ReconciliationRecord
-from smoke_payment_api import create_payment, free_port, request_json, wait_for_health
+from smoke_payment_api import create_payment, free_port, request_json, signed_provider_headers, wait_for_health
 
 
 def main() -> None:
@@ -22,6 +29,7 @@ def main() -> None:
         "secret": f"phase7-secret-{suffix}",
         "order_id": f"ORDER-PHASE7-{suffix}",
     }
+    ops_headers = seed_internal_admin(seed)
     port = free_port()
     process = subprocess.Popen(
         [
@@ -40,15 +48,16 @@ def main() -> None:
     )
     try:
         wait_for_health(port, process)
-        merchant = create_ops_merchant(port, seed)
-        onboarding = submit_onboarding_case(port, seed)
-        approval = approve_onboarding_case(port, seed)
-        credential = create_ops_credential(port, seed)
-        activation = activate_merchant(port, seed)
+        merchant = create_ops_merchant(port, seed, ops_headers)
+        onboarding = submit_onboarding_case(port, seed, ops_headers)
+        approval = approve_onboarding_case(port, seed, ops_headers)
+        credential = create_ops_credential(port, seed, ops_headers)
+        activation = activate_merchant(port, seed, ops_headers)
+        qr_account = create_qr_account(port, seed, ops_headers)
         payment = create_payment(port, seed)
         mismatch_callback = send_mismatch_callback(port, payment)
-        reconciliation_list = list_reconciliation_records(port, mismatch_callback["reconciliation_record_id"])
-        resolution = resolve_reconciliation_record(port, mismatch_callback["reconciliation_record_id"])
+        reconciliation_list = list_reconciliation_records(port, mismatch_callback["reconciliation_record_id"], ops_headers)
+        resolution = resolve_reconciliation_record(port, mismatch_callback["reconciliation_record_id"], ops_headers)
         db_state = verify_db_state(mismatch_callback["reconciliation_record_id"])
         print(
             json.dumps(
@@ -58,6 +67,7 @@ def main() -> None:
                     "onboarding_status": onboarding["status"],
                     "approval_status": approval["status"],
                     "credential_access_key": credential["access_key"],
+                    "qr_account_status": qr_account["status"],
                     "activation_status": activation["status"],
                     "payment_transaction_id": payment["transaction_id"],
                     "callback_processing_result": mismatch_callback["processing_result"],
@@ -78,7 +88,31 @@ def main() -> None:
             process.kill()
 
 
-def create_ops_merchant(port: int, seed: dict[str, str]) -> dict:
+def seed_internal_admin(seed: dict[str, str]) -> dict[str, str]:
+    now = utc_now()
+    user = InternalUser(
+        email=f"ops-{seed['merchant_id']}@example.com",
+        full_name="Phase 7 Smoke Admin",
+        role=InternalUserRole.ADMIN,
+        status=InternalUserStatus.ACTIVE,
+        password_hash=hash_password(f"phase7-admin-{seed['merchant_id']}"),
+        last_login_at=now,
+    )
+    with SessionLocal() as db:
+        db.add(user)
+        db.flush()
+        token = build_internal_session_token(
+            user_id=user.id,
+            version=internal_session_version(user),
+            secret=get_settings().internal_auth_secret,
+            now=now,
+            ttl_seconds=get_settings().internal_auth_ttl_seconds,
+        )
+        db.commit()
+    return {"Cookie": f"{get_settings().internal_auth_cookie_name}={token}"}
+
+
+def create_ops_merchant(port: int, seed: dict[str, str], ops_headers: dict[str, str]) -> dict:
     path = "/v1/ops/merchants"
     body = _json_body(
         {
@@ -95,10 +129,10 @@ def create_ops_merchant(port: int, seed: dict[str, str]) -> dict:
             "settlement_bank_code": "DEMO",
         }
     )
-    return request_json("POST", f"http://127.0.0.1:{port}{path}", path=path, body=body, headers={})
+    return request_json("POST", f"http://127.0.0.1:{port}{path}", path=path, body=body, headers=ops_headers)
 
 
-def submit_onboarding_case(port: int, seed: dict[str, str]) -> dict:
+def submit_onboarding_case(port: int, seed: dict[str, str], ops_headers: dict[str, str]) -> dict:
     path = f"/v1/ops/merchants/{seed['merchant_id']}/onboarding-case"
     body = _json_body(
         {
@@ -109,10 +143,10 @@ def submit_onboarding_case(port: int, seed: dict[str, str]) -> dict:
             "review_checks_json": {"risk_level": "LOW"},
         }
     )
-    return request_json("PUT", f"http://127.0.0.1:{port}{path}", path=path, body=body, headers={})
+    return request_json("PUT", f"http://127.0.0.1:{port}{path}", path=path, body=body, headers=ops_headers)
 
 
-def approve_onboarding_case(port: int, seed: dict[str, str]) -> dict:
+def approve_onboarding_case(port: int, seed: dict[str, str], ops_headers: dict[str, str]) -> dict:
     path = f"/v1/ops/merchants/{seed['merchant_id']}/onboarding-case/approve"
     body = _json_body(
         {
@@ -120,10 +154,10 @@ def approve_onboarding_case(port: int, seed: dict[str, str]) -> dict:
             "decision_note": "Documents verified for phase 07 smoke.",
         }
     )
-    return request_json("POST", f"http://127.0.0.1:{port}{path}", path=path, body=body, headers={})
+    return request_json("POST", f"http://127.0.0.1:{port}{path}", path=path, body=body, headers=ops_headers)
 
 
-def create_ops_credential(port: int, seed: dict[str, str]) -> dict:
+def create_ops_credential(port: int, seed: dict[str, str], ops_headers: dict[str, str]) -> dict:
     path = f"/v1/ops/merchants/{seed['merchant_id']}/credentials"
     body = _json_body(
         {
@@ -132,13 +166,31 @@ def create_ops_credential(port: int, seed: dict[str, str]) -> dict:
             "secret_key": seed["secret"],
         }
     )
-    return request_json("POST", f"http://127.0.0.1:{port}{path}", path=path, body=body, headers={})
+    return request_json("POST", f"http://127.0.0.1:{port}{path}", path=path, body=body, headers=ops_headers)
 
 
-def activate_merchant(port: int, seed: dict[str, str]) -> dict:
+def create_qr_account(port: int, seed: dict[str, str], ops_headers: dict[str, str]) -> dict:
+    path = f"/v1/ops/merchants/{seed['merchant_id']}/qr-accounts"
+    account_number = f"9704{sum(ord(char) for char in seed['merchant_id']):08d}"
+    body = _json_body(
+        {
+            "actor": _actor("Configure active phase 07 VietQR account."),
+            "provider": "VIETQR",
+            "bank_code": "VCB",
+            "bank_bin": "970436",
+            "account_number": account_number,
+            "account_name": "PHASE SEVEN SMOKE",
+            "template": "compact",
+            "status": "ACTIVE",
+        }
+    )
+    return request_json("POST", f"http://127.0.0.1:{port}{path}", path=path, body=body, headers=ops_headers)
+
+
+def activate_merchant(port: int, seed: dict[str, str], ops_headers: dict[str, str]) -> dict:
     path = f"/v1/ops/merchants/{seed['merchant_id']}/activate"
     body = _json_body({"actor": _actor("Activate approved phase 07 merchant.")})
-    return request_json("POST", f"http://127.0.0.1:{port}{path}", path=path, body=body, headers={})
+    return request_json("POST", f"http://127.0.0.1:{port}{path}", path=path, body=body, headers=ops_headers)
 
 
 def send_mismatch_callback(port: int, created_payment: dict) -> dict:
@@ -160,21 +212,21 @@ def send_mismatch_callback(port: int, created_payment: dict) -> dict:
         f"http://127.0.0.1:{port}{path}",
         data=body,
         method="POST",
-        headers={"Content-Type": "application/json"},
+        headers={"Content-Type": "application/json", **signed_provider_headers("POST", path, body)},
     )
     with urlopen(request, timeout=10) as response:
         return json.loads(response.read().decode("utf-8"))
 
 
-def list_reconciliation_records(port: int, record_id: str) -> dict:
+def list_reconciliation_records(port: int, record_id: str, ops_headers: dict[str, str]) -> dict:
     path = "/v1/ops/reconciliation?match_result=MISMATCHED&entity_type=PAYMENT&limit=25"
-    response = request_json("GET", f"http://127.0.0.1:{port}{path}", path=path, body=b"", headers={})
+    response = request_json("GET", f"http://127.0.0.1:{port}{path}", path=path, body=b"", headers=ops_headers)
     if record_id not in {record["record_id"] for record in response["records"]}:
         raise RuntimeError(f"Reconciliation record {record_id} not found in list response.")
     return response
 
 
-def resolve_reconciliation_record(port: int, record_id: str) -> dict:
+def resolve_reconciliation_record(port: int, record_id: str, ops_headers: dict[str, str]) -> dict:
     path = f"/v1/ops/reconciliation/{record_id}/resolve"
     body = _json_body(
         {
@@ -182,7 +234,7 @@ def resolve_reconciliation_record(port: int, record_id: str) -> dict:
             "review_note": "Provider evidence reviewed and accepted for smoke.",
         }
     )
-    return request_json("POST", f"http://127.0.0.1:{port}{path}", path=path, body=body, headers={})
+    return request_json("POST", f"http://127.0.0.1:{port}{path}", path=path, body=body, headers=ops_headers)
 
 
 def verify_db_state(record_id: str) -> dict[str, list[str] | str]:
@@ -192,6 +244,7 @@ def verify_db_state(record_id: str) -> dict[str, list[str] | str]:
         "ONBOARDING_CASE_APPROVED",
         "CREDENTIAL_CREATED",
         "MERCHANT_ACTIVATED",
+        "MERCHANT_QR_ACCOUNT_CREATED",
         "RECONCILIATION_RESOLVED",
     }
     with SessionLocal() as db:

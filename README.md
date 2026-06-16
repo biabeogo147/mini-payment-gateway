@@ -1,7 +1,7 @@
 # Mini Payment Gateway
 
 <p align="center">
-  <strong>A production-shaped FastAPI payment gateway MVP with merchant auth, payment/refund lifecycles, provider callbacks, durable webhooks, reconciliation, audit logs, and full E2E coverage.</strong>
+  <strong>A pilot-ready FastAPI payment gateway with merchant auth, VietQR payment creation, signed provider callbacks, worker automation, durable webhooks, reconciliation, audit logs, and full E2E coverage.</strong>
 </p>
 
 <p align="center">
@@ -21,7 +21,7 @@
   <img alt="FastAPI" src="https://img.shields.io/badge/FastAPI-Backend-009688">
   <img alt="PostgreSQL" src="https://img.shields.io/badge/PostgreSQL-Alembic-336791">
   <img alt="Tests" src="https://img.shields.io/badge/Tests-unittest%20suite-brightgreen">
-  <img alt="Status" src="https://img.shields.io/badge/Status-Dashboard%20expansion-success">
+  <img alt="Status" src="https://img.shields.io/badge/Status-Pilot%20VietQR%20API-success">
 </p>
 
 Mini Payment Gateway is not a toy CRUD demo. It is a compact backend that
@@ -37,16 +37,18 @@ how money-movement systems are stitched together.
 
 - **Merchant-grade request authentication**: HMAC signatures, timestamp checks,
   active credential lookup, and stable auth error codes.
-- **Payment lifecycle**: create QR-style payments, query by transaction/order,
-  handle duplicate pending requests, expire overdue payments, and reject
-  unsafe success duplicates.
+- **Payment lifecycle**: create Ops-configured VietQR payments, query by
+  transaction/order, handle duplicate pending requests, expire overdue payments,
+  and reject unsafe success duplicates.
 - **Refund lifecycle**: full-refund-only MVP flow with idempotent refund IDs,
   refund window checks, callback processing, and final-state protection.
-- **Provider callback handling**: normalized callback logs, raw payload
-  retention, duplicate safety, and reconciliation when provider evidence
-  conflicts with gateway state.
+- **Provider callback handling**: signed provider/simulator HMAC, normalized
+  callback logs, raw payload retention, duplicate safety, and reconciliation
+  when provider evidence conflicts with gateway state.
 - **Durable webhooks**: final payment/refund events, signed outbound payloads,
   persisted delivery attempts, retry scheduling, exhaustion, and manual retry.
+- **Background worker**: automatic overdue payment expiration and due webhook
+  retry delivery with PostgreSQL advisory locks.
 - **Internal ops layer**: merchant onboarding, credential creation/rotation,
   activation, suspension, disabling, reconciliation review, merchant portal
   user provisioning, and audit logging.
@@ -61,10 +63,10 @@ how money-movement systems are stitched together.
 
 ```mermaid
 flowchart LR
-    Ops["Ops creates and activates merchant"]
-    Merchant["Merchant creates signed payment"]
-    Provider["Provider sends callback"]
-    Webhook["Gateway delivers webhook"]
+    Ops["Ops configures merchant + VietQR account"]
+    Merchant["Merchant creates signed VietQR payment"]
+    Provider["Provider sends signed callback"]
+    Webhook["Worker delivers webhook"]
     Refund["Merchant creates full refund"]
     Reconcile["Ops resolves reconciliation cases"]
 
@@ -114,6 +116,7 @@ backend/app/
   services/      business rules and workflow orchestration
   repositories/  focused SQLAlchemy persistence helpers
   models/        SQLAlchemy entities and enums
+  worker/        expiration and webhook delivery automation
   core/          errors, security, config, time helpers
   db/            session and database wiring
 ```
@@ -174,6 +177,13 @@ python -m alembic upgrade head
 python -m uvicorn app.main:app --host 127.0.0.1 --port 8000
 ```
 
+Start the worker in another terminal:
+
+```bash
+cd backend
+python -m app.worker.main
+```
+
 Then open:
 
 - Health: `http://127.0.0.1:8000/health`
@@ -217,6 +227,7 @@ python scripts/smoke_ops_reconciliation_api.py
 | --- | --- |
 | Run the project locally | [docs/getting-started/local-setup.md](docs/getting-started/local-setup.md) |
 | Demo the full MVP | [docs/getting-started/runbook.md](docs/getting-started/runbook.md) |
+| Demo the VietQR pilot to an instructor | [docs/getting-started/vietqr-pilot-demo.md](docs/getting-started/vietqr-pilot-demo.md) |
 | Understand internal DevOps design | [docs/infrastructure/devops-architecture.md](docs/infrastructure/devops-architecture.md) |
 | Build a new sandbox host from zero | [docs/infrastructure/sandbox-setup-from-zero.md](docs/infrastructure/sandbox-setup-from-zero.md) |
 | Deploy to the sandbox host | [docs/infrastructure/sandbox-deployment.md](docs/infrastructure/sandbox-deployment.md) |
@@ -229,14 +240,15 @@ python scripts/smoke_ops_reconciliation_api.py
 
 ## Project Status
 
-Current scope is complete through phase 10:
+Current scope is pilot-ready API-only VietQR:
 
 - API contract and backend foundation
 - Merchant HMAC auth and readiness checks
-- Payment core
-- Provider callbacks and expiration
+- Payment core with Ops-managed VietQR receiving accounts
+- Signed provider callbacks and expiration
 - Refund core
 - Webhook delivery and retry
+- Worker automation for expiration and due webhook delivery
 - Ops onboarding, credentials, reconciliation, and audit
 - Readiness docs and route-level E2E coverage
 - Sandbox CI/CD
@@ -246,7 +258,7 @@ Current scope is complete through phase 10:
 
 Intentionally out of scope for this MVP:
 
-- settlement, ledger posting, disputes, advanced BI exports, and multi-provider
-  routing;
+- hosted checkout, settlement, ledger posting, disputes, advanced BI exports,
+  and multi-provider routing;
 - partial refunds;
 - merchant self-service mutation workflows beyond password change.

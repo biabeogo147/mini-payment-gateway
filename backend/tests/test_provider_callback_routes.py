@@ -1,5 +1,6 @@
 import unittest
-from datetime import datetime, timezone
+import json
+from datetime import datetime, timedelta, timezone
 from unittest.mock import patch
 from uuid import uuid4
 
@@ -29,9 +30,10 @@ class ProviderCallbackRouteTest(unittest.TestCase):
                 "process_payment_callback",
                 return_value=response_body,
             ) as service:
-                response = TestClient(app).post(
+                response = _signed_provider_post(
+                    TestClient(app),
                     "/v1/provider/callbacks/payment",
-                    json={
+                    {
                         "external_reference": "bank-ref-1001",
                         "transaction_reference": "pay_123",
                         "status": "SUCCESS",
@@ -78,9 +80,10 @@ class ProviderCallbackRouteTest(unittest.TestCase):
                 "process_payment_callback",
                 return_value=response_body,
             ):
-                response = TestClient(app).post(
+                response = _signed_provider_post(
+                    TestClient(app),
                     "/v1/provider/callbacks/payment",
-                    json={
+                    {
                         "external_reference": "bank-ref-1001",
                         "transaction_reference": "pay_123",
                         "status": "SUCCESS",
@@ -115,9 +118,10 @@ class ProviderCallbackRouteTest(unittest.TestCase):
                 "process_refund_callback",
                 return_value=response_body,
             ) as service:
-                response = TestClient(app).post(
+                response = _signed_provider_post(
+                    TestClient(app),
                     "/v1/provider/callbacks/refund",
-                    json={
+                    {
                         "external_reference": "bank-refund-1001",
                         "refund_transaction_id": "rfnd_123",
                         "status": "SUCCESS",
@@ -144,6 +148,64 @@ class ProviderCallbackRouteTest(unittest.TestCase):
         self.assertEqual(kwargs["request"].refund_transaction_id, "rfnd_123")
         self.assertEqual(kwargs["request"].raw_payload, {"trace_id": "refund-trace-1001"})
 
+    def test_payment_callback_route_rejects_missing_provider_signature(self) -> None:
+        from app.main import app
+
+        response = TestClient(app).post(
+            "/v1/provider/callbacks/payment",
+            json={
+                "external_reference": "bank-ref-1001",
+                "transaction_reference": "pay_123",
+                "status": "SUCCESS",
+                "amount": "100000.00",
+                "paid_at": "2026-04-29T10:05:00Z",
+                "raw_payload": {"trace_id": "trace-1001"},
+            },
+        )
+
+        self.assertEqual(response.status_code, 401)
+        self.assertEqual(response.json()["error_code"], "PROVIDER_AUTH_MISSING_HEADER")
+
+    def test_payment_callback_route_rejects_bad_provider_signature(self) -> None:
+        from app.main import app
+
+        response = _signed_provider_post(
+            TestClient(app),
+            "/v1/provider/callbacks/payment",
+            {
+                "external_reference": "bank-ref-1001",
+                "transaction_reference": "pay_123",
+                "status": "SUCCESS",
+                "amount": "100000.00",
+                "paid_at": "2026-04-29T10:05:00Z",
+                "raw_payload": {"trace_id": "trace-1001"},
+            },
+            signature_override="bad-signature",
+        )
+
+        self.assertEqual(response.status_code, 401)
+        self.assertEqual(response.json()["error_code"], "PROVIDER_AUTH_INVALID_SIGNATURE")
+
+    def test_payment_callback_route_rejects_expired_provider_timestamp(self) -> None:
+        from app.main import app
+
+        response = _signed_provider_post(
+            TestClient(app),
+            "/v1/provider/callbacks/payment",
+            {
+                "external_reference": "bank-ref-1001",
+                "transaction_reference": "pay_123",
+                "status": "SUCCESS",
+                "amount": "100000.00",
+                "paid_at": "2026-04-29T10:05:00Z",
+                "raw_payload": {"trace_id": "trace-1001"},
+            },
+            timestamp=(datetime.now(timezone.utc) - timedelta(minutes=10)).isoformat(),
+        )
+
+        self.assertEqual(response.status_code, 401)
+        self.assertEqual(response.json()["error_code"], "PROVIDER_AUTH_TIMESTAMP_EXPIRED")
+
     def _override_db(self, app, db) -> None:
         from app.controllers.deps import get_db
 
@@ -155,3 +217,32 @@ class ProviderCallbackRouteTest(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
+
+
+def _signed_provider_post(
+    client: TestClient,
+    path: str,
+    payload: dict,
+    *,
+    signature_override: str | None = None,
+    timestamp: str | None = None,
+):
+    from app.core.security import build_signing_string, sign_hmac_sha256
+
+    timestamp = timestamp or datetime.now(timezone.utc).isoformat()
+    body = json.dumps(payload, separators=(",", ":")).encode("utf-8")
+    signing_string = build_signing_string(timestamp, "POST", path, body)
+    signature = signature_override or sign_hmac_sha256(
+        "dev-insecure-provider-callback-secret-change-me",
+        signing_string,
+    )
+    return client.post(
+        path,
+        content=body,
+        headers={
+            "Content-Type": "application/json",
+            "X-Provider-Id": "simulator",
+            "X-Provider-Timestamp": timestamp,
+            "X-Provider-Signature": signature,
+        },
+    )

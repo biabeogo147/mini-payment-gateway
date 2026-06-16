@@ -8,8 +8,10 @@ dependencies = [
   "fastapi>=0.116.0,<1.0.0",
   "httpx>=0.28.0,<1.0.0",
   "psycopg2-binary>=2.9.9,<3.0.0",
+  "qrcode[pil]>=8.2,<9.0",
   "sqlalchemy>=2.0.38,<3.0.0",
   "uvicorn[standard]>=0.35.0,<1.0.0",
+  "vietnam-qr-pay==1.0.0",
 ]
 
 [build-system]

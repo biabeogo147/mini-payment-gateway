@@ -10,6 +10,20 @@ creation implemented in phase 06.
 
 Actor: Provider simulator.
 
+Headers:
+
+```http
+X-Provider-Id: simulator
+X-Provider-Timestamp: 2026-04-29T10:05:00Z
+X-Provider-Signature: <hmac_sha256>
+```
+
+Signing string:
+
+```text
+{timestamp}.{method}.{path}.{body_sha256_hex}
+```
+
 API:
 
 ```http
@@ -103,15 +117,15 @@ Expected Assertions:
 
 ## EXP-01 Expire Overdue Payment
 
-Implementation Status: Implemented at service level - phase 04. Webhook event
-creation implemented in phase 06.
+Implementation Status: Implemented at service level in phase 04, webhook event
+creation in phase 06, and automated by the phase 12 worker.
 
 Actor: System.
 
 API:
 
 ```http
-scheduled service or internal command
+python -m app.worker.main
 ```
 
 DB Effects:

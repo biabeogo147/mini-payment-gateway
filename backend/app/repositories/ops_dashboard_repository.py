@@ -20,6 +20,7 @@ from app.models.enums import (
 from app.models.merchant import Merchant
 from app.models.merchant_credential import MerchantCredential
 from app.models.merchant_onboarding_case import MerchantOnboardingCase
+from app.models.merchant_qr_account import MerchantQrAccount
 from app.models.payment_transaction import PaymentTransaction
 from app.models.reconciliation_record import ReconciliationRecord
 from app.models.refund_transaction import RefundTransaction
@@ -84,6 +85,16 @@ def list_credentials_for_merchant(db: Session, merchant_db_id: UUID) -> list[Mer
             select(MerchantCredential)
             .where(MerchantCredential.merchant_db_id == merchant_db_id)
             .order_by(MerchantCredential.created_at.desc())
+        ).all()
+    )
+
+
+def list_qr_accounts_for_merchant(db: Session, merchant_db_id: UUID) -> list[MerchantQrAccount]:
+    return list(
+        db.scalars(
+            select(MerchantQrAccount)
+            .where(MerchantQrAccount.merchant_db_id == merchant_db_id)
+            .order_by(MerchantQrAccount.created_at.desc())
         ).all()
     )
 

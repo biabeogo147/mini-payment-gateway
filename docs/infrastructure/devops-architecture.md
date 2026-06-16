@@ -27,9 +27,10 @@ The sandbox uses a split CI/CD model:
 - GitHub-hosted runners execute verification jobs.
 - A self-hosted runner on the sandbox host executes the deploy job locally.
 - The host keeps a persistent Git checkout and deploys with Docker Compose.
-- The runtime stack is PostgreSQL, FastAPI backend, Ops Dashboard, and Merchant
-  Dashboard.
-- Deployment is accepted only if backend health and both dashboard roots pass.
+- The runtime stack is PostgreSQL, FastAPI backend, worker, Ops Dashboard, and
+  Merchant Dashboard.
+- Deployment is accepted only if backend health, worker health, and both
+  dashboard roots pass.
 
 The key decision is **internal pull deploy**:
 
@@ -55,6 +56,7 @@ flowchart LR
         Env["Host-local .env"]
         DB["postgres"]
         API["backend"]
+        Worker["worker"]
         OpsUI["Ops Dashboard"]
         MerchantUI["Merchant Dashboard"]
     end
@@ -65,6 +67,7 @@ flowchart LR
     Env --> Compose
     Compose --> DB
     Compose --> API
+    Compose --> Worker
     Compose --> OpsUI
     Compose --> MerchantUI
 ```
@@ -79,6 +82,9 @@ Core components:
   - sandbox database runtime
 - `backend`
   - FastAPI application runtime
+- `worker`
+  - `python -m app.worker.main`; expires overdue payments and delivers due
+    webhook retries with PostgreSQL advisory locks
 - `ops-dashboard`
   - internal operator UI served by nginx and proxying `/api` to the backend
 - `merchant-dashboard`
@@ -147,10 +153,10 @@ sequenceDiagram
     else checks passed
         GH->>Runner: Queue deploy-sandbox
         Runner->>Host: fetch + checkout + pull --ff-only
-        Runner->>DC: build backend + dashboards
+        Runner->>DC: build backend + worker + dashboards
         Runner->>DC: up -d postgres
         Runner->>DC: run alembic upgrade head
-        Runner->>DC: up -d backend + dashboards
+        Runner->>DC: up -d backend + worker + dashboards
         Runner->>API: GET /health
         Runner->>OpsUI: GET /
         Runner->>MerchantUI: GET /

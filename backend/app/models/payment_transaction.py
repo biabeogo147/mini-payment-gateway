@@ -52,6 +52,7 @@ class PaymentTransaction(UUIDPrimaryKeyMixin, TimestampMixin, Base):
         server_default=PaymentStatus.PENDING.value,
     )
     qr_content: Mapped[str] = mapped_column(Text, nullable=False)
+    qr_reference: Mapped[str | None] = mapped_column(String(13), nullable=True)
     qr_image_url: Mapped[str | None] = mapped_column(Text, nullable=True)
     qr_image_base64: Mapped[str | None] = mapped_column(Text, nullable=True)
     external_reference: Mapped[str | None] = mapped_column(String(128), nullable=True)

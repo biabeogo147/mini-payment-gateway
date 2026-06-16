@@ -2,10 +2,13 @@ import { type ReactNode, useEffect, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 
 import {
+  activateQrAccount,
   activateMerchant,
+  createQrAccount,
   createMerchantPortalUser,
   createCredential,
   createMerchant,
+  deactivateQrAccount,
   disableMerchant,
   getMerchantDetail,
   listMerchants,
@@ -13,8 +16,10 @@ import {
   resetMerchantPortalUserPassword,
   rotateCredential,
   suspendMerchant,
+  updateQrAccount,
   updateMerchantPortalUser,
-  type CredentialOpsResponse,
+  type MerchantQrAccount,
+  type MerchantQrAccountStatus,
   type MerchantUserRole,
   type MerchantUserStatus,
   type MerchantStatus,
@@ -94,6 +99,24 @@ export function MerchantsPage() {
     status: "ACTIVE" as MerchantUserStatus,
   });
   const [generatedPortalPassword, setGeneratedPortalPassword] = useState("");
+  const [qrAccountForm, setQrAccountForm] = useState({
+    reason: "Configure VietQR receiving account from ops dashboard.",
+    bank_code: "",
+    bank_bin: "",
+    account_number: "",
+    account_name: "",
+    template: "compact",
+    status: "ACTIVE" as MerchantQrAccountStatus,
+  });
+  const [selectedQrAccountId, setSelectedQrAccountId] = useState("");
+  const [qrAccountUpdateForm, setQrAccountUpdateForm] = useState({
+    reason: "Update VietQR receiving account from ops dashboard.",
+    bank_code: "",
+    bank_bin: "",
+    account_number: "",
+    account_name: "",
+    template: "compact",
+  });
 
   const merchantListQuery = useQuery({
     queryKey: ["merchants", search, status],
@@ -123,6 +146,35 @@ export function MerchantsPage() {
       setSelectedMerchantId(firstMerchantId);
     }
   }, [merchantListQuery.data, selectedMerchantId]);
+
+  useEffect(() => {
+    const qrAccounts = merchantDetailQuery.data?.qr_accounts ?? [];
+    const firstQrAccount = qrAccounts[0];
+    if (!firstQrAccount) {
+      if (selectedQrAccountId) {
+        setSelectedQrAccountId("");
+      }
+      return;
+    }
+    const selectedStillExists = qrAccounts.some(
+      (account) => account.qr_account_id === selectedQrAccountId,
+    );
+    if (!selectedQrAccountId || !selectedStillExists) {
+      loadQrAccountForEditing(firstQrAccount);
+    }
+  }, [merchantDetailQuery.data, selectedQrAccountId]);
+
+  function loadQrAccountForEditing(account: MerchantQrAccount) {
+    setSelectedQrAccountId(account.qr_account_id);
+    setQrAccountUpdateForm({
+      reason: "Update VietQR receiving account from ops dashboard.",
+      bank_code: account.bank_code,
+      bank_bin: account.bank_bin,
+      account_number: account.account_number,
+      account_name: account.account_name,
+      template: account.template,
+    });
+  }
 
   const createMerchantMutation = useMutation({
     mutationFn: createMerchant,
@@ -166,6 +218,54 @@ export function MerchantsPage() {
         access_key: "",
         secret_key: "",
       });
+    },
+  });
+
+  const createQrAccountMutation = useMutation({
+    mutationFn: (merchantId: string) =>
+      createQrAccount(merchantId, {
+        ...qrAccountForm,
+        provider: "VIETQR",
+      }),
+    onSuccess: async (payload) => {
+      await invalidateOpsConsoleData(queryClient);
+      loadQrAccountForEditing(payload);
+      setQrAccountForm({
+        reason: "Configure VietQR receiving account from ops dashboard.",
+        bank_code: "",
+        bank_bin: "",
+        account_number: "",
+        account_name: "",
+        template: "compact",
+        status: "ACTIVE",
+      });
+    },
+  });
+
+  const updateQrAccountMutation = useMutation({
+    mutationFn: (input: { merchantId: string; qrAccountId: string }) =>
+      updateQrAccount(input.merchantId, input.qrAccountId, qrAccountUpdateForm),
+    onSuccess: async (payload) => {
+      await invalidateOpsConsoleData(queryClient);
+      loadQrAccountForEditing(payload);
+    },
+  });
+
+  const activateQrAccountMutation = useMutation({
+    mutationFn: (input: { merchantId: string; qrAccountId: string }) =>
+      activateQrAccount(input.merchantId, input.qrAccountId, actionReason),
+    onSuccess: async (payload) => {
+      await invalidateOpsConsoleData(queryClient);
+      loadQrAccountForEditing(payload);
+    },
+  });
+
+  const deactivateQrAccountMutation = useMutation({
+    mutationFn: (input: { merchantId: string; qrAccountId: string }) =>
+      deactivateQrAccount(input.merchantId, input.qrAccountId, actionReason),
+    onSuccess: async (payload) => {
+      await invalidateOpsConsoleData(queryClient);
+      loadQrAccountForEditing(payload);
     },
   });
 
@@ -224,6 +324,9 @@ export function MerchantsPage() {
 
   const merchants = merchantListQuery.data?.merchants ?? [];
   const merchantDetail = merchantDetailQuery.data;
+  const selectedQrAccount = merchantDetail?.qr_accounts.find(
+    (account) => account.qr_account_id === selectedQrAccountId,
+  );
 
   return (
     <section className="page-stack">
@@ -516,6 +619,335 @@ export function MerchantsPage() {
                         ))}
                       </div>
                     )}
+                  </MerchantSection>
+
+                  <MerchantSection title="QR receiving accounts">
+                    {merchantDetail.qr_accounts.length === 0 ? (
+                      <EmptyState
+                        title="No QR account configured"
+                        message="Create an active VietQR receiving account before pilot payment creation."
+                      />
+                    ) : (
+                      <div
+                        className="stack-list activity-list-scroll qr-account-list"
+                        role="list"
+                        aria-label="QR receiving accounts"
+                      >
+                        {merchantDetail.qr_accounts.map((account) => (
+                          <article
+                            key={account.qr_account_id}
+                            className="stack-row portal-user-row"
+                            role="listitem"
+                          >
+                            <div>
+                              <strong>
+                                {account.bank_code} {account.account_number}
+                              </strong>
+                              <p>
+                                {account.provider} · {account.account_name} · BIN {account.bank_bin}
+                              </p>
+                            </div>
+                            <div className="portal-user-actions">
+                              <div className="portal-user-badges">
+                                <StatusBadge value={account.status} />
+                                <span className="feedback">{account.template}</span>
+                              </div>
+                              <div className="portal-user-buttons">
+                                <button
+                                  type="button"
+                                  className="secondary-button"
+                                  onClick={() => loadQrAccountForEditing(account)}
+                                >
+                                  Edit
+                                </button>
+                                {account.status === "ACTIVE" ? (
+                                  <button
+                                    type="button"
+                                    className="secondary-button"
+                                    disabled={
+                                      deactivateQrAccountMutation.isPending || !actionReason
+                                    }
+                                    onClick={() =>
+                                      deactivateQrAccountMutation.mutate({
+                                        merchantId: merchantDetail.merchant_id,
+                                        qrAccountId: account.qr_account_id,
+                                      })
+                                    }
+                                  >
+                                    Deactivate
+                                  </button>
+                                ) : (
+                                  <button
+                                    type="button"
+                                    className="primary-button"
+                                    disabled={activateQrAccountMutation.isPending || !actionReason}
+                                    onClick={() =>
+                                      activateQrAccountMutation.mutate({
+                                        merchantId: merchantDetail.merchant_id,
+                                        qrAccountId: account.qr_account_id,
+                                      })
+                                    }
+                                  >
+                                    Activate
+                                  </button>
+                                )}
+                              </div>
+                            </div>
+                          </article>
+                        ))}
+                      </div>
+                    )}
+
+                    <div className="qr-account-form-panel">
+                      <div className="form-grid">
+                        <InlineField label="Reason">
+                          <input
+                            value={qrAccountForm.reason}
+                            onChange={(event) =>
+                              setQrAccountForm((current) => ({
+                                ...current,
+                                reason: event.target.value,
+                              }))
+                            }
+                          />
+                        </InlineField>
+                        <InlineField label="Bank code">
+                          <input
+                            value={qrAccountForm.bank_code}
+                            onChange={(event) =>
+                              setQrAccountForm((current) => ({
+                                ...current,
+                                bank_code: event.target.value,
+                              }))
+                            }
+                          />
+                        </InlineField>
+                        <InlineField label="Bank BIN">
+                          <input
+                            value={qrAccountForm.bank_bin}
+                            onChange={(event) =>
+                              setQrAccountForm((current) => ({
+                                ...current,
+                                bank_bin: event.target.value,
+                              }))
+                            }
+                          />
+                        </InlineField>
+                        <InlineField label="Account number">
+                          <input
+                            value={qrAccountForm.account_number}
+                            onChange={(event) =>
+                              setQrAccountForm((current) => ({
+                                ...current,
+                                account_number: event.target.value,
+                              }))
+                            }
+                          />
+                        </InlineField>
+                        <InlineField label="Account name">
+                          <input
+                            value={qrAccountForm.account_name}
+                            onChange={(event) =>
+                              setQrAccountForm((current) => ({
+                                ...current,
+                                account_name: event.target.value,
+                              }))
+                            }
+                          />
+                        </InlineField>
+                        <InlineField label="Template">
+                          <input
+                            value={qrAccountForm.template}
+                            onChange={(event) =>
+                              setQrAccountForm((current) => ({
+                                ...current,
+                                template: event.target.value,
+                              }))
+                            }
+                          />
+                        </InlineField>
+                        <InlineField label="Initial status">
+                          <select
+                            value={qrAccountForm.status}
+                            onChange={(event) =>
+                              setQrAccountForm((current) => ({
+                                ...current,
+                                status: event.target.value as MerchantQrAccountStatus,
+                              }))
+                            }
+                          >
+                            <option value="ACTIVE">ACTIVE</option>
+                            <option value="INACTIVE">INACTIVE</option>
+                          </select>
+                        </InlineField>
+                      </div>
+                      <div className="inline-actions">
+                        <button
+                          type="button"
+                          className="primary-button"
+                          disabled={
+                            createQrAccountMutation.isPending ||
+                            !qrAccountForm.reason ||
+                            !qrAccountForm.bank_code ||
+                            !qrAccountForm.bank_bin ||
+                            !qrAccountForm.account_number ||
+                            !qrAccountForm.account_name ||
+                            !qrAccountForm.template
+                          }
+                          onClick={() =>
+                            createQrAccountMutation.mutate(merchantDetail.merchant_id)
+                          }
+                        >
+                          {createQrAccountMutation.isPending
+                            ? "Creating..."
+                            : "Create QR account"}
+                        </button>
+                        {createQrAccountMutation.error instanceof Error ? (
+                          <span className="feedback feedback-danger">
+                            {createQrAccountMutation.error.message}
+                          </span>
+                        ) : null}
+                      </div>
+                    </div>
+
+                    {merchantDetail.qr_accounts.length > 0 ? (
+                      <div className="qr-account-form-panel">
+                        <div className="form-grid">
+                          <InlineField label="QR account">
+                            <select
+                              value={selectedQrAccountId}
+                              onChange={(event) => {
+                                const next = merchantDetail.qr_accounts.find(
+                                  (account) => account.qr_account_id === event.target.value,
+                                );
+                                if (next) {
+                                  loadQrAccountForEditing(next);
+                                }
+                              }}
+                            >
+                              {merchantDetail.qr_accounts.map((account) => (
+                                <option
+                                  key={account.qr_account_id}
+                                  value={account.qr_account_id}
+                                >
+                                  {account.bank_code} {account.account_number}
+                                </option>
+                              ))}
+                            </select>
+                          </InlineField>
+                          <InlineField label="Reason">
+                            <input
+                              value={qrAccountUpdateForm.reason}
+                              onChange={(event) =>
+                                setQrAccountUpdateForm((current) => ({
+                                  ...current,
+                                  reason: event.target.value,
+                                }))
+                              }
+                            />
+                          </InlineField>
+                          <InlineField label="Bank code">
+                            <input
+                              value={qrAccountUpdateForm.bank_code}
+                              onChange={(event) =>
+                                setQrAccountUpdateForm((current) => ({
+                                  ...current,
+                                  bank_code: event.target.value,
+                                }))
+                              }
+                            />
+                          </InlineField>
+                          <InlineField label="Bank BIN">
+                            <input
+                              value={qrAccountUpdateForm.bank_bin}
+                              onChange={(event) =>
+                                setQrAccountUpdateForm((current) => ({
+                                  ...current,
+                                  bank_bin: event.target.value,
+                                }))
+                              }
+                            />
+                          </InlineField>
+                          <InlineField label="Account number">
+                            <input
+                              value={qrAccountUpdateForm.account_number}
+                              onChange={(event) =>
+                                setQrAccountUpdateForm((current) => ({
+                                  ...current,
+                                  account_number: event.target.value,
+                                }))
+                              }
+                            />
+                          </InlineField>
+                          <InlineField label="Account name">
+                            <input
+                              value={qrAccountUpdateForm.account_name}
+                              onChange={(event) =>
+                                setQrAccountUpdateForm((current) => ({
+                                  ...current,
+                                  account_name: event.target.value,
+                                }))
+                              }
+                            />
+                          </InlineField>
+                          <InlineField label="Template">
+                            <input
+                              value={qrAccountUpdateForm.template}
+                              onChange={(event) =>
+                                setQrAccountUpdateForm((current) => ({
+                                  ...current,
+                                  template: event.target.value,
+                                }))
+                              }
+                            />
+                          </InlineField>
+                        </div>
+                        <div className="inline-actions">
+                          <button
+                            type="button"
+                            className="secondary-button"
+                            disabled={
+                              updateQrAccountMutation.isPending ||
+                              !selectedQrAccount ||
+                              !qrAccountUpdateForm.reason ||
+                              !qrAccountUpdateForm.bank_code ||
+                              !qrAccountUpdateForm.bank_bin ||
+                              !qrAccountUpdateForm.account_number ||
+                              !qrAccountUpdateForm.account_name ||
+                              !qrAccountUpdateForm.template
+                            }
+                            onClick={() => {
+                              if (!selectedQrAccount) {
+                                return;
+                              }
+                              updateQrAccountMutation.mutate({
+                                merchantId: merchantDetail.merchant_id,
+                                qrAccountId: selectedQrAccount.qr_account_id,
+                              });
+                            }}
+                          >
+                            {updateQrAccountMutation.isPending
+                              ? "Updating..."
+                              : "Update QR account"}
+                          </button>
+                          {updateQrAccountMutation.error instanceof Error ? (
+                            <span className="feedback feedback-danger">
+                              {updateQrAccountMutation.error.message}
+                            </span>
+                          ) : null}
+                          {activateQrAccountMutation.error instanceof Error ? (
+                            <span className="feedback feedback-danger">
+                              {activateQrAccountMutation.error.message}
+                            </span>
+                          ) : null}
+                          {deactivateQrAccountMutation.error instanceof Error ? (
+                            <span className="feedback feedback-danger">
+                              {deactivateQrAccountMutation.error.message}
+                            </span>
+                          ) : null}
+                        </div>
+                      </div>
+                    ) : null}
                   </MerchantSection>
 
                   <MerchantSection title="Onboarding case">

@@ -71,6 +71,21 @@ entity "merchant_credentials" as MERCHANT_CREDENTIAL {
   updated_at : datetime
 }
 
+entity "merchant_qr_accounts" as MERCHANT_QR_ACCOUNT {
+  * id : UUID <<PK>>
+  --
+  merchant_db_id : UUID <<FK>>
+  provider : enum
+  bank_code : string
+  bank_bin : string
+  account_number : string
+  account_name : string
+  template : string
+  status : enum
+  created_at : datetime
+  updated_at : datetime
+}
+
 entity "merchant_users" as MERCHANT_USER {
   * id : UUID <<PK>>
   --
@@ -107,6 +122,7 @@ entity "payment_transactions" as PAYMENT_TRANSACTION {
   currency : string
   description : text
   status : enum
+  qr_reference : string
   qr_content : text
   qr_image_url : text
   qr_image_base64 : text
@@ -224,6 +240,7 @@ entity "audit_logs" as AUDIT_LOG {
 
 MERCHANT "1" -down- "0..1" MERCHANT_ONBOARDING_CASE
 MERCHANT "1" -down- "0..*" MERCHANT_CREDENTIAL
+MERCHANT "1" -down- "0..*" MERCHANT_QR_ACCOUNT
 MERCHANT "1" -down- "0..*" MERCHANT_USER
 MERCHANT "1" -right- "0..*" ORDER_REFERENCE
 MERCHANT "1" -right- "0..*" PAYMENT_TRANSACTION
@@ -253,6 +270,7 @@ meaning of each relation.
 | --- | --- | --- | --- |
 | `MERCHANT` | `MERCHANT_ONBOARDING_CASE` | `1 -> 0..1` | Merchant has one onboarding case in the MVP. |
 | `MERCHANT` | `MERCHANT_CREDENTIAL` | `1 -> 0..*` | Merchant owns API credentials. |
+| `MERCHANT` | `MERCHANT_QR_ACCOUNT` | `1 -> 0..*` | Merchant owns Ops-managed QR receiving accounts. |
 | `MERCHANT` | `MERCHANT_USER` | `1 -> 0..*` | Merchant owns portal users for the Merchant Dashboard. |
 | `MERCHANT` | `ORDER_REFERENCE` | `1 -> 0..*` | Merchant owns order references. |
 | `MERCHANT` | `PAYMENT_TRANSACTION` | `1 -> 0..*` | Merchant receives payment transactions. |
@@ -271,6 +289,9 @@ meaning of each relation.
 
 - `merchants.merchant_id` is unique and is the public merchant identifier.
 - `merchant_credentials` allows only one `ACTIVE` credential per merchant.
+- `merchant_qr_accounts` allows only one `ACTIVE` account per
+  `merchant_db_id + provider`.
+- Pilot QR accounts currently use `provider=VIETQR`.
 - `merchant_users` is unique by `merchant_db_id + email`.
 - `merchant_users` is indexed by `merchant_db_id` and `email` for scoped
   login, list, and admin management.

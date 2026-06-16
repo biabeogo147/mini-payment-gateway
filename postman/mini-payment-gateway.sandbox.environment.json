@@ -9,6 +9,18 @@
       "enabled": true
     },
     {
+      "key": "internal_email",
+      "value": "",
+      "type": "default",
+      "enabled": true
+    },
+    {
+      "key": "internal_password",
+      "value": "",
+      "type": "secret",
+      "enabled": true
+    },
+    {
       "key": "merchant_id",
       "value": "",
       "type": "default",
@@ -179,6 +191,78 @@
     {
       "key": "provider_source_type",
       "value": "SIMULATOR",
+      "type": "default",
+      "enabled": true
+    },
+    {
+      "key": "provider_id",
+      "value": "simulator",
+      "type": "default",
+      "enabled": true
+    },
+    {
+      "key": "provider_callback_secret",
+      "value": "dev-insecure-provider-callback-secret-change-me",
+      "type": "secret",
+      "enabled": true
+    },
+    {
+      "key": "provider_timestamp",
+      "value": "",
+      "type": "default",
+      "enabled": true
+    },
+    {
+      "key": "provider_body_sha256_hex",
+      "value": "",
+      "type": "default",
+      "enabled": true
+    },
+    {
+      "key": "provider_signing_string",
+      "value": "",
+      "type": "default",
+      "enabled": true
+    },
+    {
+      "key": "provider_signature",
+      "value": "",
+      "type": "default",
+      "enabled": true
+    },
+    {
+      "key": "qr_account_id",
+      "value": "",
+      "type": "default",
+      "enabled": true
+    },
+    {
+      "key": "qr_bank_code",
+      "value": "VCB",
+      "type": "default",
+      "enabled": true
+    },
+    {
+      "key": "qr_bank_bin",
+      "value": "970436",
+      "type": "default",
+      "enabled": true
+    },
+    {
+      "key": "qr_account_number",
+      "value": "9704000000000001",
+      "type": "default",
+      "enabled": true
+    },
+    {
+      "key": "qr_account_name",
+      "value": "QA DEMO MERCHANT",
+      "type": "default",
+      "enabled": true
+    },
+    {
+      "key": "qr_template",
+      "value": "compact",
       "type": "default",
       "enabled": true
     },

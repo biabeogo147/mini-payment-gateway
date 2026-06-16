@@ -12,6 +12,9 @@ from app.schemas.ops_dashboard import (
     AuditLogListResponse,
     DashboardChartsResponse,
     DashboardSummaryResponse,
+    MerchantCredentialDetailResponse,
+    MerchantDetailResponse,
+    MerchantQrAccountDetailResponse,
     MerchantListItemResponse,
     MerchantListResponse,
     PaymentListItemResponse,
@@ -128,6 +131,59 @@ class OpsDashboardRouteTest(unittest.TestCase):
         self.assertEqual(kwargs["status"], MerchantStatus.PENDING_REVIEW)
         self.assertEqual(kwargs["onboarding_status"], OnboardingCaseStatus.PENDING_REVIEW)
         self.assertEqual(kwargs["limit"], 25)
+
+    def test_get_merchant_detail_route_serializes_qr_accounts(self) -> None:
+        from app.controllers import ops_dashboard_controller
+        from app.main import app
+
+        db = object()
+        self._override_db(app, db)
+        override_current_internal_user(app, make_internal_user())
+
+        try:
+            with patch.object(
+                ops_dashboard_controller.ops_dashboard_service,
+                "get_merchant_detail",
+                return_value=MerchantDetailResponse(
+                    merchant_id="m_demo",
+                    merchant_name="Demo Merchant",
+                    contact_email="ops@example.com",
+                    status=MerchantStatus.ACTIVE,
+                    settlement_account_name=None,
+                    settlement_account_number=None,
+                    settlement_bank_code=None,
+                    created_at=datetime(2026, 5, 13, 10, 0, tzinfo=timezone.utc),
+                    updated_at=datetime(2026, 5, 13, 10, 0, tzinfo=timezone.utc),
+                    onboarding_case=None,
+                    credentials=[],
+                    qr_accounts=[
+                        MerchantQrAccountDetailResponse(
+                            qr_account_id=str(uuid4()),
+                            provider="VIETQR",
+                            bank_code="VCB",
+                            bank_bin="970436",
+                            account_number="9704361234567890",
+                            account_name="DEMO MERCHANT LLC",
+                            template="compact",
+                            status="ACTIVE",
+                            created_at=datetime(2026, 5, 13, 10, 0, tzinfo=timezone.utc),
+                            updated_at=datetime(2026, 5, 13, 10, 0, tzinfo=timezone.utc),
+                        )
+                    ],
+                    recent_payments=[],
+                    recent_refunds=[],
+                    recent_webhooks=[],
+                    recent_audit_logs=[],
+                ),
+            ) as service:
+                response = TestClient(app).get("/v1/ops/merchants/m_demo")
+        finally:
+            app.dependency_overrides.clear()
+
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.json()["qr_accounts"][0]["bank_bin"], "970436")
+        self.assertIs(service.call_args.kwargs["db"], db)
+        self.assertEqual(service.call_args.kwargs["merchant_id"], "m_demo")
 
     def test_list_payments_route_passes_filters(self) -> None:
         from app.controllers import ops_dashboard_controller

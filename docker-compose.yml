@@ -30,6 +30,7 @@ services:
       MERCHANT_AUTH_COOKIE_NAME: ${MERCHANT_AUTH_COOKIE_NAME:-mini_payment_gateway_merchant_session}
       MERCHANT_AUTH_TTL_SECONDS: ${MERCHANT_AUTH_TTL_SECONDS:-43200}
       MERCHANT_AUTH_COOKIE_SECURE: ${MERCHANT_AUTH_COOKIE_SECURE:-false}
+      PROVIDER_CALLBACK_SECRETS: ${PROVIDER_CALLBACK_SECRETS:-simulator=dev-insecure-provider-callback-secret-change-me}
     volumes:
       - ./backend:/app
     depends_on:
@@ -38,6 +39,28 @@ services:
     command: bash -lc "uvicorn app.main:app --host 0.0.0.0 --port 8000"
     ports:
       - "8000:8000"
+
+  worker:
+    build:
+      context: ./backend
+    working_dir: /app
+    environment:
+      APP_ENV: ${APP_ENV:-local}
+      DATABASE_URL: ${DATABASE_URL:-postgresql+psycopg2://postgres:postgres@postgres:5432/mini_payment_gateway}
+      WORKER_ENABLED: ${WORKER_ENABLED:-true}
+      WORKER_LOOP_INTERVAL_SECONDS: ${WORKER_LOOP_INTERVAL_SECONDS:-15}
+      PAYMENT_EXPIRATION_BATCH_LIMIT: ${PAYMENT_EXPIRATION_BATCH_LIMIT:-200}
+      WEBHOOK_DELIVERY_BATCH_LIMIT: ${WEBHOOK_DELIVERY_BATCH_LIMIT:-100}
+      WORKER_PAYMENT_EXPIRATION_ENABLED: ${WORKER_PAYMENT_EXPIRATION_ENABLED:-true}
+      WORKER_WEBHOOK_DELIVERY_ENABLED: ${WORKER_WEBHOOK_DELIVERY_ENABLED:-true}
+      WORKER_LOG_LEVEL: ${WORKER_LOG_LEVEL:-INFO}
+      WORKER_HEARTBEAT_PATH: ${WORKER_HEARTBEAT_PATH:-/tmp/worker.heartbeat}
+    volumes:
+      - ./backend:/app
+    depends_on:
+      postgres:
+        condition: service_healthy
+    command: bash -lc "python -m app.worker.main"
 
   ops-dashboard:
     build:

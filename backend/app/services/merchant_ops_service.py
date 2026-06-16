@@ -8,24 +8,35 @@ from app.core.time import utc_now
 from app.models.enums import (
     CredentialStatus,
     EntityType,
+    MerchantQrAccountStatus,
     MerchantStatus,
     OnboardingCaseStatus,
+    QrProvider,
 )
 from app.models.merchant import Merchant
 from app.models.merchant_credential import MerchantCredential
 from app.models.merchant_onboarding_case import MerchantOnboardingCase
-from app.repositories import credential_repository, merchant_repository, onboarding_repository
+from app.models.merchant_qr_account import MerchantQrAccount
+from app.repositories import (
+    credential_repository,
+    merchant_qr_account_repository,
+    merchant_repository,
+    onboarding_repository,
+)
 from app.schemas.ops import (
     CreateCredentialRequest,
     CreateMerchantRequest,
+    CreateQrAccountRequest,
     CredentialOpsResponse,
     MerchantOpsResponse,
     OnboardingCaseResponse,
     OpsActorContext,
     OpsReasonRequest,
+    QrAccountOpsResponse,
     ReviewOnboardingCaseRequest,
     RotateCredentialRequest,
     SubmitOnboardingCaseRequest,
+    UpdateQrAccountRequest,
 )
 from app.services import audit_service
 
@@ -313,6 +324,141 @@ def rotate_credential(
     return CredentialOpsResponse.from_credential(new_credential, merchant.merchant_id)
 
 
+def create_qr_account(
+    db: Session,
+    merchant_id: str,
+    request: CreateQrAccountRequest,
+    actor: OpsActorContext,
+    now: datetime | None = None,
+) -> QrAccountOpsResponse:
+    merchant = _require_merchant(db, merchant_id)
+    if request.status == MerchantQrAccountStatus.ACTIVE:
+        active_account = merchant_qr_account_repository.get_active_by_merchant_provider(
+            db,
+            merchant.id,
+            request.provider,
+        )
+        if active_account is not None:
+            raise AppError(
+                error_code="ACTIVE_QR_ACCOUNT_EXISTS",
+                message="An active QR account already exists for this merchant and provider.",
+                status_code=409,
+                details={"merchant_id": merchant_id, "provider": request.provider.value},
+            )
+
+    qr_account = merchant_qr_account_repository.create(
+        db=db,
+        merchant_db_id=merchant.id,
+        provider=request.provider,
+        bank_code=request.bank_code,
+        bank_bin=request.bank_bin,
+        account_number=request.account_number,
+        account_name=request.account_name,
+        template=request.template,
+        status=request.status,
+    )
+    _record_audit(
+        db=db,
+        event_type="MERCHANT_QR_ACCOUNT_CREATED",
+        entity_type=EntityType.MERCHANT_QR_ACCOUNT,
+        entity_id=qr_account.id,
+        actor=actor,
+        before_state=None,
+        after_state=_qr_account_state(qr_account),
+    )
+    db.commit()
+    return QrAccountOpsResponse.from_qr_account(qr_account, merchant.merchant_id)
+
+
+def update_qr_account(
+    db: Session,
+    merchant_id: str,
+    qr_account_id: str,
+    request: UpdateQrAccountRequest,
+    actor: OpsActorContext,
+    now: datetime | None = None,
+) -> QrAccountOpsResponse:
+    merchant = _require_merchant(db, merchant_id)
+    qr_account = _require_qr_account(db, merchant, qr_account_id)
+    before_state = _qr_account_state(qr_account)
+    for field_name in ("bank_code", "bank_bin", "account_number", "account_name", "template"):
+        value = getattr(request, field_name)
+        if value is not None:
+            setattr(qr_account, field_name, value)
+    merchant_qr_account_repository.save(db, qr_account)
+    _record_audit(
+        db=db,
+        event_type="MERCHANT_QR_ACCOUNT_UPDATED",
+        entity_type=EntityType.MERCHANT_QR_ACCOUNT,
+        entity_id=qr_account.id,
+        actor=actor,
+        before_state=before_state,
+        after_state=_qr_account_state(qr_account),
+    )
+    db.commit()
+    return QrAccountOpsResponse.from_qr_account(qr_account, merchant.merchant_id)
+
+
+def activate_qr_account(
+    db: Session,
+    merchant_id: str,
+    qr_account_id: str,
+    request: OpsReasonRequest,
+    actor: OpsActorContext,
+    now: datetime | None = None,
+) -> QrAccountOpsResponse:
+    merchant = _require_merchant(db, merchant_id)
+    qr_account = _require_qr_account(db, merchant, qr_account_id)
+    before_state = _qr_account_state(qr_account)
+    existing_active = merchant_qr_account_repository.get_active_by_merchant_provider(
+        db,
+        merchant.id,
+        qr_account.provider,
+    )
+    if existing_active is not None and existing_active.id != qr_account.id:
+        existing_active.status = MerchantQrAccountStatus.INACTIVE
+        merchant_qr_account_repository.save(db, existing_active)
+    qr_account.status = MerchantQrAccountStatus.ACTIVE
+    merchant_qr_account_repository.save(db, qr_account)
+    _record_audit(
+        db=db,
+        event_type="MERCHANT_QR_ACCOUNT_ACTIVATED",
+        entity_type=EntityType.MERCHANT_QR_ACCOUNT,
+        entity_id=qr_account.id,
+        actor=actor,
+        before_state=before_state,
+        after_state=_qr_account_state(qr_account),
+    )
+    db.commit()
+    return QrAccountOpsResponse.from_qr_account(qr_account, merchant.merchant_id)
+
+
+def deactivate_qr_account(
+    db: Session,
+    merchant_id: str,
+    qr_account_id: str,
+    request: OpsReasonRequest,
+    actor: OpsActorContext,
+    now: datetime | None = None,
+) -> QrAccountOpsResponse:
+    merchant = _require_merchant(db, merchant_id)
+    qr_account = _require_qr_account(db, merchant, qr_account_id)
+    before_state = _qr_account_state(qr_account)
+    qr_account.status = MerchantQrAccountStatus.INACTIVE
+    merchant_qr_account_repository.save(db, qr_account)
+    _record_audit(
+        db=db,
+        event_type="MERCHANT_QR_ACCOUNT_DEACTIVATED",
+        entity_type=EntityType.MERCHANT_QR_ACCOUNT,
+        entity_id=qr_account.id,
+        actor=actor,
+        before_state=before_state,
+        after_state=_qr_account_state(qr_account),
+    )
+    db.commit()
+    return QrAccountOpsResponse.from_qr_account(qr_account, merchant.merchant_id)
+
+
 def _decide_onboarding_case(
     db: Session,
     merchant_id: str,
@@ -394,6 +540,18 @@ def _require_merchant(db: Session, merchant_id: str) -> Merchant:
     return merchant
 
 
+def _require_qr_account(db: Session, merchant: Merchant, qr_account_id: str) -> MerchantQrAccount:
+    qr_account = merchant_qr_account_repository.get_by_id(db, qr_account_id)
+    if qr_account is None or qr_account.merchant_db_id != merchant.id:
+        raise AppError(
+            error_code="QR_ACCOUNT_NOT_FOUND",
+            message="QR account not found.",
+            status_code=404,
+            details={"merchant_id": merchant.merchant_id, "qr_account_id": qr_account_id},
+        )
+    return qr_account
+
+
 def _record_audit(
     db: Session,
     event_type: str,
@@ -460,6 +618,20 @@ def _credential_state(credential: MerchantCredential) -> dict[str, Any]:
         "status": _enum_value(credential.status),
         "expired_at": _datetime_value(credential.expired_at),
         "rotated_at": _datetime_value(credential.rotated_at),
+    }
+
+
+def _qr_account_state(qr_account: MerchantQrAccount) -> dict[str, Any]:
+    return {
+        "id": str(qr_account.id),
+        "merchant_db_id": str(qr_account.merchant_db_id),
+        "provider": _enum_value(qr_account.provider),
+        "bank_code": qr_account.bank_code,
+        "bank_bin": qr_account.bank_bin,
+        "account_number": qr_account.account_number,
+        "account_name": qr_account.account_name,
+        "template": qr_account.template,
+        "status": _enum_value(qr_account.status),
     }
 
 

@@ -17,7 +17,9 @@ from app.models.enums import (
     DeliveryAttemptResult,
     InternalUserRole,
     InternalUserStatus,
+    MerchantQrAccountStatus,
     PaymentStatus,
+    QrProvider,
     ReconciliationStatus,
     RefundStatus,
     WebhookEventStatus,
@@ -26,6 +28,7 @@ from app.models.internal_user import InternalUser
 from app.models.merchant import Merchant
 from app.models.merchant_credential import MerchantCredential
 from app.models.merchant_onboarding_case import MerchantOnboardingCase
+from app.models.merchant_qr_account import MerchantQrAccount
 from app.models.order_reference import OrderReference
 from app.models.payment_transaction import PaymentTransaction
 from app.models.reconciliation_record import ReconciliationRecord
@@ -155,6 +158,17 @@ class PaymentRefundWebhookE2ETests(unittest.TestCase):
                 if merchant_ids
                 else []
             )
+            qr_account_ids = (
+                list(
+                    db.scalars(
+                        select(MerchantQrAccount.id).where(
+                            MerchantQrAccount.merchant_db_id.in_(merchant_ids)
+                        )
+                    )
+                )
+                if merchant_ids
+                else []
+            )
             reconciliation_ids = (
                 list(
                     db.scalars(
@@ -174,6 +188,7 @@ class PaymentRefundWebhookE2ETests(unittest.TestCase):
                 + webhook_ids
                 + case_ids
                 + credential_ids
+                + qr_account_ids
                 + reconciliation_ids
             )
             if user_ids and audit_entity_ids:
@@ -242,6 +257,11 @@ class PaymentRefundWebhookE2ETests(unittest.TestCase):
                             MerchantCredential.merchant_db_id.in_(merchant_ids)
                     )
                 )
+                db.execute(
+                    delete(MerchantQrAccount).where(
+                        MerchantQrAccount.merchant_db_id.in_(merchant_ids)
+                    )
+                )
                 db.execute(delete(Merchant).where(Merchant.id.in_(merchant_ids)))
 
             if user_ids:
@@ -286,6 +306,7 @@ class PaymentRefundWebhookE2ETests(unittest.TestCase):
         self._login_internal_user(ops_user["email"], ops_user["password"])
         merchant_id = f"m_e2e_{suffix}"
         secret_key = f"e2e_secret_{suffix}"
+        account_number = f"9704{int(suffix, 16):010d}"
 
         create_response = self.client.post(
             "/v1/ops/merchants",
@@ -346,6 +367,21 @@ class PaymentRefundWebhookE2ETests(unittest.TestCase):
         self.assertEqual(credential_response.status_code, 200, credential_response.text)
         access_key = credential_response.json()["access_key"]
 
+        qr_account_response = self.client.post(
+            f"/v1/ops/merchants/{merchant_id}/qr-accounts",
+            json={
+                **self._actor(ops_user_id, "E2E configure VietQR account"),
+                "provider": QrProvider.VIETQR.value,
+                "bank_code": "VCB",
+                "bank_bin": "970436",
+                "account_number": account_number,
+                "account_name": "E2E MERCHANT",
+                "template": "compact",
+                "status": MerchantQrAccountStatus.ACTIVE.value,
+            },
+        )
+        self.assertEqual(qr_account_response.status_code, 200, qr_account_response.text)
+
         activate_response = self.client.post(
             f"/v1/ops/merchants/{merchant_id}/activate",
             json=self._actor(ops_user_id, "E2E activate merchant"),
@@ -357,6 +393,7 @@ class PaymentRefundWebhookE2ETests(unittest.TestCase):
             "access_key": access_key,
             "secret_key": secret_key,
             "ops_user_id": ops_user_id,
+            "qr_account_id": qr_account_response.json()["qr_account_id"],
         }
 
     def _signed_headers(
@@ -382,6 +419,20 @@ class PaymentRefundWebhookE2ETests(unittest.TestCase):
         if idempotency_key:
             headers["X-Idempotency-Key"] = idempotency_key
         return headers
+
+    def _provider_headers(self, method: str, path: str, body: bytes) -> dict[str, str]:
+        timestamp = datetime.now(timezone.utc).replace(microsecond=0).isoformat()
+        payload_hash = sha256_hex(body)
+        signature_payload = f"{timestamp}.{method.upper()}.{path}.{payload_hash}"
+        return {
+            "Content-Type": "application/json",
+            "X-Provider-Id": "simulator",
+            "X-Provider-Timestamp": timestamp,
+            "X-Provider-Signature": sign_hmac_sha256(
+                "dev-insecure-provider-callback-secret-change-me",
+                signature_payload,
+            ),
+        }
 
     def _merchant_post(
         self,
@@ -425,9 +476,9 @@ class PaymentRefundWebhookE2ETests(unittest.TestCase):
         return response.json()
 
     def _mark_payment_success(self, transaction_id: str, amount: str = "12345.00"):
-        response = self.client.post(
-            "/v1/provider/callbacks/payment",
-            json={
+        path = "/v1/provider/callbacks/payment"
+        body = _compact_json(
+            {
                 "transaction_reference": transaction_id,
                 "external_reference": f"bank-{transaction_id}",
                 "status": "SUCCESS",
@@ -440,7 +491,12 @@ class PaymentRefundWebhookE2ETests(unittest.TestCase):
                     "status": "SUCCESS",
                 },
                 "source_type": "SIMULATOR",
-            },
+            }
+        )
+        response = self.client.post(
+            path,
+            content=body,
+            headers=self._provider_headers("POST", path, body),
         )
         self.assertEqual(response.status_code, 200, response.text)
         return response.json()
@@ -463,9 +519,9 @@ class PaymentRefundWebhookE2ETests(unittest.TestCase):
         return response.json()
 
     def _mark_refund_success(self, refund_transaction_id: str, amount: str = "12345.00"):
-        response = self.client.post(
-            "/v1/provider/callbacks/refund",
-            json={
+        path = "/v1/provider/callbacks/refund"
+        body = _compact_json(
+            {
                 "refund_transaction_id": refund_transaction_id,
                 "external_reference": f"bank-{refund_transaction_id}",
                 "status": "SUCCESS",
@@ -478,7 +534,12 @@ class PaymentRefundWebhookE2ETests(unittest.TestCase):
                     "status": "SUCCESS",
                 },
                 "source_type": "SIMULATOR",
-            },
+            }
+        )
+        response = self.client.post(
+            path,
+            content=body,
+            headers=self._provider_headers("POST", path, body),
         )
         self.assertEqual(response.status_code, 200, response.text)
         return response.json()

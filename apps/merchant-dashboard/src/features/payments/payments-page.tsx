@@ -62,6 +62,7 @@ export function PaymentsPage() {
 
   const payments = listQuery.data?.payments ?? [];
   const paymentDetail = detailQuery.data;
+  const qrImageSource = paymentDetail?.qr_image_base64 ?? paymentDetail?.qr_image_url;
 
   return (
     <section className="page-stack">
@@ -175,7 +176,23 @@ export function PaymentsPage() {
                 ]}
               />
               <ContentCard title="QR payload">
-                <JsonBlock value={{ qr_content: paymentDetail.qr_content }} />
+                <div className={qrImageSource ? "qr-payload-grid" : "qr-payload-grid qr-payload-grid-single"}>
+                  {qrImageSource ? (
+                    <div className="qr-image-frame">
+                      <img
+                        className="qr-image"
+                        src={qrImageSource}
+                        alt={`QR code for ${paymentDetail.transaction_id}`}
+                      />
+                    </div>
+                  ) : null}
+                  <JsonBlock
+                    value={{
+                      qr_reference: paymentDetail.qr_reference,
+                      qr_content: paymentDetail.qr_content,
+                    }}
+                  />
+                </div>
               </ContentCard>
               <div className="panel-grid">
                 <ContentCard title="Callback evidence">

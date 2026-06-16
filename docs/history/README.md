@@ -46,3 +46,4 @@ point.
 - `completions/phase-08.md`
 - `completions/phase-09.md`
 - `completions/phase-10.md`
+- `completions/phase-12.md`

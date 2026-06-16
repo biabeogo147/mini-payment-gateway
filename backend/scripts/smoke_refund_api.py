@@ -2,8 +2,11 @@ import json
 import subprocess
 import sys
 from datetime import datetime, timezone
+from pathlib import Path
 from urllib.error import HTTPError, URLError
 from urllib.request import Request, urlopen
+
+sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
 from sqlalchemy import select
 
@@ -17,6 +20,7 @@ from smoke_payment_api import (
     free_port,
     request_json,
     seed_merchant,
+    signed_provider_headers,
     signed_headers,
     wait_for_health,
 )
@@ -135,7 +139,7 @@ def send_refund_success_callback(port: int, created_refund: dict) -> dict:
         f"http://127.0.0.1:{port}{path}",
         data=body,
         method="POST",
-        headers={"Content-Type": "application/json"},
+        headers={"Content-Type": "application/json", **signed_provider_headers("POST", path, body)},
     )
     try:
         with urlopen(request, timeout=10) as response:

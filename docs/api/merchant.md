@@ -51,9 +51,10 @@ hex(hmac_sha256(secret_key, signing_string))
   "transaction_id": "pay_...",
   "order_id": "ORDER-1001",
   "merchant_id": "m_demo",
-  "qr_content": "MINI_GATEWAY|...",
+  "qr_reference": "PABC123456789",
+  "qr_content": "000201...",
   "qr_image_url": null,
-  "qr_image_base64": null,
+  "qr_image_base64": "data:image/png;base64,...",
   "status": "PENDING",
   "expire_at": "2026-04-29T10:00:00Z"
 }
@@ -62,6 +63,12 @@ hex(hmac_sha256(secret_key, signing_string))
 ### Rules
 
 - Merchant must be `ACTIVE`.
+- Merchant must have one active Ops-managed VietQR receiving account.
+- Pilot payments accept only `currency=VND` and whole-VND amounts.
+- `qr_reference` is a gateway transfer reference, maximum 13 ASCII characters,
+  and is used as the VietQR transfer purpose.
+- `qr_content` is the merchant-presented VietQR/EMV payload. `qr_image_base64`
+  is a PNG data URL suitable for direct rendering in merchant apps.
 - A usable transaction is persisted directly as `PENDING`; `INITIATED` is never
   stored.
 - One active payment means one `PENDING` payment per `merchant_id + order_id`.

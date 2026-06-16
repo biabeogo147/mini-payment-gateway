@@ -77,14 +77,20 @@ def get_pending_by_merchant_order(
 def find_overdue_pending(
     db: Session,
     now: datetime,
+    limit: int | None = None,
 ) -> list[PaymentTransaction]:
+    statement = (
+        select(PaymentTransaction)
+        .where(
+            PaymentTransaction.status == PaymentStatus.PENDING,
+            PaymentTransaction.expire_at <= now,
+        )
+        .order_by(PaymentTransaction.expire_at.asc(), PaymentTransaction.created_at.asc())
+    )
+    if limit is not None:
+        statement = statement.limit(limit)
     return list(
-        db.scalars(
-            select(PaymentTransaction).where(
-                PaymentTransaction.status == PaymentStatus.PENDING,
-                PaymentTransaction.expire_at <= now,
-            )
-        ).all()
+        db.scalars(statement).all()
     )
 
 
@@ -97,7 +103,9 @@ def create(
     amount: Decimal,
     currency: str,
     description: str,
+    qr_reference: str | None,
     qr_content: str,
+    qr_image_base64: str | None,
     expire_at: datetime,
     idempotency_key: str | None = None,
 ) -> PaymentTransaction:
@@ -110,7 +118,9 @@ def create(
         currency=currency,
         description=description,
         status=PaymentStatus.PENDING,
+        qr_reference=qr_reference,
         qr_content=qr_content,
+        qr_image_base64=qr_image_base64,
         expire_at=expire_at,
         idempotency_key=idempotency_key,
     )
