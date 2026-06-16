@@ -1,0 +1,102 @@
+\chapter{API Design and Implementation}
+
+\section{API Documentation Strategy}
+
+The main report uses compact API family IDs so that the design discussion stays
+readable. The companion document in \code{api-documentation.tex} owns the
+detailed
+request and response contracts, shared conventions, error cases, security
+notes, and Postman scenario mapping.
+
+This chapter therefore focuses on API design decisions rather than endpoint-by-
+endpoint payload detail.
+
+\section{API Taxonomy And Boundary Split}
+
+\begin{table}[H]
+\centering
+\caption{API families and access boundaries}
+\begin{tabularx}{\textwidth}{L{0.18\textwidth}L{0.20\textwidth}Y}
+\toprule
+\textbf{Family} & \textbf{Actor or auth} & \textbf{Design purpose} \\
+\midrule
+\apiid{AUTH-01} & Internal Admin/Ops session & Bootstrap, login, logout, current-session lookup, password change, and internal user administration support. \\
+\apiid{AUTH-02--03} & Merchant portal session & Merchant Dashboard login, logout, current-session lookup, and password change. \\
+\apiid{PAY-*} and \apiid{REF-*} & Merchant backend / HMAC & Merchant-facing payment and refund creation plus transaction lookup. \\
+\apiid{CB-*} and \apiid{REF-04--05} & Provider simulator & Provider-side payment and refund result callbacks with reconciliation fallback. \\
+\apiid{OPS-*}, \apiid{ONB-*}, \apiid{MPU-*}, \apiid{REC-*} & Internal Admin/Ops session & Internal dashboard reads, merchant lifecycle actions, portal-user provisioning, reconciliation, and recovery. \\
+\apiid{MP-*} & Merchant portal session & Merchant-scoped overview, analytics, explorers, profile, and credentials. \\
+\apiid{WH-*} & Gateway-to-merchant plus internal Ops retry & Outbound webhook event contract, retry behavior, and manual recovery. \\
+\bottomrule
+\end{tabularx}
+\end{table}
+
+The implemented API design uses three separate authentication models rather than
+one shared credential system:
+
+\begin{itemize}
+  \item merchant backends call \apiid{PAY-*} and \apiid{REF-*} with HMAC
+  headers;
+  \item internal users call \apiid{AUTH-01}, \apiid{OPS-*}, \apiid{ONB-*},
+  \apiid{MPU-*}, and \apiid{REC-*} with an internal HttpOnly session and RBAC;
+  \item Merchant Dashboard users call \apiid{AUTH-02--03} and \apiid{MP-*}
+  with a merchant portal HttpOnly session.
+\end{itemize}
+
+\section{Reduced API ID Catalogue}
+
+\begin{longtable}{L{0.16\textwidth}L{0.27\textwidth}L{0.18\textwidth}L{0.29\textwidth}}
+\caption{Reduced API catalogue for the report narrative}\\
+\toprule
+\textbf{ID family} & \textbf{Representative routes} & \textbf{Actor/auth} & \textbf{Design note} \\
+\midrule
+\endfirsthead
+\toprule
+\textbf{ID family} & \textbf{Representative routes} & \textbf{Actor/auth} & \textbf{Design note} \\
+\midrule
+\endhead
+\apiid{AUTH-01} & \routecell{\texttt{/v1/internal/auth/*}\\\texttt{/v1/internal/users/*}} & Admin/Ops session & Internal auth is session-based and supports RBAC plus internal user administration. \\
+\apiid{PAY-01--03} & \routecell{\texttt{POST /v1/payments}\\\texttt{GET /v1/payments/*}} & Merchant backend / HMAC & Payment creation enforces merchant readiness and semantic idempotency. \\
+\apiid{REF-01--05} & \routecell{\texttt{POST /v1/refunds}\\\texttt{GET /v1/refunds/*}\\\texttt{/v1/provider/callbacks/refund}} & Merchant backend or provider simulator & Refund design is full-refund-only and integrates callback-based finalization. \\
+\apiid{CB-01--02} & \routecell{\texttt{/v1/provider/callbacks/payment}} & Provider simulator & Ambiguous or mismatched evidence produces reconciliation rather than silent overwrite. \\
+\apiid{OPS-01--06} & \routecell{\texttt{/v1/ops/dashboard/*}\\\texttt{/v1/ops/merchants/*}} & Admin/Ops session & Internal dashboards combine read APIs, merchant lifecycle actions, credentials, and internal user workflows. \\
+\apiid{MPU-01--04} & \routecell{\texttt{/v1/ops/merchants/}\\\texttt{.../portal-users/*}} & Admin session & Merchant portal user provisioning is internal-only and returns generated passwords once. \\
+\apiid{MP-01--06} & \routecell{\texttt{/v1/merchant-portal/*}} & Merchant portal session & Merchant APIs are read-only, merchant-scoped, and never trust client-supplied merchant ids after login. \\
+\apiid{REC-01--02} and \apiid{WH-10} & \routecell{\texttt{/v1/ops/reconciliation/*}\\\texttt{/v1/ops/webhooks/*/retry}} & Admin/Ops session & Recovery APIs support review and manual retry without mutating already-final money-flow state. \\
+\bottomrule
+\end{longtable}
+
+\section{Asynchronous API And Event Design}
+
+The API design must handle asynchronous evidence safely. Provider callbacks do
+not merely set a status field; they first store durable evidence and then apply
+domain rules. Late success after expiration, amount mismatch, and final-state
+conflicts create reconciliation records instead of forcing incorrect state
+transitions.
+
+Webhook delivery is intentionally decoupled from payment and refund finality.
+The API surface exposes the business event indirectly through webhook event
+creation and directly through internal retry support. This makes it possible to
+recover from merchant endpoint failure without changing the final payment or
+refund outcome.
+
+\section{Error Model And Security Design}
+
+Business failures use stable application error codes rather than ad hoc status
+messages. Examples include \texttt{MERCHANT\_NOT\_ACTIVE},
+\texttt{ACTIVE\_CREDENTIAL\_REQUIRED}, \texttt{PAYMENT\_ALREADY\_SUCCESS}, and
+\texttt{MERCHANT\_AUTH\_INACTIVE}.
+
+Sensitive data exposure is minimized:
+
+\begin{itemize}
+  \item raw credential secrets are never returned by credential metadata APIs;
+  \item generated portal passwords are returned only on create and reset;
+  \item audit snapshots mask secret-like fields recursively;
+  \item Merchant Portal detail routes return 404 for records outside the
+  authenticated merchant scope.
+\end{itemize}
+
+The detailed payload examples, common error envelope, and Postman mapping are
+maintained in the companion API documentation so the report can stay design-
+focused.

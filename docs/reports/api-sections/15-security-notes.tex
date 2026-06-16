@@ -1,0 +1,25 @@
+\chapter{Security Notes}
+
+The implemented API surface applies several important security controls even in
+its MVP form:
+
+\begin{itemize}
+  \item merchant payment and refund APIs require HMAC authentication;
+  \item internal Ops APIs and Merchant Portal APIs use separate session systems;
+  \item merchant-scoped portal routes derive tenant scope from session context
+  rather than trusting client-supplied merchant ids;
+  \item raw merchant credential secrets are not returned by metadata APIs;
+  \item generated merchant portal and internal user passwords are returned only
+  on create or reset;
+  \item audit snapshots mask secret-like fields recursively;
+  \item manual operational actions capture an audit reason.
+\end{itemize}
+
+Security limitations that remain outside the MVP:
+
+\begin{itemize}
+  \item provider-grade signing for callback routes;
+  \item stronger secret management beyond environment-local storage;
+  \item broader production hardening for externally reachable dashboards or
+  APIs.
+\end{itemize}

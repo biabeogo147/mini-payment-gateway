@@ -1,0 +1,92 @@
+\chapter{Testing and Evaluation}
+
+\section{Testing Strategy}
+
+Testing is layered around business risk. Unit and service tests cover isolated
+rules such as HMAC verification, merchant readiness, payment idempotency,
+refund eligibility, expiration handling, webhook retry policy, and
+reconciliation. Route tests cover FastAPI contracts and status codes. End-to-
+end tests cover complete business journeys through controllers and services.
+Frontend tests cover transforms, rendering, route behavior, type safety, and
+build correctness.
+
+\begin{longtable}{L{0.22\textwidth}L{0.34\textwidth}L{0.34\textwidth}}
+\caption{Testing and evaluation matrix}\\
+\toprule
+\textbf{Category} & \textbf{Coverage} & \textbf{Evidence} \\
+\midrule
+\endfirsthead
+\toprule
+\textbf{Category} & \textbf{Coverage} & \textbf{Evidence} \\
+\midrule
+\endhead
+Backend unit and service & Auth, readiness, payment, refund, expiration, callback, webhook, reconciliation, audit. & Python \texttt{unittest} suite under \code{backend/tests/}. \\
+Backend route & Merchant APIs, provider callbacks, Ops APIs, Merchant Portal APIs, internal auth, internal users. & FastAPI controller and route tests. \\
+Backend E2E & Onboarding to payment, refund, webhook, late callback reconciliation, and manual webhook retry. & \code{test_e2e_payment_refund_webhook.py}. \\
+Merchant Portal scope & Auth, inactive user rejection, profile and credential secrecy, merchant-specific explorers, analytics ranges and zero buckets. & Merchant portal route and analytics tests. \\
+Frontend Merchant Dashboard & Analytics transforms, chart render, route behavior, login accessibility, typecheck, build. & Vitest, TypeScript, and Vite build. \\
+Frontend Ops Dashboard & Typecheck and production build. & TypeScript and Vite build. \\
+Deployment configuration & Compose syntax and sandbox env requirements. & Docker Compose config validation. \\
+Browser smoke & Login, dashboards, list and detail pages, analytics, mobile layout, and overflow checks. & Manual checklist in \code{docs/testing/README.md}. \\
+\bottomrule
+\end{longtable}
+
+\section{Verification Commands}
+
+\begin{lstlisting}[language=bash,caption={Backend verification}]
+cd backend
+python -m unittest discover tests -v
+python -m unittest tests.test_e2e_payment_refund_webhook -v
+\end{lstlisting}
+
+\begin{lstlisting}[language=bash,caption={Frontend and compose verification}]
+npm run merchant-dashboard:typecheck
+npm run merchant-dashboard:test
+npm run merchant-dashboard:build
+npm run ops-dashboard:typecheck
+npm run ops-dashboard:build
+docker compose -f docker-compose.yml config --quiet
+docker compose --env-file .env.sandbox.example -f docker-compose.sandbox.yml config --quiet
+\end{lstlisting}
+
+Historical pass counts and deploy verification snapshots are maintained in
+\code{docs/history/completions/}. The report keeps the verification commands and test
+coverage model in the foreground, while exact rollout-specific results stay in
+the completion records.
+
+\section{Manual Browser Smoke}
+
+Manual smoke testing validates what automated tests cannot fully express:
+layout, readable charts, responsive behavior, and practical operator workflows.
+The smoke checklist includes:
+
+\begin{itemize}
+  \item Ops login, overview, merchant list and detail, lifecycle action,
+  portal-user create or reset or deactivate, payments, refunds, webhooks,
+  reconciliation, and audit;
+  \item Merchant login, overview, analytics range switching, drill-down links,
+  payments, refunds, webhooks, profile, credentials, password change, and
+  logout;
+  \item UI regressions such as horizontal overflow, clipped badges, unreadable
+  charts, unstable status panels, and unreadable data tables.
+\end{itemize}
+
+\section{Evaluation Summary}
+
+The current testing approach matches the system's main risks well:
+
+\begin{itemize}
+  \item merchant-facing business rules are covered at both service and route
+  levels;
+  \item asynchronous callback and webhook behavior is validated with focused
+  service tests and end-to-end scenarios;
+  \item dashboard correctness is supported by frontend build checks, targeted
+  tests, and manual browser smoke;
+  \item deployment wiring is validated separately through compose checks and
+  sandbox deployment verification.
+\end{itemize}
+
+The remaining evaluation gap is typical for an MVP: browser smoke and internal
+deployment verification still complement the automated suite because layout,
+operational readability, and sandbox-specific runtime integration are not fully
+captured by unit tests alone.

@@ -1,0 +1,75 @@
+\chapter{Database Design}
+
+\section{Entity Model}
+
+The database uses PostgreSQL with SQLAlchemy models and Alembic migrations. The
+schema is designed to support merchant lifecycle management, credentials,
+payment attempts, refunds, webhook delivery, provider callback evidence,
+reconciliation, audit logging, internal users, and merchant portal users.
+
+\begin{landscape}
+\begin{center}
+\includegraphics[width=0.95\linewidth]{figures/ERD.png}
+\captionof{figure}{Entity relationship diagram for the implemented Mini Payment
+Gateway schema.}
+\end{center}
+\end{landscape}
+
+\section{Core Entities}
+
+\begin{longtable}{L{0.25\textwidth}L{0.65\textwidth}}
+\caption{Core database entities}\\
+\toprule
+\textbf{Entity} & \textbf{Purpose} \\
+\midrule
+\endfirsthead
+\toprule
+\textbf{Entity} & \textbf{Purpose} \\
+\midrule
+\endhead
+\texttt{merchants} & Operational merchant profile, contact data, webhook URL, settlement metadata, and status. \\
+\texttt{merchant\_onboarding\_cases} & Onboarding payload, documents, review checks, approval or rejection decision, reviewer, and timestamps. \\
+\texttt{merchant\_credentials} & Merchant HMAC API credential metadata and stored secret material; responses expose suffix metadata only. \\
+\texttt{merchant\_users} & Interactive Merchant Dashboard accounts scoped to one merchant. \\
+\texttt{internal\_users} & Internal Admin and Ops users authenticated through session-based auth. \\
+\texttt{order\_references} & Business order mapping for payment attempts and latest payment pointer. \\
+\texttt{payment\_transactions} & Persisted payment attempts with amount, currency, QR content, status, expiration, and provider references. \\
+\texttt{refund\_transactions} & Refund workflow records linked to original successful payments. \\
+\texttt{webhook\_events} & Outbound event payloads, delivery status, retry metadata, and signature material. \\
+\texttt{webhook\_delivery\_attempts} & HTTP delivery attempt evidence for webhook events. \\
+\texttt{bank\_callback\_logs} & Raw and normalized provider callback evidence for payments and refunds. \\
+\texttt{reconciliation\_records} & Review evidence for mismatched or ambiguous external and internal outcomes. \\
+\texttt{audit\_logs} & Immutable operational audit trail for manual and administrative actions. \\
+\bottomrule
+\end{longtable}
+
+\section{Database Invariants}
+
+\begin{longtable}{L{0.33\textwidth}L{0.57\textwidth}}
+\caption{Important database invariants}\\
+\toprule
+\textbf{Invariant} & \textbf{Reason} \\
+\midrule
+\endfirsthead
+\toprule
+\textbf{Invariant} & \textbf{Reason} \\
+\midrule
+\endhead
+\texttt{merchants.merchant\_id} is unique. & Public merchant identity must be stable across APIs and dashboards. \\
+Only one active credential per merchant. & HMAC verification should have one active secret source at a time. \\
+\texttt{merchant\_users} are unique by merchant and email. & A merchant portal email identifies one account within one merchant tenant. \\
+One pending payment per merchant and order. & Prevents duplicate active QR payment attempts for the same business order. \\
+Refunds are unique by merchant and refund id. & Provides business idempotency for refund creation. \\
+At most one refunded row per payment. & Prevents multiple successful full refunds against the same payment. \\
+Payment, refund, and webhook rows are indexed by merchant and creation time. & Supports merchant-scoped analytics and explorer queries efficiently. \\
+Raw secrets and plaintext passwords are not retrievable through read APIs. & Protects merchant credentials and interactive dashboard accounts. \\
+\bottomrule
+\end{longtable}
+
+\section{Schema Evolution}
+
+Schema changes are applied through discrete Alembic revisions. The migration
+history reflects the system's feature growth: merchant and credential tables,
+payments and order references, refunds, webhook persistence, callback and audit
+evidence, internal auth and Ops dashboard support, and finally merchant portal
+accounts and portal-facing read models.

@@ -1,0 +1,26 @@
+\chapter{Reconciliation APIs}
+
+Reconciliation APIs support internal review when external provider evidence does
+not match internal state cleanly.
+
+\section{\apiid{REC-01--02} Reconciliation Review}
+
+\begin{longtable}{L{0.24\textwidth}L{0.66\textwidth}}
+\caption{REC-01--02 contract block}\\
+\toprule
+\textbf{Field} & \textbf{Contract} \\
+\midrule
+\endfirsthead
+\toprule
+\textbf{Field} & \textbf{Contract} \\
+\midrule
+\endhead
+Routes & \code{GET /v1/ops/reconciliation}, \code{GET /v1/ops/reconciliation/{record_id}}, \code{POST /v1/ops/reconciliation/{record_id}/resolve}. \\
+Actor and auth & Internal Admin/Ops session. \\
+Key request fields & Query filters such as \code{match_result}, \code{entity_type}, \code{entity_id}, and \code{limit}; resolve uses audit reason plus optional \code{reviewed_by} and \code{review_note}. \\
+Key response fields & Reconciliation record id, entity type, internal and external status, internal and external amounts, mismatch reason, review metadata, timestamps. \\
+Important business rules & Resolve marks the record as \code{RESOLVED}, writes review metadata, and records \code{RECONCILIATION_RESOLVED} in the audit log. \\
+Important error cases & \code{RECONCILIATION_NOT_FOUND}, \code{RECONCILIATION_ALREADY_RESOLVED}, session and RBAC failures. \\
+Related scenarios & \code{REC-01}, \code{REC-02}, \code{REC-02R}, \code{REC-03}, \code{REC-04}, \code{REC-05}, \code{E2E-03}. \\
+\bottomrule
+\end{longtable}

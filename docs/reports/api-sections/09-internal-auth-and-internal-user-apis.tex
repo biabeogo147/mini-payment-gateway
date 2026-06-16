@@ -1,0 +1,45 @@
+\chapter{Internal Auth And Internal User APIs}
+
+\section{\apiid{AUTH-01} Internal Session Authentication}
+
+\begin{longtable}{L{0.24\textwidth}L{0.66\textwidth}}
+\caption{AUTH-01 contract block}\\
+\toprule
+\textbf{Field} & \textbf{Contract} \\
+\midrule
+\endfirsthead
+\toprule
+\textbf{Field} & \textbf{Contract} \\
+\midrule
+\endhead
+Routes & \code{GET /v1/internal/auth/bootstrap-status}, \code{POST /v1/internal/auth/bootstrap}, \code{POST /v1/internal/auth/login}, \code{POST /v1/internal/auth/logout}, \code{GET /v1/internal/auth/me}, \code{POST /v1/internal/auth/change-password}. \\
+Actor and auth & Internal Admin or Ops users using an HttpOnly session cookie. \\
+Key request fields & Bootstrap and login use \code{email} and \code{password}; change password uses \code{current_password} and \code{new_password}. \\
+Key response fields & Current session user, role, session validity, and bootstrap state. \\
+Important business rules & Bootstrap is used only to create the first internal admin; later auth uses session login; role checks are enforced server-side. \\
+Important error cases & Invalid credentials, inactive users, expired sessions, validation errors. \\
+Related scenarios & Internal dashboard login and bootstrap flows; frontend browser smoke in \code{docs/testing/README.md}. \\
+\bottomrule
+\end{longtable}
+
+\section{\apiid{OPS-06} Internal User Administration}
+
+\begin{longtable}{L{0.24\textwidth}L{0.66\textwidth}}
+\caption{OPS-06 contract block}\\
+\toprule
+\textbf{Field} & \textbf{Contract} \\
+\midrule
+\endfirsthead
+\toprule
+\textbf{Field} & \textbf{Contract} \\
+\midrule
+\endhead
+Routes & \code{GET /v1/internal/users}, \code{POST /v1/internal/users}, \code{PATCH /v1/internal/users/{user_id}}, \code{POST /v1/internal/users/{user_id}/reset-password}. \\
+Actor and auth & Internal \code{ADMIN} session only. \\
+Key request fields & Create and update carry internal user identity fields; reset-password has no body. \\
+Key response fields & User identity, role, status, timestamps, and one-time generated password on create or reset. \\
+Important business rules & Internal user administration is Admin-only; generated passwords are returned once and not retrievable later. \\
+Important error cases & Auth and RBAC failures, validation errors, internal user lookup failures. \\
+Related scenarios & Ops Dashboard internal user management flows. \\
+\bottomrule
+\end{longtable}

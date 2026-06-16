@@ -1,0 +1,73 @@
+\documentclass[11pt,a4paper,oneside]{report}
+
+\newcommand{\DocumentTitle}{System Design and Implementation Report}
+\newcommand{\DocumentSummary}{This report documents the implemented Mini Payment Gateway as an academic project artifact. It covers requirements, architecture, database design, user interface design, implementation structure, API design, and testing evidence while staying aligned with the behavior currently present in the repository.}
+
+\input{shared/metadata.tex}
+\input{shared/preamble.tex}
+\input{shared/macros.tex}
+
+\begin{document}
+
+\hypersetup{pageanchor=false}
+\makempgtitlepage
+\clearpage
+\hypersetup{pageanchor=true}
+
+\pagenumbering{roman}
+
+\frontchapter{Abstract}
+The Mini Payment Gateway is an implemented MVP payment gateway for merchant
+onboarding, dynamic QR payment creation, provider result callbacks, full
+refunds, webhook delivery, operational investigation, and dashboard-based
+merchant visibility. The system combines a FastAPI backend, PostgreSQL
+database, an internal Ops Dashboard, and a separate Merchant Dashboard.
+
+The report is intentionally implementation-faithful. It focuses on the current
+repository state rather than speculative features, and it uses the companion
+API document in \code{api-documentation.tex} for the detailed endpoint
+contracts.
+
+\tableofcontents
+\listoffigures
+\listoftables
+
+\frontchapter{Glossary and Acronyms}
+\begin{longtable}{L{0.20\textwidth}L{0.70\textwidth}}
+\toprule
+\textbf{Term} & \textbf{Meaning} \\
+\midrule
+\endfirsthead
+\toprule
+\textbf{Term} & \textbf{Meaning} \\
+\midrule
+\endhead
+API & Application Programming Interface. \\
+E2E & End-to-end verification across multiple components. \\
+HMAC & Hash-based message authentication code used by merchant-facing APIs. \\
+MVP & Minimum viable product scope implemented for the project. \\
+Ops & Internal operations role used for day-to-day support workflows. \\
+RBAC & Role-based access control for internal and merchant-facing session users. \\
+QR & Quick response payment payload returned to merchants during payment creation. \\
+\bottomrule
+\end{longtable}
+
+\clearpage
+\pagenumbering{arabic}
+
+\input{chapters/01-system-requirements-and-problem-analysis.tex}
+\input{chapters/02-use-case-analysis.tex}
+\input{chapters/03-user-stories.tex}
+\input{chapters/04-system-architecture.tex}
+\input{chapters/05-component-architecture-and-design.tex}
+\input{chapters/06-database-design.tex}
+\input{chapters/07-user-interface-design.tex}
+\input{chapters/08-component-implementation.tex}
+\input{chapters/09-api-design-and-implementation.tex}
+\input{chapters/10-testing-and-evaluation.tex}
+
+\appendix
+\input{appendices/demonstration-storyline.tex}
+\input{appendices/limitations-and-future-work.tex}
+
+\end{document}

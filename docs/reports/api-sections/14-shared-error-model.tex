@@ -1,0 +1,42 @@
+\chapter{Shared Error Model}
+
+All API errors use the same envelope shape:
+
+\begin{lstlisting}[language=json,caption={Shared error response shape}]
+{
+  "error_code": "PAYMENT_ALREADY_SUCCESS",
+  "message": "Payment already succeeded for this order.",
+  "request_id": "req_...",
+  "details": {}
+}
+\end{lstlisting}
+
+\begin{longtable}{L{0.24\textwidth}L{0.10\textwidth}L{0.56\textwidth}}
+\caption{Representative application error codes}\\
+\toprule
+\textbf{Code} & \textbf{HTTP} & \textbf{Meaning} \\
+\midrule
+\endfirsthead
+\toprule
+\textbf{Code} & \textbf{HTTP} & \textbf{Meaning} \\
+\midrule
+\endhead
+\texttt{VALIDATION\_ERROR} & 422 & Request shape or field validation failed. \\
+\texttt{AUTH\_MISSING\_HEADER} & 401 & Required merchant auth header is missing. \\
+\texttt{AUTH\_INVALID\_MERCHANT} & 401 & \code{X-Merchant-Id} does not identify a known merchant. \\
+\texttt{AUTH\_INVALID\_CREDENTIAL} & 401 & \code{X-Access-Key} is not active for the merchant. \\
+\texttt{AUTH\_TIMESTAMP\_EXPIRED} & 401 & \code{X-Timestamp} is outside the validity window. \\
+\texttt{AUTH\_INVALID\_SIGNATURE} & 401 & \code{X-Signature} does not match the canonical request signature. \\
+\texttt{MERCHANT\_NOT\_ACTIVE} & 403 & Merchant is not allowed to create payment or refund. \\
+\texttt{PAYMENT\_PENDING\_EXISTS} & 409 & A non-identical pending payment already exists for the order. \\
+\texttt{PAYMENT\_ALREADY\_SUCCESS} & 409 & The order already has a successful payment. \\
+\texttt{REFUND\_WINDOW\_EXPIRED} & 409 & Refund is outside the seven day window from \code{paid_at}. \\
+\texttt{REFUND\_AMOUNT\_NOT\_FULL} & 409 & Refund amount does not match the original payment amount. \\
+\texttt{WEBHOOK\_RETRY\_NOT\_ALLOWED} & 409 & Webhook event is not eligible for retry. \\
+\texttt{MERCHANT\_AUTH\_INACTIVE} & 403 & Merchant portal user is inactive. \\
+\texttt{RECONCILIATION\_ALREADY\_RESOLVED} & 409 & Reconciliation record has already been resolved. \\
+\bottomrule
+\end{longtable}
+
+The authoritative markdown source for this error list remains
+\code{docs/api/errors.md}.

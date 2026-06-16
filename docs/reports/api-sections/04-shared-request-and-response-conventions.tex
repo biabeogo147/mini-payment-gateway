@@ -1,0 +1,80 @@
+\chapter{Shared Request And Response Conventions}
+
+\section{Versioning And Transport}
+
+All implemented endpoints use the \code{/v1} prefix. Requests and responses are JSON
+unless the route is an outbound webhook delivery performed by the gateway
+toward a merchant callback URL.
+
+\section{Time, Money, And Identifiers}
+
+\begin{longtable}{L{0.28\textwidth}L{0.62\textwidth}}
+\caption{Shared data conventions}\\
+\toprule
+\textbf{Item} & \textbf{Convention} \\
+\midrule
+\endfirsthead
+\toprule
+\textbf{Item} & \textbf{Convention} \\
+\midrule
+\endhead
+Timestamps & UTC ISO 8601 timestamps are used for API payloads and response fields. \\
+Amounts & Monetary amounts are represented as decimal strings rather than binary floating-point values. \\
+Merchant scope & Merchant-facing HMAC APIs derive merchant identity from auth headers; Merchant Portal APIs derive scope from the authenticated portal session. \\
+Audit reason & Internal write routes use a nested actor object so the human reason can be written to audit logs. \\
+Scenario IDs & Postman and testing scenarios reuse the same stable IDs documented here. \\
+\bottomrule
+\end{longtable}
+
+\section{Merchant HMAC Headers}
+
+Merchant-facing payment and refund endpoints require:
+
+\begin{itemize}
+  \item \code{X-Merchant-Id}
+  \item \code{X-Access-Key}
+  \item \code{X-Timestamp}
+  \item \code{X-Signature}
+  \item \code{X-Idempotency-Key} when technical idempotency is desired
+\end{itemize}
+
+Canonical signing string:
+
+\begin{lstlisting}[caption={Merchant HMAC signing string}]
+{timestamp}.{method}.{path}.{body_sha256_hex}
+\end{lstlisting}
+
+\section{Internal Write Payload Convention}
+
+Many internal Ops write routes use the following nested actor shape so that the
+audit reason remains explicit:
+
+\begin{lstlisting}[language=json,caption={Internal actor payload fragment}]
+{
+  "actor": {
+    "actor_type": "OPS",
+    "actor_id": null,
+    "reason": "Operator note"
+  }
+}
+\end{lstlisting}
+
+The backend treats \code{reason} as meaningful input, but it does not trust
+client-supplied identity blindly. Role and user identity are derived from the
+authenticated internal session.
+
+\section{Shared Error Envelope}
+
+All API errors use the same envelope shape:
+
+\begin{lstlisting}[language=json,caption={Shared error response shape}]
+{
+  "error_code": "PAYMENT_ALREADY_SUCCESS",
+  "message": "Payment already succeeded for this order.",
+  "request_id": "req_...",
+  "details": {}
+}
+\end{lstlisting}
+
+The shared error model is summarized later in this document and corresponds to
+\code{docs/api/errors.md}.

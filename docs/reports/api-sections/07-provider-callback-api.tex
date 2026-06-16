@@ -1,0 +1,64 @@
+\chapter{Provider Callback API}
+
+Provider callback APIs simulate provider or bank completion events. They persist
+raw callback evidence before applying state transitions. Ambiguous or
+conflicting callbacks create reconciliation evidence instead of silently
+overwriting internal state.
+
+\section{\apiid{CB-01--02} Payment Callback}
+
+\begin{longtable}{L{0.24\textwidth}L{0.66\textwidth}}
+\caption{CB-01--02 contract block}\\
+\toprule
+\textbf{Field} & \textbf{Contract} \\
+\midrule
+\endfirsthead
+\toprule
+\textbf{Field} & \textbf{Contract} \\
+\midrule
+\endhead
+Method and path & \code{POST /v1/provider/callbacks/payment} \\
+Actor and auth & Provider simulator in controlled MVP environments. \\
+Key request fields & \code{external_reference}, \code{transaction_reference}, \code{status}, \code{amount}, success requires \code{paid_at}, failures may include \code{failed_reason_code} and \code{failed_reason_message}, \code{raw_payload}. \\
+Key response fields & \code{transaction_id}, \code{status}, \code{processing_result}, optional \code{reconciliation_record_id}. \\
+Important business rules & Raw callback evidence is always stored; late success after expiration and amount mismatch create reconciliation evidence; duplicate final-state callbacks are repeat-safe. \\
+Important error cases & Validation errors and review-oriented \code{PENDING_REVIEW} outcomes rather than only hard rejections. \\
+Related scenarios & \code{CB-01}, \code{CB-02}, \code{CB-03}, \code{CB-04}, \code{REC-01}, \code{REC-02}. \\
+\bottomrule
+\end{longtable}
+
+\begin{lstlisting}[language=json,caption={CB-01 payment callback request}]
+{
+  "external_reference": "bank_ref_1001",
+  "transaction_reference": "pay_...",
+  "status": "SUCCESS",
+  "amount": "100000.00",
+  "paid_at": "2026-04-29T10:00:00Z",
+  "source_type": "SIMULATOR",
+  "raw_payload": {
+    "provider_status": "00"
+  }
+}
+\end{lstlisting}
+
+\section{\apiid{REF-04--05} Refund Callback}
+
+\begin{longtable}{L{0.24\textwidth}L{0.66\textwidth}}
+\caption{REF-04--05 callback contract block}\\
+\toprule
+\textbf{Field} & \textbf{Contract} \\
+\midrule
+\endfirsthead
+\toprule
+\textbf{Field} & \textbf{Contract} \\
+\midrule
+\endhead
+Method and path & \code{POST /v1/provider/callbacks/refund} \\
+Actor and auth & Provider simulator in controlled MVP environments. \\
+Key request fields & \code{external_reference}, \code{refund_transaction_id}, \code{status}, \code{amount}, success requires \code{processed_at}, failures may include \code{failed_reason_code} and \code{failed_reason_message}, \code{raw_payload}. \\
+Key response fields & \code{refund_transaction_id}, \code{refund_status}, \code{processing_result}, optional \code{reconciliation_record_id}. \\
+Important business rules & Raw callback evidence is stored; mismatches and final-state conflicts become reconciliation evidence; successful final-state changes emit webhook events when merchant webhook delivery is configured. \\
+Important error cases & Validation errors and review-oriented \code{PENDING_REVIEW} outcomes. \\
+Related scenarios & \code{REF-04}, \code{REF-05}, \code{REC-02R}, \code{REC-04}. \\
+\bottomrule
+\end{longtable}

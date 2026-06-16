@@ -1,0 +1,28 @@
+\chapter{Merchant Portal User Provisioning APIs}
+
+Merchant portal user management belongs to the Ops surface and is
+\apiid{ADMIN}-only. \apiid{OPS} users can continue operational workflows but
+cannot create merchant portal users, change portal roles or status, or reset
+portal passwords.
+
+\section{\apiid{MPU-01--04} Portal User Administration}
+
+\begin{longtable}{L{0.24\textwidth}L{0.66\textwidth}}
+\caption{MPU-01--04 contract block}\\
+\toprule
+\textbf{Field} & \textbf{Contract} \\
+\midrule
+\endfirsthead
+\toprule
+\textbf{Field} & \textbf{Contract} \\
+\midrule
+\endhead
+Routes & \code{GET /v1/ops/merchants/{merchant_id}/portal-users}, \code{POST /v1/ops/merchants/{merchant_id}/portal-users}, \code{PATCH /v1/ops/merchants/{merchant_id}/portal-users/{user_id}}, \code{POST /v1/ops/merchants/{merchant_id}/portal-users/{user_id}/reset-password}. \\
+Actor and auth & Internal Admin session. \\
+Key request fields & \code{email}, \code{full_name}, \code{role}, \code{status} for create; optional \code{full_name}, \code{role}, \code{status} for update; reset-password has no body. \\
+Key response fields & Portal user identity and timestamps, plus \code{generated_password} on create and reset. \\
+Important business rules & Plaintext passwords are returned once only; they are never persisted or retrievable later. \\
+Important error cases & Auth and RBAC failures, validation errors, merchant lookup failures, portal user lookup failures. \\
+Related scenarios & Merchant portal user create, update, reset, deactivate, and reactivate flows in the Ops Dashboard. \\
+\bottomrule
+\end{longtable}

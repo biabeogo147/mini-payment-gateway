@@ -1,0 +1,88 @@
+\chapter{Component Implementation}
+
+\section{Backend Implementation}
+
+The backend implementation is organized by API surface and business workflow.
+Controllers define endpoint paths and dependencies. Services enforce business
+rules such as merchant readiness, payment idempotency, refund eligibility,
+webhook retry policy, RBAC, audit, and merchant portal scoping. Repositories
+hold focused persistence and aggregation queries.
+
+Important implementation points include:
+
+\begin{itemize}
+  \item internal auth and merchant portal auth are implemented as separate
+  session systems;
+  \item merchant-scoped read APIs derive scope from authenticated context rather
+  than trusting request parameters;
+  \item callback processing and reconciliation are implemented as explicit
+  service logic instead of ad hoc controller branches;
+  \item write actions that matter operationally emit audit rows with masked
+  before and after state snapshots.
+\end{itemize}
+
+The Merchant Portal feature introduced a dedicated portal account model,
+\texttt{merchant\_users}, and a separate session-auth service. This avoids the
+anti-pattern of using HMAC API credentials for human dashboard login. Internal
+\texttt{ADMIN} users create and reset merchant portal users from the Ops
+Dashboard; generated passwords are returned once and only password hashes are
+stored.
+
+\section{Frontend Implementation}
+
+The Ops Dashboard and Merchant Dashboard are separate React, Vite, and
+TypeScript applications. Both use React Router for navigation and TanStack
+Query for server state. The Merchant Dashboard analytics page uses Recharts for
+interactive charts, tooltips, and compact visual summaries.
+
+Important frontend implementation details include:
+
+\begin{itemize}
+  \item list and detail layouts for operational scanning on desktop;
+  \item responsive one-column behavior on smaller screens;
+  \item loading, error, and empty states for async data;
+  \item scrollable long lists for recent payments, audit logs, portal users,
+  webhooks, credentials, and chart data tables;
+  \item stable status and session panels so context does not jump between pages;
+  \item explicit label associations on the merchant login form for
+  accessibility.
+\end{itemize}
+
+\section{Asynchronous Service Implementation}
+
+The current implementation includes the key asynchronous business operations as
+callable application services:
+
+\begin{itemize}
+  \item payment expiration service for overdue pending payments;
+  \item webhook event factory for payment and refund final states;
+  \item webhook delivery service with retry scheduling and attempt persistence;
+  \item reconciliation services for mismatched or late provider evidence;
+  \item internal manual retry endpoint for failed webhook events.
+\end{itemize}
+
+However, the project does not yet include a standalone long-running scheduler or
+worker runtime as part of the deployed stack. The implemented services are
+ready to be invoked by a scheduler or worker trigger, and this boundary is
+tested in the backend suite.
+
+\section{Demo Data Implementation}
+
+The demo seed script is explicit and idempotent. It creates a demo merchant,
+portal user, credential metadata, payments, refund rows, webhooks, delivery
+attempts, and callback evidence. The script does not run automatically on
+deploy because production-like deployments should not silently create demo
+users.
+
+\begin{lstlisting}[language=bash,caption={Manual demo seed command}]
+cd backend
+python scripts/seed_dashboard_demo.py
+\end{lstlisting}
+
+For sandbox container deployment, the equivalent command is:
+
+\begin{lstlisting}[language=bash,caption={Sandbox demo seed command}]
+cd /opt/mini-payment-gateway
+docker compose -f docker-compose.sandbox.yml run --rm backend \
+  python scripts/seed_dashboard_demo.py
+\end{lstlisting}

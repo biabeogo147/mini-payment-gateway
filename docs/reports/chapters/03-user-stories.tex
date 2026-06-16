@@ -1,0 +1,29 @@
+\chapter{User Stories}
+
+The user stories are grouped by actor so that the report can connect user
+intent to the implemented workflows and boundaries.
+
+\begin{longtable}{L{0.17\textwidth}L{0.37\textwidth}L{0.36\textwidth}}
+\caption{Implemented user stories}\\
+\toprule
+\textbf{ID} & \textbf{Story} & \textbf{Acceptance criteria} \\
+\midrule
+\endfirsthead
+\toprule
+\textbf{ID} & \textbf{Story} & \textbf{Acceptance criteria} \\
+\midrule
+\endhead
+US-ADMIN-01 & As an Admin, I want to create and review merchants so that only approved merchants can use the gateway. & Admin can create a merchant, submit and review onboarding evidence, create credentials, and activate the merchant. \\
+US-ADMIN-02 & As an Admin, I want to manage internal users so that operations access can be controlled. & Admin can list, create, update, deactivate or reactivate, and reset internal user passwords. \\
+US-ADMIN-03 & As an Admin, I want to provision merchant dashboard users so that merchants can inspect their own gateway data. & Admin can create, update, deactivate or reactivate, and reset merchant portal users from merchant detail. \\
+US-OPS-01 & As an Ops user, I want to monitor operational queues so that failed or pending work can be handled quickly. & Ops can log in, view metrics and charts, and navigate to payments, refunds, webhooks, and reconciliation. \\
+US-OPS-02 & As an Ops user, I want to manage merchant lifecycle states safely. & Ops can perform allowed lifecycle actions with a required reason and audit trail. \\
+US-OPS-03 & As an Ops user, I want to inspect webhook attempts so failed notifications can be retried or explained. & Ops can open webhook detail, see attempts, and retry failed webhook events where allowed. \\
+US-MERCHANT-01 & As a merchant operator, I want to log in without API credentials. & Merchant user logs in with merchant id, email, and password; the session is separate from HMAC API credentials. \\
+US-MERCHANT-02 & As a merchant operator, I want to see overview metrics. & Overview shows summary cards and compact charts for the logged-in merchant only. \\
+US-MERCHANT-03 & As a merchant operator, I want interactive analytics with exact values. & Analytics supports 7, 30, and 90 day ranges, tooltips, data tables, and drill-down links. \\
+US-MERCHANT-04 & As a merchant operator, I want to inspect payments, refunds, and webhooks for support questions. & Explorer pages list and show detail for only the logged-in merchant's records. \\
+US-VIEWER-01 & As a merchant business viewer, I want to view revenue and success-rate trends. & Viewer can open Overview and Analytics, read chart values, and switch date ranges. \\
+US-VIEWER-02 & As a merchant business viewer, I want read-only credential metadata. & Credentials page shows access key, secret suffix, status, and timestamps only. \\
+\bottomrule
+\end{longtable}

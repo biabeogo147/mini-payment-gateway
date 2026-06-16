@@ -1,0 +1,106 @@
+\chapter{Component Architecture and Design}
+
+\section{Backend Layering}
+
+The backend follows a compact layered architecture. It is intentionally simpler
+than full domain-driven design, but it still keeps HTTP handling, schemas,
+business rules, persistence, and database concerns separated so that each layer
+has one main responsibility.
+
+\begin{figure}[H]
+\centering
+\begin{tikzpicture}[node distance=8mm]
+  \node[box, text width=44mm] (controllers) {Controllers\\FastAPI routers and dependencies};
+  \node[box, below=of controllers, text width=44mm] (schemas) {Schemas\\request and response DTOs};
+  \node[box, below=of schemas, text width=44mm] (services) {Services\\business rules and workflows};
+  \node[box, below=of services, text width=44mm] (repos) {Repositories\\SQLAlchemy queries};
+  \node[box, below=of repos, text width=44mm] (models) {Models\\entities, enums, constraints};
+  \node[db, below=of models, text width=36mm] (database) {PostgreSQL\\Alembic-managed schema};
+
+  \draw[arrow] (controllers) -- (schemas);
+  \draw[arrow] (schemas) -- (services);
+  \draw[arrow] (services) -- (repos);
+  \draw[arrow] (repos) -- (models);
+  \draw[arrow] (models) -- (database);
+\end{tikzpicture}
+\caption{Backend component layer stack. Lower layers do not depend on FastAPI
+route objects.}
+\end{figure}
+
+\section{Component Responsibilities}
+
+\begin{longtable}{L{0.25\textwidth}L{0.65\textwidth}}
+\caption{Component responsibilities}\\
+\toprule
+\textbf{Component} & \textbf{Responsibility} \\
+\midrule
+\endfirsthead
+\toprule
+\textbf{Component} & \textbf{Responsibility} \\
+\midrule
+\endhead
+Ops Dashboard & Internal workflow UI for merchant lifecycle, credentials, portal-user provisioning, payments, refunds, webhooks, reconciliation, audit, and internal users. \\
+Merchant Dashboard & Merchant-scoped portal for overview, analytics, explorers, profile, credentials, and password change. \\
+Controllers & Define routes, dependencies, access boundaries, HTTP errors, and response models. \\
+Schemas & Define request and response contracts plus typed auth and session context objects. \\
+Services & Enforce state transitions, merchant readiness, refund rules, RBAC, audit, portal scoping, webhook retry, and analytics aggregation. \\
+Repositories & Encapsulate focused SQLAlchemy lookup and aggregate queries. \\
+Models & Define tables, relationships, enum values, indexes, and constraints. \\
+Alembic migrations & Apply database schema changes in a controlled sequence before runtime restart. \\
+\bottomrule
+\end{longtable}
+
+\section{Business Rules And State Machines}
+
+The domain behavior is centered on explicit state transitions rather than
+implicit status changes inside controllers.
+
+\begin{table}[H]
+\centering
+\caption{Core state models}
+\begin{tabularx}{\textwidth}{L{0.24\textwidth}L{0.24\textwidth}Y}
+\toprule
+\textbf{Domain object} & \textbf{Persisted states} & \textbf{Design note} \\
+\midrule
+Merchant operational status & \texttt{PENDING\_REVIEW}, \texttt{ACTIVE}, \texttt{REJECTED}, \texttt{SUSPENDED}, \texttt{DISABLED} & Operational status remains on \texttt{merchants}, while onboarding approval state is tracked separately on \texttt{merchant\_onboarding\_cases}. \\
+Payment transaction & \texttt{PENDING}, \texttt{SUCCESS}, \texttt{FAILED}, \texttt{EXPIRED} & Provider callbacks finalize pending payments, but late or conflicting outcomes create reconciliation evidence instead of reviving invalid state. \\
+Refund transaction & \texttt{REFUND\_PENDING}, \texttt{REFUNDED}, \texttt{REFUND\_FAILED} & Only full refunds are implemented; state changes depend on refund rules and provider callback outcomes. \\
+Webhook event & \texttt{PENDING}, \texttt{DELIVERED}, \texttt{FAILED} & Delivery success is independent from payment or refund final state. Retry metadata is stored on the event and attempt history is stored separately. \\
+\bottomrule
+\end{tabularx}
+\end{table}
+
+Two design choices are especially important:
+
+\begin{itemize}
+  \item payment expiration does not silently disappear; it creates a durable
+  state transition and can emit a webhook event;
+  \item ambiguous provider evidence creates a reconciliation record rather than
+  forcing a risky automatic correction.
+\end{itemize}
+
+\section{Asynchronous Event Lifecycle And Recovery}
+
+The project contains implemented asynchronous service operations even though it
+does not yet run a standalone long-running worker process. Expiration and
+due-webhook delivery are represented as explicit service operations that can be
+invoked by a scheduler or worker trigger.
+
+\begin{enumerate}
+  \item Merchant payment creation stores a pending payment with expiration
+  metadata.
+  \item Provider callbacks update payments or refunds, store callback evidence,
+  and create durable webhook events when final states are reached.
+  \item Expiration service marks overdue pending payments as expired and can
+  create \texttt{payment.expired} webhook events.
+  \item Webhook delivery service sends signed payloads, stores each HTTP attempt,
+  and applies the retry schedule of 1, 5, and 15 minutes before final failure.
+  \item Failed or mismatched external evidence produces reconciliation records
+  for manual internal review.
+  \item Internal users can manually retry eligible failed webhook events without
+  mutating the already-final payment or refund state.
+\end{enumerate}
+
+This separation makes the design easier to test. Business rules live in service
+functions and repositories, while the future scheduler or worker integration can
+remain thin and orchestration-focused.

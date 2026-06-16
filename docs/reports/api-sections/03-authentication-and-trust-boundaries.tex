@@ -1,0 +1,32 @@
+\chapter{Authentication And Trust Boundaries}
+
+\begin{longtable}{@{}L{0.22\textwidth}L{0.24\textwidth}L{0.22\textwidth}L{0.22\textwidth}@{}}
+\caption{Actor and authentication matrix}\\
+\toprule
+\textbf{Actor} & \textbf{API surface} & \textbf{Auth model} & \textbf{Scope source} \\
+\midrule
+\endfirsthead
+\toprule
+\textbf{Actor} & \textbf{API surface} & \textbf{Auth model} & \textbf{Scope source} \\
+\midrule
+\endhead
+Merchant backend & Merchant API & HMAC headers: merchant id, access key, timestamp, signature. & Authenticated merchant credential. \\
+Provider simulator & Provider callback API & Environment-local trust for MVP simulator routes. & Callback payload references payment or refund records. \\
+Admin/Ops user & Ops API & Internal HttpOnly session cookie. & Internal user role \apiid{ADMIN} or \apiid{OPS}. \\
+Admin user & Portal-user provisioning API & Internal HttpOnly session cookie plus \apiid{ADMIN} role. & Internal user role. \\
+Merchant portal user & Merchant Portal API & Merchant HttpOnly session cookie. & \texttt{merchant\_users.merchant\_db\_id}. \\
+\bottomrule
+\end{longtable}
+
+Important trust-boundary rules:
+
+\begin{itemize}
+  \item Merchant Portal routes never accept a client-supplied
+  \texttt{merchant\_id} for data scope after login.
+  \item Internal write routes still accept a nested actor object so the
+  user-supplied reason can become part of the audit trail, but actor identity
+  is normalized from the authenticated internal session.
+  \item Provider callback routes are simulator-trusted in the MVP and should be
+  treated as internal or controlled-environment routes rather than public,
+  internet-grade provider integrations.
+\end{itemize}

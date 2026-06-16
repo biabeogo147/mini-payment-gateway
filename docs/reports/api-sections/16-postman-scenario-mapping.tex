@@ -1,0 +1,34 @@
+\chapter{Postman Scenario Mapping}
+
+\begin{longtable}{@{}L{0.22\textwidth}L{0.26\textwidth}L{0.42\textwidth}@{}}
+\caption{Postman and testing mapping}\\
+\toprule
+\textbf{Collection or file} & \textbf{Scenario IDs} & \textbf{Purpose} \\
+\midrule
+\endfirsthead
+\toprule
+\textbf{Collection or file} & \textbf{Scenario IDs} & \textbf{Purpose} \\
+\midrule
+\endhead
+\texttt{postman/scenarios/auth.collection.json} & \code{AUTH-01} to \code{AUTH-05} & Merchant HMAC authentication failures and credential validity cases. \\
+\texttt{postman/scenarios/merchant.collection.json} & \code{MER-01}, \code{MER-02}, \code{ONB-01} to \code{ONB-04} & Merchant onboarding and readiness preconditions. \\
+\texttt{postman/scenarios/payment.collection.json} & \code{PAY-01} to \code{PAY-10} & Payment creation, lookup, idempotency, duplicate handling, and ownership isolation. \\
+\texttt{postman/scenarios/callback.collection.json} & \code{CB-01} to \code{CB-04}, \code{EXP-01} & Provider payment callbacks, duplicate callback handling, unknown transaction evidence, and expiration templates. \\
+\texttt{postman/scenarios/refund.collection.json} & \code{REF-01} to \code{REF-09} & Full refund creation, lookup, callbacks, partial-refund rejection, and refund window rules. \\
+\texttt{postman/scenarios/webhook.collection.json} & \code{WH-01} to \code{WH-10} & Webhook event creation, delivery outcomes, retry exhaustion, and manual retry. \\
+\texttt{postman/scenarios/ops.collection.json} & \code{OPS-01} to \code{OPS-03}, \code{AUD-01} to \code{AUD-02} & Internal merchant lifecycle, credential rotation, and audit-oriented operations. \\
+\texttt{postman/scenarios/reconciliation.collection.json} & \code{REC-01} to \code{REC-05} & Callback mismatch evidence and reconciliation review. \\
+\texttt{postman/scenarios/happy-path.collection.json} & \code{E2E-01} to \code{E2E-04} & End-to-end onboarding, payment, refund, callback, webhook, and recovery journeys. \\
+\texttt{postman/mini-payment-gateway.collection.json} & Core happy path & Compact general exploration and smoke walkthrough. \\
+\bottomrule
+\end{longtable}
+
+The shared environment file is:
+
+\begin{itemize}
+  \item \code{postman/mini-payment-gateway.sandbox.environment.json}
+\end{itemize}
+
+The Postman sandbox environment stores base URLs and test variables. It should
+not store production secrets. Demo accounts and generated passwords should be
+treated as disposable test data.

@@ -1,0 +1,66 @@
+\chapter{Outbound Webhook Contract}
+
+Outbound webhook delivery is a gateway-to-merchant contract. The Mini Payment
+Gateway creates events when payment or refund final states change. Delivery is
+asynchronous and does not control the final payment or refund state.
+
+\section{\apiid{WH-01--09} Event Delivery Contract}
+
+\begin{longtable}{L{0.24\textwidth}L{0.66\textwidth}}
+\caption{WH-01--09 contract block}\\
+\toprule
+\textbf{Field} & \textbf{Contract} \\
+\midrule
+\endfirsthead
+\toprule
+\textbf{Field} & \textbf{Contract} \\
+\midrule
+\endhead
+Event types & \code{payment.succeeded}, \code{payment.failed}, \code{payment.expired}, \code{refund.succeeded}, \code{refund.failed}. \\
+Actor and auth & Gateway to merchant backend; payload signed with merchant credential secret. \\
+Key payload fields & \code{event_id}, \code{event_type}, \code{merchant_id}, \code{entity_type}, \code{entity_id}, \code{created_at}, \code{data}. \\
+Key delivery headers & \code{X-Webhook-Event-Id}, \code{X-Webhook-Event-Type}, \code{X-Webhook-Timestamp}, \code{X-Webhook-Signature}. \\
+Important business rules & HTTP 2xx marks delivery success; non-2xx, timeout, and network errors are failed attempts; retry schedule is 1, 5, and 15 minutes before final failure on attempt 4. \\
+Important error cases & Delivery failure does not roll back final payment or refund state. \\
+Related scenarios & \code{WH-01} to \code{WH-09}, \code{E2E-04}. \\
+\bottomrule
+\end{longtable}
+
+\begin{lstlisting}[language=json,caption={Webhook envelope example}]
+{
+  "event_id": "evt_...",
+  "event_type": "payment.succeeded",
+  "merchant_id": "m_demo",
+  "entity_type": "PAYMENT",
+  "entity_id": "payment-row-uuid",
+  "created_at": "2026-04-29T10:05:01Z",
+  "data": {
+    "transaction_id": "pay_...",
+    "order_id": "ORDER-1001",
+    "status": "SUCCESS",
+    "amount": "100000.00"
+  }
+}
+\end{lstlisting}
+
+\section{\apiid{WH-10} Manual Retry}
+
+\begin{longtable}{L{0.24\textwidth}L{0.66\textwidth}}
+\caption{WH-10 contract block}\\
+\toprule
+\textbf{Field} & \textbf{Contract} \\
+\midrule
+\endfirsthead
+\toprule
+\textbf{Field} & \textbf{Contract} \\
+\midrule
+\endhead
+Method and path & \code{POST /v1/ops/webhooks/{event_id}/retry} \\
+Actor and auth & Internal Admin/Ops session. \\
+Key request fields & Optional audit payload with \code{actor_type}, \code{actor_id}, and \code{reason}. \\
+Key response fields & \code{event_id}, \code{status}, \code{attempt_count}, \code{last_attempt_result}, \code{next_retry_at}. \\
+Important business rules & Manual retry is allowed only when the webhook event is already \code{FAILED}; successful manual retry moves it to \code{DELIVERED}; failed manual retry keeps it \code{FAILED}. \\
+Important error cases & \code{WEBHOOK_EVENT_NOT_FOUND}, \code{WEBHOOK_RETRY_NOT_ALLOWED}. \\
+Related scenarios & \code{WH-10}, \code{E2E-04}. \\
+\bottomrule
+\end{longtable}
