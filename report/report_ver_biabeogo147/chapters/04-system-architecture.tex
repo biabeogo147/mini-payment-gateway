@@ -1,0 +1,177 @@
+\chapter{System Architecture}
+
+\section{System Context}
+
+The Mini Payment Gateway is built around one central gateway core service. That
+service coordinates merchant transaction requests, provider outcome evidence,
+merchant notifications, and internal operational review. Two separate
+dashboards sit around the core: one for internal operations and one for
+merchant-facing visibility.
+
+\begin{figure}[!htbp]
+\centering
+\resizebox{\textwidth}{!}{%
+\begin{tikzpicture}[node distance=12mm and 18mm]
+  \node[actor] (merchantBackend) {Merchant backend};
+  \node[box, below=of merchantBackend, text width=32mm] (checkout) {Customer checkout\\QR display};
+  \node[actor, below=of checkout] (customer) {Customer banking\\app};
+  \node[actor, below=of customer] (provider) {Provider callback\\source};
+  \node[actor, below=6mm of provider] (trigger) {Scheduled\\trigger};
+
+  \node[box, right=34mm of provider, text width=38mm] (gateway) {Gateway core service};
+  \node[box, left=of gateway, text width=32mm, yshift=-31mm] (opsDashboard) {Internal operations dashboard};
+  \node[box, below=of opsDashboard, text width=32mm] (merchantDashboard) {Merchant dashboard};
+  \node[actor, left=of opsDashboard, yshift=-8mm] (opsUser) {Admin / Ops user};
+  \node[actor, left=of merchantDashboard] (merchantUser) {Merchant dashboard\\user};
+  \node[db, right=of gateway] (store) {Persistent\\data store};
+  \node[box, below=of store, text width=34mm] (webhookTarget) {Merchant callback\\endpoint};
+
+  \draw[arrow] (merchantBackend.east) -- (gateway.west);
+  \draw[arrow] (gateway.west) to[out=150,in=25] (merchantBackend.east);
+  \draw[arrow] (merchantBackend.south) -- (checkout.north);
+  \draw[arrow] (customer.north) -- (checkout.south);
+  \draw[arrow] (provider.east) -- (gateway.west);
+  \draw[arrow] (trigger.east) -- (gateway.west);
+  \draw[arrow] (opsUser.east) -- (opsDashboard.west);
+  \draw[arrow] (merchantUser.east) -- (merchantDashboard.west);
+  \draw[arrow] (opsDashboard.east) -- (gateway.west);
+  \draw[arrow] (merchantDashboard.east) -- (gateway.west);
+  \draw[arrow] (gateway.east) -- (store.west);
+  \draw[arrow] (gateway.east) to[out=10,in=180] (webhookTarget.west);
+\end{tikzpicture}
+}
+\caption{Logical system context. The gateway core service sits between merchant
+requests, provider evidence, scheduled processing, dashboard access, and
+merchant notification delivery.}
+\end{figure}
+
+\newpage
+\section{Logical Components}
+
+\begin{table}[!htbp]
+\centering
+\caption{Logical components and responsibilities}
+\begin{tabularx}{\textwidth}{L{0.24\textwidth}L{0.22\textwidth}Y}
+\toprule
+\textbf{Component} & \textbf{Role} & \textbf{Primary responsibility} \\
+\midrule
+Gateway core service & Central application service & Handles payment and refund requests, processes external outcome evidence, creates merchant notifications, and exposes internal and merchant-facing data views. \\
+\bodyrowrule
+Persistent data store & Durable data layer & Stores merchant profiles, transaction state, callback evidence, notification history, reconciliation items, audit history, and user-account information. \\
+\bodyrowrule
+Internal operations dashboard & Internal user interface & Supports merchant review, credential management, transaction investigation, reconciliation handling, and operational recovery workflows. \\
+\bodyrowrule
+Merchant dashboard & Merchant user interface & Supports merchant-scoped visibility into payments, refunds, notifications, profile information, credentials, and analytics. \\
+\bodyrowrule
+Merchant backend & External integration client & Sends payment and refund requests on behalf of merchant business workflows. \\
+\bodyrowrule
+Demo merchant application & Local reference integration & Keeps the merchant secret in server memory, signs Merchant API requests, serves a customer checkout, simulates provider callbacks, verifies gateway webhooks, and exposes the resulting order state. \\
+\bodyrowrule
+Customer checkout / QR display & Merchant-owned checkout surface & Displays the QR payload or image returned by the gateway through the merchant backend. \\
+\bodyrowrule
+Customer banking app & External payment channel & Scans the VietQR image displayed by the merchant checkout and initiates the real-world bank transfer outside the gateway UI. \\
+\bodyrowrule
+Provider callback source & External evidence source & Confirms payment and refund outcomes after external processing. \\
+\bodyrowrule
+Scheduled trigger & Time-based orchestrator & Activates expiration handling and due notification retry processing. \\
+\bottomrule
+\end{tabularx}
+\end{table}
+
+\newpage
+\section{Authentication, Authorization, And Trust Boundaries}
+
+\begin{table}[!htbp]
+\centering
+\caption{Trust boundaries and access models}
+\begin{tabularx}{\textwidth}{L{0.20\textwidth}L{0.21\textwidth}L{0.24\textwidth}Y}
+\toprule
+\textbf{Actor} & \textbf{Access surface} & \textbf{Authentication model} & \textbf{Scope source} \\
+\midrule
+Merchant backend & Merchant transaction API & Signed merchant integration credentials & The authenticated merchant integration identity. \\
+\bodyrowrule
+Admin or Ops user & Internal operations API & Internal session authentication & The authenticated internal role and permissions. \\
+\bodyrowrule
+Admin user & Account-administration functions & Internal session authentication & The authenticated internal role with elevated administrative permissions. \\
+\bodyrowrule
+Merchant dashboard user & Merchant dashboard API & Merchant session authentication & The merchant account associated with the signed-in dashboard user. \\
+\bodyrowrule
+Provider callback source & Outcome callback surface & Provider id, timestamp, and HMAC callback signature & The authenticated provider identity and the referenced payment or refund evidence carried in the callback payload. \\
+\bottomrule
+\end{tabularx}
+\end{table}
+
+This separation is one of the system's key architectural choices. Merchant
+backends authenticate as integrations, internal users authenticate for
+operational control, and merchant dashboard users authenticate for
+merchant-scoped visibility. After a merchant dashboard user signs in, the
+system derives merchant scope from the authenticated session rather than from
+user-supplied identifiers. This prevents cross-merchant access through
+manipulated requests and avoids reusing integration credentials for human
+dashboard login.
+
+\newpage
+\section{Key Request Flows}
+
+Three request flows illustrate the main design decisions in the system:
+
+\begin{enumerate}
+  \item \textbf{Merchant creates a payment}: the merchant backend submits a
+  signed payment request. The gateway checks merchant readiness and active
+  VietQR account configuration, creates a new pending payment or reuses an
+  equivalent pending request, and returns QR data for checkout.
+  \item \textbf{Internal operator prepares merchant access}: an internal user
+  registers the merchant, reviews readiness information, issues credentials,
+  and, when needed, provisions merchant dashboard access for human merchant
+  representatives.
+  \item \textbf{Merchant reads analytics}: a signed-in merchant dashboard user
+  requests analytics for a selected reporting window. The gateway aggregates
+  merchant-owned payment, refund, and notification data and returns a scoped
+  analytical view.
+\end{enumerate}
+
+\section{VietQR Pilot Flow}
+
+The gateway remains API-only and does not host a production checkout page.
+This branch includes a separate local demo merchant application that receives
+QR data through the Merchant API and displays it to the customer. It represents
+the behavior of a real merchant backend without moving merchant secrets into
+browser JavaScript. The important system boundary is that QR generation is
+controlled by gateway configuration, while the customer's bank app and the
+provider callback simulator represent the external payment world.
+
+\begin{figure}[!htbp]
+\centering
+\resizebox{\textwidth}{!}{%
+\begin{tikzpicture}[node distance=9mm and 11mm]
+  \node[actor, text width=30mm] (ops) {Admin / Ops};
+  \node[box, right=of ops, text width=35mm] (config) {Configure active VietQR receiving account};
+  \node[actor, below=of ops, text width=30mm] (merchant) {Merchant backend};
+  \node[box, right=of merchant, text width=35mm] (payment) {Create signed payment request};
+  \node[box, right=of payment, text width=38mm] (qr) {Gateway returns \code{qr_reference}, \code{qr_content}, and PNG QR};
+  \node[actor, below=of qr, text width=34mm] (customer) {Customer banking app};
+  \node[actor, below=of customer, text width=34mm] (provider) {Provider callback source};
+  \node[box, left=of provider, text width=38mm] (callback) {Signed callback finalizes payment};
+  \node[box, left=of callback, text width=35mm] (webhook) {Worker delivers merchant webhook};
+
+  \draw[arrow] (ops) -- (config);
+  \draw[arrow] (config) -- (payment);
+  \draw[arrow] (merchant) -- (payment);
+  \draw[arrow] (payment) -- (qr);
+  \draw[arrow] (qr) -- (customer);
+  \draw[arrow] (customer) -- (provider);
+  \draw[arrow] (provider) -- (callback);
+  \draw[arrow] (callback) -- (webhook);
+\end{tikzpicture}
+}
+\caption{VietQR pilot flow. Internal operations configure the merchant's
+receiving account, the Merchant API returns scannable QR evidence, external
+payment confirmation arrives through a signed callback, and the worker handles
+merchant notification delivery.}
+\end{figure}
+
+Scanning the QR only transfers the encoded bank, account, amount, and transfer
+purpose into the customer's banking application. It does not call the gateway.
+The provider callback informs the gateway of the external result, and the
+worker's signed webhook informs the merchant. The complete executable sequence
+is maintained in \code{docs/architecture/diagrams/e2e-payment-demo.puml}.

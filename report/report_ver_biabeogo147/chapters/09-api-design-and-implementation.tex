@@ -1,0 +1,121 @@
+\chapter{API Design and Implementation}
+
+\section{API Design Strategy}
+
+The API design separates actor responsibilities instead of forcing every actor
+through one shared access model. This decision keeps merchant integration,
+internal operations, and merchant dashboard access aligned with their real
+security and data-visibility needs.
+
+Detailed request and response contracts are maintained in a separate API
+reference. This chapter focuses on the boundary design decisions that shape the
+overall interface.
+
+Three interface rules drive the design:
+
+\begin{itemize}
+  \item each actor group receives an access surface that matches its real
+  operational role rather than being forced through one generic API;
+  \item state-changing integration flows remain separate from human dashboard
+  visibility and internal control flows;
+  \item delayed callbacks and outbound notifications are treated as durable
+  event exchanges rather than incidental side effects.
+\end{itemize}
+
+\section{API Families And Access Boundaries}
+
+The family map below makes that split explicit by pairing each surface with its
+primary actor, its trust model, and its design purpose.
+
+\begin{longtable}{L{0.17\textwidth}L{0.19\textwidth}L{0.20\textwidth}L{0.34\textwidth}}
+\caption{API families and access boundaries}\\
+\toprule
+\textbf{API family} & \textbf{Primary actor} & \textbf{Authentication model} & \textbf{Design purpose} \\
+\midrule
+\endfirsthead
+\toprule
+\textbf{API family} & \textbf{Primary actor} & \textbf{Authentication model} & \textbf{Design purpose} \\
+\midrule
+\endhead
+Internal authentication and administration & Admin or Ops user & Internal session authentication & Supports internal sign-in, account management, and operational access control. \\
+\bodyrowrule
+Merchant transaction APIs & Merchant backend & Signed merchant integration credentials & Supports payment creation, payment lookup, refund creation, and refund lookup for merchant systems. \\
+\bodyrowrule
+Provider callback APIs & Provider callback source & Provider id, timestamp, and HMAC signature headers & Accepts external outcome evidence for payments and refunds. \\
+\bodyrowrule
+Internal operations APIs & Admin or Ops user & Internal session authentication & Supports merchant management, QR receiving account management, evidence review, reconciliation, notification recovery, and dashboard reads. \\
+\bodyrowrule
+Merchant dashboard APIs & Merchant dashboard user & Merchant session authentication & Supports merchant-scoped overview, analytics, record exploration, profile views, and credential metadata views. \\
+\bodyrowrule
+Outbound notification contract & Merchant callback endpoint & Signed gateway-to-merchant notification model & Delivers final payment and refund events to merchant-owned callback destinations. \\
+\bottomrule
+\end{longtable}
+
+\section{Authentication Model Split}
+
+As established by the system architecture, the interface preserves three access
+boundaries: merchant integration requests, internal operational sessions, and
+merchant-facing dashboard sessions. This split prevents two common design
+problems: using human dashboard login for machine integration, and using
+merchant integration credentials for interactive dashboard access.
+
+\section{VietQR Payment API Contract}
+
+Payment creation keeps the merchant request shape intentionally small, but the
+response now carries the information needed for a merchant checkout page to show
+a scannable VietQR code. A successful response includes:
+
+\begin{itemize}
+  \item \code{qr_reference}: a short gateway-generated transfer reference used
+  for matching and support;
+  \item \code{qr_content}: the generated VietQR payload that starts with the
+  EMV merchant-presented QR prefix;
+  \item \code{qr_image_base64}: a PNG data URL that can be rendered directly by
+  a merchant checkout or dashboard detail view.
+\end{itemize}
+
+The gateway only returns these values after the merchant is active, has active
+integration credentials, and has an active Ops-managed VietQR receiving account.
+The API rejects non-VND or fractional pilot payments before QR generation so
+that invalid checkout data is not persisted.
+
+\section{Asynchronous API And Event Design}
+
+The interface design must safely accept delayed external evidence and delayed
+merchant notification delivery. For that reason, provider callbacks and
+merchant notifications are treated as durable event flows rather than as simple
+status updates.
+
+When external evidence arrives, the system first preserves the evidence and then
+applies state rules. If the evidence conflicts with the current internal state,
+the system creates a reconciliation path rather than forcing an unsafe
+automatic correction.
+
+Provider callbacks are protected by \code{X-Provider-Id},
+\code{X-Provider-Timestamp}, and \code{X-Provider-Signature}. The signature
+covers the timestamp and raw request body, which prevents unauthenticated or
+stale callback messages from changing payment or refund state.
+
+Merchant notification delivery is also decoupled from transaction finality. A
+payment or refund can be final even if merchant notification delivery fails
+temporarily. This makes retry and manual recovery possible without rewriting the
+underlying money-flow outcome.
+
+\section{Error Model And Data Exposure Rules}
+
+The API design uses stable business error codes so that calling systems and
+internal users can distinguish validation failure, readiness failure,
+authentication failure, and business-rule conflict.
+
+Sensitive data exposure is minimized throughout the interface design:
+
+\begin{itemize}
+  \item raw merchant secrets are not exposed in ordinary read views;
+  \item generated one-time passwords are shown only at the moment of creation
+  or reset;
+  \item merchant dashboard reads remain scoped to the signed-in merchant;
+  \item QR receiving account management remains on the internal Ops surface,
+  not the merchant dashboard surface;
+  \item operational evidence is preserved for investigation without exposing
+  secret material unnecessarily.
+\end{itemize}

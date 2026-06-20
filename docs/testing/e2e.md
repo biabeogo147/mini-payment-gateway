@@ -75,6 +75,12 @@ Implemented now:
   - late success callback reconciliation and ops resolution;
   - webhook retry exhaustion, manual retry audit, and suspended merchant
     payment/refund rejection.
+- Local demo merchant API and Vietnamese checkout for real merchant HMAC
+  payment creation, scannable VietQR display, signed provider simulation,
+  verified/idempotent webhook receipt, and visible final order state.
+- Real-HTTP smoke scripts for both successful and failed payment outcomes. The
+  scripts provision unique merchants through Ops APIs and poll until the worker
+  webhook reaches the demo merchant.
 
 Not implemented yet:
 
@@ -171,7 +177,14 @@ python scripts/smoke_provider_callback_api.py
 python scripts/smoke_refund_api.py
 python scripts/smoke_webhook_api.py
 python scripts/smoke_ops_reconciliation_api.py
+python scripts/smoke_e2e_demo.py --outcome success
+python scripts/smoke_e2e_demo.py --outcome failed
 ```
+
+The last two commands require the gateway on port `8000`, the worker, and the
+demo merchant on port `8100`. See
+`../getting-started/e2e-payment-demo.md` for the complete five-terminal setup
+and instructor walkthrough.
 
 See `scenarios/payment.md`, `scenarios/callback.md`, `scenarios/refund.md`, `scenarios/webhook.md`, `scenarios/merchant.md`, `scenarios/ops.md`,
 and `scenarios/reconciliation.md` for the API and DB effects of these runnable slices.

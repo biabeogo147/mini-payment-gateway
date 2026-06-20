@@ -14,6 +14,8 @@
   <a href="docs/testing/e2e.md">E2E Scenarios</a>
   |
   <a href="docs/getting-started/runbook.md">Runbook</a>
+  |
+  <a href="docs/getting-started/e2e-payment-demo.md">Visual E2E Demo</a>
 </p>
 
 <p align="center">
@@ -58,19 +60,22 @@ how money-movement systems are stitched together.
   rules, repository-focused persistence, SQLAlchemy models, Alembic migrations.
 - **Demo-ready verification**: route-level E2E coverage plus smoke scripts for
   payment, callback, refund, webhook, and ops reconciliation flows.
+- **Visible merchant checkout**: a separate local demo merchant backend signs
+  payment requests, displays VietQR, verifies gateway webhooks, and updates its
+  checkout only after a valid webhook arrives.
 
 ## Demo Journey
 
 ```mermaid
 flowchart LR
     Ops["Ops configures merchant + VietQR account"]
-    Merchant["Merchant creates signed VietQR payment"]
+    Merchant["Demo merchant creates signed VietQR payment"]
+    Customer["Customer scans checkout QR"]
     Provider["Provider sends signed callback"]
     Webhook["Worker delivers webhook"]
-    Refund["Merchant creates full refund"]
-    Reconcile["Ops resolves reconciliation cases"]
+    Result["Merchant checkout shows final result"]
 
-    Ops --> Merchant --> Provider --> Webhook --> Refund --> Reconcile
+    Ops --> Merchant --> Customer --> Provider --> Webhook --> Result
 ```
 
 The main E2E test covers the full route-level story:
@@ -140,6 +145,10 @@ password change. Its Analytics page gives merchant-scoped revenue, payment
 status, refund, webhook health, and attention-breakdown charts. It never exposes
 raw credential secrets.
 
+The separate `backend/demo_merchant/` FastAPI app runs on port `8100` for the
+visual payment demonstration. It is a local merchant integration example, not
+a new gateway-hosted checkout or Docker service.
+
 Run them locally like this:
 
 ```bash
@@ -184,12 +193,21 @@ cd backend
 python -m app.worker.main
 ```
 
+Start the visual demo merchant in another terminal when demonstrating the
+customer checkout:
+
+```bash
+cd backend
+python -m uvicorn demo_merchant.main:app --host 127.0.0.1 --port 8100
+```
+
 Then open:
 
 - Health: `http://127.0.0.1:8000/health`
 - OpenAPI UI: `http://127.0.0.1:8000/docs`
 - Ops dashboard: `http://127.0.0.1:4173`
 - Merchant dashboard: `http://127.0.0.1:4174`
+- Demo merchant checkout: `http://127.0.0.1:8100`
 
 Detailed setup lives in
 [docs/getting-started/local-setup.md](docs/getting-started/local-setup.md).
@@ -219,6 +237,8 @@ python scripts/smoke_provider_callback_api.py
 python scripts/smoke_refund_api.py
 python scripts/smoke_webhook_api.py
 python scripts/smoke_ops_reconciliation_api.py
+python scripts/smoke_e2e_demo.py --outcome success
+python scripts/smoke_e2e_demo.py --outcome failed
 ```
 
 ## Documentation Map
@@ -228,6 +248,7 @@ python scripts/smoke_ops_reconciliation_api.py
 | Run the project locally | [docs/getting-started/local-setup.md](docs/getting-started/local-setup.md) |
 | Demo the full MVP | [docs/getting-started/runbook.md](docs/getting-started/runbook.md) |
 | Demo the VietQR pilot to an instructor | [docs/getting-started/vietqr-pilot-demo.md](docs/getting-started/vietqr-pilot-demo.md) |
+| Demo the complete visible payment journey | [docs/getting-started/e2e-payment-demo.md](docs/getting-started/e2e-payment-demo.md) |
 | Understand internal DevOps design | [docs/infrastructure/devops-architecture.md](docs/infrastructure/devops-architecture.md) |
 | Build a new sandbox host from zero | [docs/infrastructure/sandbox-setup-from-zero.md](docs/infrastructure/sandbox-setup-from-zero.md) |
 | Deploy to the sandbox host | [docs/infrastructure/sandbox-deployment.md](docs/infrastructure/sandbox-deployment.md) |
@@ -240,7 +261,8 @@ python scripts/smoke_ops_reconciliation_api.py
 
 ## Project Status
 
-Current scope is pilot-ready API-only VietQR:
+Current scope is a pilot-ready API-only gateway with a separate visual demo
+merchant integration:
 
 - API contract and backend foundation
 - Merchant HMAC auth and readiness checks
@@ -255,6 +277,8 @@ Current scope is pilot-ready API-only VietQR:
 - Internal auth, RBAC, and Ops dashboard UI
 - Merchant Dashboard backend/session APIs, frontend UI, Ops provisioning, and
   explicit demo seeding
+- Local demo merchant checkout for payment creation, bank callback simulation,
+  verified webhook receipt, and visible final status
 
 Intentionally out of scope for this MVP:
 

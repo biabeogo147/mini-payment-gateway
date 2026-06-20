@@ -1,0 +1,173 @@
+\chapter{User Interface Design}
+
+\section{Two Dashboard Applications}
+
+The project uses two dashboard applications because internal operators and
+merchant users have different permissions, risks, and workflows.
+
+\begin{table}[!htbp]
+\centering
+\caption{Dashboard split}
+\begin{tabularx}{\textwidth}{L{0.24\textwidth}L{0.24\textwidth}Y}
+\toprule
+\textbf{UI} & \textbf{Audience} & \textbf{Purpose} \\
+\midrule
+Ops Dashboard & Internal Admin/Ops & Operate merchants, configure QR receiving accounts, investigate evidence, manage users, and recover failed workflows. \\
+\bodyrowrule
+Merchant Dashboard & Merchant dashboard users & Read merchant-scoped payment, refund, webhook, profile, credential, and analytics data. \\
+\bottomrule
+\end{tabularx}
+\end{table}
+
+This split follows the architectural access boundaries already established for
+the system and keeps internal operations separate from merchant-facing
+visibility. The result is a clearer user experience and stronger data
+separation.
+
+\section{Ops Dashboard UI}
+
+The Ops Dashboard is designed for repeated operational work. It favors dense but
+readable list and detail layouts, explicit lifecycle actions, semantic badges,
+and direct access to operational evidence such as onboarding data, credentials,
+VietQR receiving accounts, payments, refunds, webhook attempts, audit logs, and
+reconciliation records.
+
+The merchant detail page is also the control point for pilot QR readiness.
+Internal users configure the merchant's receiving bank code, bank BIN, account
+number, account name, template, and active or inactive state. This keeps QR
+configuration in the same operational workflow as onboarding, credentials, and
+activation.
+
+\begin{figure}[!htbp]
+\centering
+\begin{subfigure}[t]{0.62\textwidth}
+  \centering
+  \safeimage[\linewidth]{ops-overview.png}{Ops Dashboard overview showing internal metrics and work queues.}
+  \caption{Overview}
+\end{subfigure}
+\hfill
+\begin{subfigure}[t]{0.32\textwidth}
+  \centering
+  \safeimage[\linewidth]{ops-merchant-detail.png}{Ops merchant detail with lifecycle status, credential metadata, portal users, onboarding evidence, recent payments, and audit.}
+  \caption{Merchant detail}
+\end{subfigure}
+\caption{Ops Dashboard overview and merchant detail. The internal interface
+supports both queue-level prioritization and case-level operational review
+within one workflow.}
+\end{figure}
+
+\section{Merchant Dashboard UI}
+
+The Merchant Dashboard is read-only except for local password change. It gives
+merchant users an overview first, then deeper analytics and explorer pages for
+support or business questions. Long values such as webhook URLs, QR payloads,
+and JSON snippets are wrapped or scrollable to avoid layout overflow.
+
+For payments that include generated VietQR data, the payment detail view can
+show both the QR image and the underlying payload fields. Older or legacy
+payments without a QR image still display their payload evidence in a full-width
+layout so that the detail panel does not leave an empty visual gap.
+
+\begin{figure}[!htbp]
+\centering
+\begin{subfigure}{0.48\textwidth}
+  \centering
+  \safeimage[\linewidth]{merchant-overview.png}{Merchant Overview with summary cards and compact charts.}
+  \caption{Overview}
+\end{subfigure}
+\hfill
+\begin{subfigure}{0.48\textwidth}
+  \centering
+  \safeimage[\linewidth]{merchant-analytics.png}{Merchant Analytics with interactive Recharts, tooltips, and data tables.}
+  \caption{Analytics}
+\end{subfigure}
+\caption{Merchant Dashboard overview and analytics.}
+\end{figure}
+
+\begin{figure}[!htbp]
+\centering
+\begin{subfigure}{0.48\textwidth}
+  \centering
+  \safeimage[\linewidth]{merchant-payments.png}{Merchant payment explorer with filters, QR image, QR payload, and detail panel.}
+  \caption{Payments}
+\end{subfigure}
+\hfill
+\begin{subfigure}{0.48\textwidth}
+  \centering
+  \safeimage[\linewidth]{merchant-webhooks.png}{Merchant webhook explorer with event status and attempts.}
+  \caption{Webhooks}
+\end{subfigure}
+\caption{Merchant explorer pages.}
+\end{figure}
+
+\section{Demo Merchant Checkout}
+
+The demo merchant is a separate FastAPI application rather than another
+gateway dashboard. Its setup panel accepts merchant integration credentials
+once, while its server keeps the secret in memory and performs signed gateway
+requests. The checkout displays the amount, transfer purpose, transaction ID,
+countdown, and scannable VietQR image returned by the gateway.
+
+The status timeline deliberately separates bank confirmation from merchant
+notification. Pressing a simulation button sends a provider callback but leaves
+the merchant order pending. The interface first states that the bank has
+responded and that the merchant is waiting for the gateway. Only a valid signed
+webhook received by the demo merchant changes the checkout to a terminal
+success, failure, or expiration state.
+
+\begin{figure}[!htbp]
+\centering
+\begin{subfigure}[t]{0.48\textwidth}
+  \centering
+  \safeimage[\linewidth]{demo-checkout-pending.png}{Demo merchant checkout displaying a pending VietQR payment, transfer details, timeline, and bank simulator controls.}
+  \caption{Pending VietQR checkout}
+\end{subfigure}
+\hfill
+\begin{subfigure}[t]{0.48\textwidth}
+  \centering
+  \safeimage[\linewidth]{demo-checkout-success.png}{Demo merchant checkout after the provider callback and signed gateway webhook, showing a successful payment result.}
+  \caption{Webhook-confirmed success}
+\end{subfigure}
+\caption{The local demo merchant makes the asynchronous payment handoff visible.
+The QR is generated by the gateway, while the terminal checkout result is based
+only on the verified merchant webhook.}
+\label{fig:demo-merchant-checkout}
+\end{figure}
+
+\section{Responsive And State Design}
+
+Both dashboards treat asynchronous state as a first-class design concern:
+
+\begin{itemize}
+  \item loading, error, and empty states are explicit on data-fetching routes;
+  \item long tables and side panels remain scrollable instead of forcing layout
+  overflow;
+  \item chart data is paired with readable labels and tables so exact values are
+  not hidden behind hover-only interactions;
+  \item session and status panels remain visually stable to reduce user
+  confusion during multi-step workflows;
+  \item the merchant login form uses explicit labels and accessible field
+  associations.
+  \item the demo checkout hides mutually exclusive empty and active states,
+  keeps long transaction identifiers inside their columns, and collapses to a
+  single-column layout without horizontal overflow on mobile screens.
+\end{itemize}
+
+Two smaller read-only pages complete the merchant-facing experience by exposing
+merchant profile metadata and credential metadata without exposing raw secrets.
+
+\begin{figure}[!htbp]
+\centering
+\begin{subfigure}{0.48\textwidth}
+  \centering
+  \safeimage[\linewidth]{merchant-profile.png}{Read-only merchant profile and integration metadata.}
+  \caption{Profile}
+\end{subfigure}
+\hfill
+\begin{subfigure}{0.48\textwidth}
+  \centering
+  \safeimage[\linewidth]{merchant-credentials.png}{Credential metadata without raw secret.}
+  \caption{Credentials}
+\end{subfigure}
+\caption{Read-only merchant metadata pages.}
+\end{figure}

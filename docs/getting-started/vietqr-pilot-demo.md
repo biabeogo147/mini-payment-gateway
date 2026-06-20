@@ -6,6 +6,9 @@ systems create payments through the Merchant API, the gateway returns a VietQR
 payload and PNG QR image, and the provider/bank result is demonstrated with a
 signed simulator callback.
 
+For the separate visual merchant checkout and the webhook-driven final result,
+use `e2e-payment-demo.md`.
+
 ## What The Demo Proves
 
 ```mermaid
@@ -148,8 +151,8 @@ migration, provider callback secret, and worker are present:
 
 ```bash
 git fetch origin
-git checkout codex/pilot-vietqr-api
-git pull --ff-only origin codex/pilot-vietqr-api
+git checkout feature/e2e-payment-demo
+git pull --ff-only origin feature/e2e-payment-demo
 
 cd backend
 python -m pip install -e .

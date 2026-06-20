@@ -11,6 +11,8 @@ flowchart LR
     admin["Admin / Ops user"]
     merchant_user["Merchant portal user"]
     merchant_backend["Merchant backend"]
+    demo_merchant["Demo merchant backend + checkout\nFastAPI on :8100"]
+    customer["Customer / banking app"]
     provider["Provider simulator"]
     scheduler["Scheduler / timer"]
 
@@ -23,12 +25,15 @@ flowchart LR
     admin --> ops_ui
     merchant_user --> merchant_ui
     merchant_backend --> api
+    customer --> demo_merchant
+    demo_merchant --> api
     provider --> api
     scheduler --> api
     ops_ui --> api
     merchant_ui --> api
     api --> db
     api --> merchant_webhook
+    api --> demo_merchant
 ```
 
 The system has three user-facing API surfaces:
@@ -41,6 +46,10 @@ The system has three user-facing API surfaces:
 
 Provider callbacks and scheduler-triggered jobs are separate system inputs. They
 do not use the merchant dashboard session or merchant HMAC credentials.
+
+The demo merchant is a local integration example, not a fourth gateway API
+surface. Its server keeps the merchant API secret in memory, signs Merchant API
+requests, renders the customer checkout, and accepts signed gateway webhooks.
 
 ## Runtime Containers
 
@@ -79,6 +88,10 @@ The frontend apps are separate containers in sandbox deployment:
 - `ops-dashboard` serves the internal UI on port `4173`.
 - `merchant-dashboard` serves the merchant portal UI on port `4174`.
 - Both proxy `/api` to the FastAPI backend in local and container deployment.
+
+For the end-to-end classroom demo, `demo_merchant` runs directly from `.venv`
+on port `8100`. It is intentionally not added to Docker Compose and is not part
+of the production gateway deployment topology.
 
 ## Trust Boundaries
 
@@ -127,6 +140,7 @@ Important boundaries:
 | --- | --- |
 | Ops Dashboard | Internal workflow UI for merchant lifecycle, credentials, reconciliation, audit, internal users, and merchant portal user provisioning. |
 | Merchant Dashboard | Read-only merchant portal for overview, analytics, payments, refunds, webhooks, profile, credentials, and password change. |
+| Demo merchant | Local merchant backend and checkout that signs payment requests, shows VietQR, simulates provider callbacks, verifies webhook HMAC, and displays terminal order state. |
 | Controllers | Define routes, dependencies, auth boundaries, and response models. |
 | Services | Enforce payment, refund, webhook, auth, merchant lifecycle, audit, and analytics rules. |
 | Repositories | Own focused SQLAlchemy aggregate and lookup queries. |
@@ -156,6 +170,15 @@ sequenceDiagram
     Payment-->>API: response DTO
     API-->>Merchant: payment id, status, QR payload
 ```
+
+### Visible End-To-End Payment Demo
+
+The full visual sequence, including first-Admin bootstrap, merchant setup,
+customer QR scan, provider callback, worker delivery, and merchant checkout
+result, is maintained as PlantUML source in
+`diagrams/e2e-payment-demo.puml`. The critical boundary is that scanning a QR
+does not call the gateway. The bank/provider callback informs the gateway, and
+the signed gateway webhook informs the merchant.
 
 ### Admin Provisions A Merchant Portal User
 

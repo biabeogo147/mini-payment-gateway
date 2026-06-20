@@ -1,0 +1,138 @@
+\chapter{Testing and Evaluation}
+
+\section{Testing Strategy}
+
+The evaluation approach is organized around business risk rather than around
+implementation layers alone. The most important questions are whether the
+gateway preserves correct transaction state, protects access boundaries, keeps
+merchant data scoped correctly, and records enough evidence for operational
+review.
+
+\begin{longtable}{L{0.22\textwidth}L{0.36\textwidth}L{0.32\textwidth}}
+\caption{Testing and evaluation matrix}\\
+\toprule
+\textbf{Category} & \textbf{Coverage} & \textbf{Evidence type} \\
+\midrule
+\endfirsthead
+\toprule
+\textbf{Category} & \textbf{Coverage} & \textbf{Evidence type} \\
+\midrule
+\endhead
+Business rule validation & Merchant readiness, QR account readiness, VietQR generation, duplicate handling, refund eligibility, expiration, notification retry, reconciliation, and audit-aware state changes. & Automated business rule checks. \\
+\bodyrowrule
+End-to-end scenario validation & Merchant onboarding, QR account configuration, payment creation, callback processing, refund finalization, notification delivery, late evidence handling, and manual recovery. & Automated end-to-end transaction scenarios. \\
+\bodyrowrule
+Internal operations validation & Internal sign-in, merchant lifecycle actions, QR account management, review workflows, reconciliation handling, and evidence exploration. & Automated operational workflow checks and manual review walkthroughs. \\
+\bodyrowrule
+Merchant dashboard validation & Merchant sign-in, analytics windows, scoped list and detail views, QR image and payload display, profile visibility, credential metadata visibility, and password maintenance. & Automated dashboard interaction tests and scoped data checks. \\
+\bodyrowrule
+Manual usability review & Readability, layout stability, chart clarity, mobile behavior, and operator usability. & Manual browser review. \\
+\bottomrule
+\end{longtable}
+
+\section{Business Rule Evaluation}
+
+The strongest part of the evaluation is the coverage of transaction rules and
+state transitions. Payment creation, refund eligibility, callback handling,
+notification retry, and reconciliation behavior are all checked through
+automated scenarios that focus on expected business outcomes rather than only on
+technical success responses.
+
+This is important because the system is not merely a request router. It must
+decide when a merchant is ready, whether a merchant has an active VietQR
+receiving account, when a duplicate payment may be reused, when a refund is
+allowed, when a delayed callback becomes suspicious, and when a failed
+notification is safe to retry.
+
+The VietQR pilot adds tests for QR-specific failure and success paths:
+
+\begin{itemize}
+  \item payment creation fails when an active merchant has no active QR account;
+  \item VND and whole-amount constraints are enforced before QR generation;
+  \item generated payments include QR reference, VietQR payload, and PNG data
+  URL evidence;
+  \item duplicate equivalent pending payment requests return the same stored QR
+  evidence;
+  \item provider callbacks reject missing, invalid, or stale HMAC signatures.
+\end{itemize}
+
+\section{Dashboard And Access Evaluation}
+
+The report also evaluates whether the two human-facing dashboards enforce the
+correct boundaries. Internal users must be able to review and recover
+operational issues, while merchant users must only see records that belong to
+their own merchant account.
+
+Dashboard evaluation therefore focuses on:
+
+\begin{itemize}
+  \item sign-in and session behavior for internal and merchant-facing users;
+  \item merchant-scoped visibility for analytics and record exploration;
+  \item visibility of useful metadata without exposure of raw secret material;
+  \item internal-only QR account controls and merchant-facing QR evidence
+  display;
+  \item practical usability for review, investigation, and account maintenance
+  tasks.
+\end{itemize}
+
+\section{Pilot Demo And Smoke Evaluation}
+
+The branch includes a visual demo merchant, real-HTTP smoke scripts, and the
+existing Postman/Newman scenario. Together they exercise the same flow used in
+demonstration:
+
+\begin{enumerate}
+  \item internal login, merchant onboarding, credential creation, and QR account
+  setup;
+  \item merchant HMAC payment creation returning \code{qr_reference},
+  \code{qr_content}, and \code{qr_image_base64};
+  \item signed provider callback that finalizes the payment;
+  \item refund creation and signed refund callback processing;
+  \item worker-driven webhook delivery or retry behavior;
+  \item merchant-side webhook verification, duplicate event handling, and
+  visible checkout transition to success or failure.
+\end{enumerate}
+
+The commands \code{scripts/smoke_e2e_demo.py --outcome success} and
+\code{scripts/smoke_e2e_demo.py --outcome failed} provision unique merchants
+through the real Ops API, create QR payments through merchant HMAC, call the
+provider callback surface, and poll until the worker webhook reaches the demo
+merchant. They also verify that the Merchant Dashboard API exposes the same
+payment. The simulator response is explicitly checked while the demo order is
+still pending, which proves that only the merchant webhook controls the final
+checkout result.
+
+This gives the demonstration a visible real-world story: the merchant backend
+receives a QR image for checkout, the customer can scan it in a banking app,
+the simulator replaces provider confirmation, and the gateway then records
+evidence and notifies the merchant. Figure~\ref{fig:demo-merchant-checkout}
+shows both the pending and webhook-confirmed states used in browser review.
+
+\section{Manual Review And Overall Assessment}
+
+Manual browser review complements the automated evaluation by checking visual
+and operational qualities that are difficult to reduce to pure rule-based
+tests. These checks include page readability, table overflow, chart clarity,
+mobile behavior, and general workflow stability.
+
+Overall, the evaluation indicates that the Mini Payment Gateway covers its pilot
+goals well:
+
+\begin{itemize}
+  \item money-flow rules are protected by explicit validation and state control;
+  \item QR payment generation is tied to audited Ops configuration rather than
+  uncontrolled merchant-side data;
+  \item external evidence and merchant notification behavior are preserved as
+  durable reviewable events;
+  \item internal and merchant-facing access boundaries are treated as separate
+  security concerns;
+  \item both dashboards support the operational and merchant visibility goals of
+  the project.
+  \item the separate demo merchant demonstrates server-side HMAC integration
+  and webhook-driven customer status without weakening the gateway's API-only
+  boundary.
+\end{itemize}
+
+The main remaining limitation is typical for an academic pilot system: some
+usability and layout quality still depend on manual review in addition to
+automated validation.

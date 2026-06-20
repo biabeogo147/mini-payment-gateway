@@ -27,6 +27,8 @@ historical phase files.
 - `getting-started/runbook.md` - smoke scripts and full demo flow.
 - `getting-started/vietqr-pilot-demo.md` - instructor-facing VietQR pilot demo
   guide with dashboard, Postman/Newman, smoke, and sandbox commands.
+- `getting-started/e2e-payment-demo.md` - preferred visible end-to-end demo from
+  first Admin bootstrap through merchant checkout webhook result.
 - `service-operations/merchant-onboarding-sop.md` - merchant lifecycle
   workflow.
 - `service-operations/webhook-retry-sop.md` - failed webhook handling.

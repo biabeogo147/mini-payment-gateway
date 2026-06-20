@@ -1,0 +1,144 @@
+\chapter{Database Design}
+
+\section{Entity Model}
+
+The data model is designed around durable business evidence. It must support
+merchant readiness, transaction state, refund state, notification delivery,
+external outcome evidence, reconciliation, audit history, and human account
+access without losing traceability.
+
+These entities fall into four practical groups: merchant identity and access,
+money-flow records, external delivery evidence, and operational traceability.
+The overview below emphasizes those relationships in a portrait-friendly form so
+the reader can connect the major business objects without needing a landscape
+schema page.
+
+\begin{figure}[!htbp]
+\centering
+\resizebox{\textwidth}{!}{%
+\begin{tikzpicture}[x=1cm,y=1cm]
+  \node[box, text width=28mm] (internalUser) at (0,0) {Internal user};
+  \node[box, text width=29mm] (merchant) at (4,0) {Merchant};
+  \node[box, text width=32mm] (merchantUser) at (8,0) {Merchant dashboard user};
+
+  \node[box, text width=28mm] (onboarding) at (0,-1.7) {Onboarding case};
+  \node[box, text width=29mm] (credential) at (4,-1.7) {Merchant credential};
+  \node[box, text width=32mm] (payment) at (8,-1.7) {Payment transaction};
+  \node[box, text width=32mm] (webhook) at (12,-1.7) {Webhook event};
+
+  \node[box, text width=28mm] (audit) at (0,-3.4) {Audit log};
+  \node[box, text width=29mm] (qrAccount) at (4,-3.4) {Merchant QR account};
+  \node[box, text width=32mm] (callback) at (8,-3.4) {Callback evidence};
+  \node[box, text width=32mm] (attempt) at (12,-3.4) {Webhook delivery attempt};
+
+  \node[box, text width=29mm] (refund) at (4,-5.1) {Refund transaction};
+  \node[box, text width=32mm] (recon) at (8,-5.1) {Reconciliation record};
+
+  \draw[arrow] (internalUser.south) -- (onboarding.north);
+  \draw[arrow] (internalUser.west) to[out=180,in=180] (audit.west);
+  \draw[arrow] (merchant.west) to[out=180,in=25] (onboarding.east);
+  \draw[arrow] (merchant.south) -- (credential.north);
+  \draw[arrow] (merchant.south west) to[out=-115,in=115] (qrAccount.west);
+  \draw[arrow] (merchant.east) -- (merchantUser.west);
+  \draw[arrow] (merchant.east) to[out=-18,in=160] (payment.west);
+  \draw[arrow] (merchant.south west) to[out=-145,in=45] (audit.north east);
+  \draw[arrow] (qrAccount.east) to[out=20,in=200] (payment.west);
+  \draw[arrow] (payment.east) -- (webhook.west);
+  \draw[arrow] (webhook.south) -- (attempt.north);
+  \draw[arrow] (callback.north) -- (payment.south);
+  \draw[arrow] (callback.south west) to[out=-140,in=25] (refund.east);
+  \draw[arrow] (callback.south) -- (recon.north);
+  \draw[arrow] (payment.south east) to[out=-80,in=35] (recon.east);
+  \draw[arrow] (refund.east) -- (recon.west);
+\end{tikzpicture}
+}
+\caption{Logical entity relationship overview. The model centers on merchants,
+transactions, delivery evidence, and operational traceability.}
+\label{fig:logical-entity-overview}
+\end{figure}
+
+Figure~\ref{fig:logical-entity-overview} is intentionally simplified for
+readability. The complete entity diagram is provided on the final page in
+Figure~\ref{fig:full-entity-diagram}.
+
+\section{Core Entities}
+
+\begin{longtable}{L{0.26\textwidth}L{0.64\textwidth}}
+\caption{Core business entities}\\
+\toprule
+\textbf{Entity} & \textbf{Purpose} \\
+\midrule
+\endfirsthead
+\toprule
+\textbf{Entity} & \textbf{Purpose} \\
+\midrule
+\endhead
+Merchant & Stores the merchant identity, operating profile, contact data, notification destination, settlement information, and current operating status. \\
+\bodyrowrule
+Onboarding Case & Stores merchant-submitted readiness information, review findings, approval or rejection outcomes, and review history. \\
+\bodyrowrule
+Merchant Credential & Stores merchant integration credential metadata and protected secret material used for signed transaction requests. \\
+\bodyrowrule
+Merchant QR Account & Stores the Ops-managed receiving account used to generate VietQR payloads, including provider, bank code, bank BIN, account number, account name, template, status, and timestamps. \\
+\bodyrowrule
+Merchant Dashboard User & Stores human merchant accounts that sign in to the merchant dashboard and are scoped to one merchant. \\
+\bodyrowrule
+Internal User & Stores internal administrative and operational accounts used for management and review workflows. \\
+\bodyrowrule
+Payment Transaction & Stores payment attempts, money amounts, state, expiration information, merchant references, QR reference, QR payload, QR image data, and externally linked payment evidence. \\
+\bodyrowrule
+Refund Transaction & Stores refund requests and their linkage to successful original payments. \\
+\bodyrowrule
+Webhook Event & Stores merchant notification payloads, delivery state, retry metadata, and notification history. \\
+\bodyrowrule
+Webhook Delivery Attempt & Stores individual delivery attempts so the system can preserve delivery evidence over time. \\
+\bodyrowrule
+Callback Evidence & Stores raw and normalized external outcome evidence for payments and refunds. \\
+\bodyrowrule
+Reconciliation Record & Stores manual-review evidence when external outcomes do not align cleanly with internal state. \\
+\bodyrowrule
+Audit Log & Stores durable review and administrative evidence for sensitive human actions. \\
+\bottomrule
+\end{longtable}
+
+\section{Data Invariants}
+
+\begin{longtable}{L{0.34\textwidth}L{0.56\textwidth}}
+\caption{Important data invariants}\\
+\toprule
+\textbf{Invariant} & \textbf{Reason} \\
+\midrule
+\endfirsthead
+\toprule
+\textbf{Invariant} & \textbf{Reason} \\
+\midrule
+\endhead
+Each merchant has one stable public merchant identity. & External integrations and both dashboards need one durable merchant anchor. \\
+\bodyrowrule
+Only one active merchant integration credential exists at a time. & Signed requests should resolve to one authoritative active credential for each merchant. \\
+\bodyrowrule
+Only one active QR account exists for each merchant and QR provider. & Payment creation must resolve to one authoritative receiving account when generating a VietQR payload. \\
+\bodyrowrule
+Each merchant dashboard user belongs to exactly one merchant. & Merchant dashboard access must remain tenant-scoped and must not leak across merchants. \\
+\bodyrowrule
+Only one active pending payment can exist for the same merchant order at a time. & This prevents duplicate active checkout attempts for one business order. \\
+\bodyrowrule
+Payment QR references are short and stored on the payment record. & The callback simulator and manual review workflows can match bank transfer purpose back to the gateway transaction. \\
+\bodyrowrule
+Refund requests are unique per merchant refund reference. & The system needs business-level idempotency for merchant refund initiation. \\
+\bodyrowrule
+At most one successful full refund can exist for one successful payment. & The project implements full-refund-only behavior. \\
+\bodyrowrule
+Notification delivery history is preserved separately from notification state. & Final notification status and the evidence that led to it must both remain available. \\
+\bodyrowrule
+Protected secrets and plaintext passwords are never returned through ordinary read views. & Human access and merchant integration credentials must remain protected even when metadata is viewable. \\
+\bottomrule
+\end{longtable}
+
+\section{Data Evolution}
+
+The data model evolves by extending business capabilities rather than by
+rewriting existing evidence. As the system grows, new entities or attributes
+can be introduced for additional merchant lifecycle information, expanded
+notification channels, or richer reconciliation support while preserving
+historical transaction and audit integrity.
