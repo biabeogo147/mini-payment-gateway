@@ -19,7 +19,7 @@ does not include future-only stories.
 | US-OPS-01 | As an Ops user, I want to monitor operational queues so that failed or pending work can be handled quickly. | Ops can login, view dashboard metrics/charts, and navigate to payments, refunds, webhooks, and reconciliation. |
 | US-OPS-02 | As an Ops user, I want to manage merchant lifecycle states so that merchants can be activated, suspended, or disabled safely. | Ops can perform allowed lifecycle actions with a required reason and audit trail. |
 | US-OPS-03 | As an Ops user, I want to inspect webhook attempts so that failed merchant notifications can be retried or explained. | Ops can open webhook detail, see attempts, and retry failed webhook events where allowed. |
-| US-OPS-04 | As an Ops user, I want RBAC to block admin-only actions so that password management remains controlled. | Ops cannot create/reset merchant portal users or manage internal users. |
+| US-OPS-04 | As an Ops user, I want to manage merchant dashboard users so that merchant access can be provisioned during onboarding and support. | Ops can create, update, deactivate/reactivate, and reset merchant portal users; generated passwords are shown once and mutations are audited. Ops still cannot manage internal users, rotate credentials, or disable merchants. |
 
 ## Merchant Operator
 

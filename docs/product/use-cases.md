@@ -95,13 +95,9 @@ These use cases are included in the current dashboard branch and should be used
 in the final presentation demo only if they can be shown through the running
 application.
 
-`Admin` and `Ops` are both internal users of the Ops Dashboard, but they are
-modeled separately here because the implementation enforces different RBAC
-permissions. `Admin` can perform privileged account-provisioning work such as
-creating, activating/deactivating, and resetting passwords for merchant portal
-users. `Ops` represents day-to-day internal operations users who can inspect
-and operate the payment gateway workflows but cannot provision merchant portal
-password access.
+`Admin` and `Ops` are both internal users of the Ops Dashboard. Both roles can
+provision and support merchant portal users, while only `Admin` can manage
+internal users, rotate merchant credentials, or disable merchants.
 
 ```plantuml
 @startuml dashboard_use_cases
@@ -132,6 +128,7 @@ Admin --> DUC003
 Admin --> DUC004
 Ops --> DUC001
 Ops --> DUC002
+Ops --> DUC003
 Ops --> DUC004
 MerchantUser --> DUC005
 MerchantUser --> DUC006
@@ -144,7 +141,7 @@ MerchantUser --> DUC008
 | --- | --- | --- | --- |
 | DUC001 | Login and view operations overview | Admin/Ops | Internal users login with session cookie and inspect dashboard metrics/charts. |
 | DUC002 | Manage merchant lifecycle | Admin/Ops | Operators create merchants, manage onboarding/credentials, and activate/suspend/disable merchants according to RBAC. |
-| DUC003 | Provision merchant portal users | Admin | Admin creates, updates, deactivates/reactivates, and resets passwords for merchant dashboard users. |
+| DUC003 | Provision merchant portal users | Admin/Ops | Internal operators create, update, deactivate/reactivate, and reset passwords for merchant dashboard users. |
 | DUC004 | Inspect operational evidence | Admin/Ops | Internal users inspect payments, refunds, webhooks, reconciliation, audit logs, and webhook attempts. |
 | DUC005 | Login and change password | Merchant portal user | Merchant users login with merchant session cookie and can change their own password. |
 | DUC006 | View overview and analytics | Merchant portal user | Merchant users see scoped summary metrics and interactive 7/30/90-day analytics. |
@@ -156,7 +153,8 @@ Dashboard constraints:
 - Merchant portal scope is resolved from the session user, never from a
   client-provided `merchant_id`.
 - Merchant Dashboard is read-only except for local password change.
-- `OPS` users cannot create or reset merchant portal user passwords.
+- `OPS` users can manage merchant portal users but cannot manage internal users,
+  rotate merchant credentials, or disable merchants.
 - Dashboard use-case diagrams intentionally split `Admin` and `Ops` because
   they share the same internal application but not the same authorization
   boundary.

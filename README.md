@@ -137,7 +137,8 @@ The repository has two React/Vite dashboard apps:
 
 Ops includes internal login/bootstrap for `ADMIN` and `OPS`, operational
 explorers, merchant lifecycle actions, reconciliation workflows, audit logs,
-internal user management, and `ADMIN` provisioning for merchant portal users.
+Admin-only internal user management, and merchant portal user provisioning for
+both internal roles.
 
 Merchant Dashboard includes merchant session auth, overview metrics, payment,
 refund, and webhook explorers, profile metadata, credential metadata, and local

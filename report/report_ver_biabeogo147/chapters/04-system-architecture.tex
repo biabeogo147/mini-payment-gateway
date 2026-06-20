@@ -90,9 +90,9 @@ Scheduled trigger & Time-based orchestrator & Activates expiration handling and 
 \midrule
 Merchant backend & Merchant transaction API & Signed merchant integration credentials & The authenticated merchant integration identity. \\
 \bodyrowrule
-Admin or Ops user & Internal operations API & Internal session authentication & The authenticated internal role and permissions. \\
+Admin or Ops user & Internal operations API, including merchant dashboard account provisioning & Internal session authentication & The authenticated internal role and permissions. \\
 \bodyrowrule
-Admin user & Account-administration functions & Internal session authentication & The authenticated internal role with elevated administrative permissions. \\
+Admin user & Internal-user administration and high-risk merchant actions & Internal session authentication & The authenticated internal role with elevated administrative permissions. \\
 \bodyrowrule
 Merchant dashboard user & Merchant dashboard API & Merchant session authentication & The merchant account associated with the signed-in dashboard user. \\
 \bodyrowrule

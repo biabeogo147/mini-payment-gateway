@@ -27,6 +27,8 @@ US-OPS-03 & As an Ops user, I want to inspect webhook attempts so failed notific
 \bodyrowrule
 US-OPS-04 & As an Ops user, I want to configure a merchant's VietQR receiving account so that payment QR generation is controlled and auditable. & Ops can list, create, activate, and deactivate merchant QR accounts from merchant detail, with one active account per provider and audit evidence for changes. \\
 \bodyrowrule
+US-OPS-05 & As an Ops user, I want to provision merchant dashboard users so merchant access can be completed during onboarding and support. & Ops can create, update, deactivate or reactivate, and reset merchant portal users; generated passwords are shown once and every mutation records the authenticated Ops actor. \\
+\bodyrowrule
 US-INTEGRATION-01 & As a merchant backend, I want payment creation to return a scannable QR image and stable QR reference. & A valid signed payment request for an active, QR-configured merchant returns \code{qr_reference}, \code{qr_content}, and \code{qr_image_base64}; duplicate equivalent pending requests return the same QR evidence. \\
 \bodyrowrule
 US-MERCHANT-01 & As a merchant operator, I want to log in without API credentials. & Merchant user logs in with merchant id, email, and password; the session is separate from HMAC API credentials. \\

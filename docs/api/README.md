@@ -33,7 +33,7 @@ explicitly changes the behavior.
 | --- | --- | --- | --- | --- |
 | Merchant backend | Merchant API | `X-Merchant-Id`, `X-Access-Key`, `X-Timestamp`, `X-Signature` HMAC headers | Authenticated merchant credential | `/v1/payments`, `/v1/refunds` |
 | Admin/Ops user | Ops API | Internal HttpOnly session cookie | Internal user role `ADMIN` or `OPS` | `/v1/ops/merchants`, `/v1/ops/reconciliation` |
-| Admin user | Ops portal-user API | Internal HttpOnly session cookie | Internal user role `ADMIN` | `/v1/ops/merchants/{merchant_id}/portal-users` |
+| Admin/Ops user | Ops portal-user API | Internal HttpOnly session cookie | Internal user role `ADMIN` or `OPS` | `/v1/ops/merchants/{merchant_id}/portal-users` |
 | Merchant portal user | Merchant Portal API | Merchant HttpOnly session cookie | `merchant_users.merchant_db_id` | `/v1/merchant-portal/dashboard/summary`, `/v1/merchant-portal/analytics` |
 | Provider simulator | Provider callback API | Provider HMAC headers using `PROVIDER_CALLBACK_SECRETS` | Callback payload references | `/v1/provider/callbacks/payment`, `/v1/provider/callbacks/refund` |
 

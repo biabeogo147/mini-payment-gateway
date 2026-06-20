@@ -37,6 +37,8 @@ import {
   StatusBadge,
 } from "../common/ui";
 import { useSession } from "../auth/use-session";
+import { canManageMerchantPortalUsers } from "./portal-user-permissions";
+import { PortalUserRoleSelect } from "./portal-user-role-select";
 
 const merchantStatusOptions: Array<MerchantStatus | ""> = [
   "",
@@ -65,6 +67,7 @@ function MerchantSection(props: {
 export function MerchantsPage() {
   const queryClient = useQueryClient();
   const { data: session } = useSession();
+  const canManagePortalUsers = canManageMerchantPortalUsers(session?.user.role);
   const [search, setSearch] = useState("");
   const [status, setStatus] = useState<MerchantStatus | "">("");
   const [selectedMerchantId, setSelectedMerchantId] = useState<string>("");
@@ -137,7 +140,7 @@ export function MerchantsPage() {
   const portalUsersQuery = useQuery({
     queryKey: ["merchant-portal-users", selectedMerchantId],
     queryFn: () => listMerchantPortalUsers(selectedMerchantId),
-    enabled: Boolean(selectedMerchantId) && session?.user.role === "ADMIN",
+    enabled: Boolean(selectedMerchantId) && canManagePortalUsers,
   });
 
   useEffect(() => {
@@ -288,11 +291,12 @@ export function MerchantsPage() {
     mutationFn: (input: {
       merchantId: string;
       userId: string;
-      status: MerchantUserStatus;
+      payload: {
+        role?: MerchantUserRole;
+        status?: MerchantUserStatus;
+      };
     }) =>
-      updateMerchantPortalUser(input.merchantId, input.userId, {
-        status: input.status,
-      }),
+      updateMerchantPortalUser(input.merchantId, input.userId, input.payload),
     onSuccess: async () => invalidateOpsConsoleData(queryClient),
   });
 
@@ -589,13 +593,7 @@ export function MerchantsPage() {
                 ) : null}
               </div>
 
-              <div
-                className={
-                  session?.user.role === "ADMIN"
-                    ? "merchant-access-grid"
-                    : "merchant-access-grid merchant-access-grid-single"
-                }
-              >
+              <div className="merchant-access-grid">
                 <div className="merchant-access-column">
                   <MerchantSection title="Credentials">
                     {merchantDetail.credentials.length === 0 ? (
@@ -980,7 +978,7 @@ export function MerchantsPage() {
                   </MerchantSection>
                 </div>
 
-                {session?.user.role === "ADMIN" ? (
+                {canManagePortalUsers ? (
                   <MerchantSection title="Merchant portal users" className="portal-users-panel">
                     {portalUsersQuery.isLoading ? (
                       <EmptyState
@@ -1007,7 +1005,18 @@ export function MerchantsPage() {
                             </div>
                             <div className="portal-user-actions">
                               <div className="portal-user-badges">
-                                <StatusBadge value={user.role} />
+                                <PortalUserRoleSelect
+                                  disabled={updatePortalUserMutation.isPending}
+                                  email={user.email}
+                                  role={user.role}
+                                  onChange={(role) =>
+                                    updatePortalUserMutation.mutate({
+                                      merchantId: merchantDetail.merchant_id,
+                                      userId: user.user_id,
+                                      payload: { role },
+                                    })
+                                  }
+                                />
                                 <StatusBadge value={user.status} />
                               </div>
                               <div className="portal-user-buttons">
@@ -1019,10 +1028,12 @@ export function MerchantsPage() {
                                     updatePortalUserMutation.mutate({
                                       merchantId: merchantDetail.merchant_id,
                                       userId: user.user_id,
-                                      status:
-                                        user.status === "ACTIVE"
-                                          ? "INACTIVE"
-                                          : "ACTIVE",
+                                      payload: {
+                                        status:
+                                          user.status === "ACTIVE"
+                                            ? "INACTIVE"
+                                            : "ACTIVE",
+                                      },
                                     })
                                   }
                                 >

@@ -31,8 +31,8 @@ Role model:
 - `ADMIN`: full access, including internal user management, merchant disable,
   and credential rotation.
 - `OPS`: standard operating access for onboarding, payment/refund/webhook
-  support, reconciliation resolution, and merchant lifecycle actions short of
-  the admin-only actions above.
+  support, reconciliation resolution, merchant portal user management, and
+  merchant lifecycle actions short of the admin-only actions above.
 
 Ops write routes still require an `actor` object in the request body because
 the user-supplied `reason` remains part of the audit trail. `actor_type` and
@@ -105,9 +105,11 @@ Audit and reconciliation:
 
 ## Merchant Portal User Management
 
-Merchant portal user management is `ADMIN`-only. `OPS` users can continue the
-standard operational workflows, but they cannot create merchant dashboard users,
-change portal roles/status, or reset merchant portal passwords.
+Merchant portal user management is available to both `ADMIN` and `OPS` internal
+users. Both roles can list, create, change role/status, and reset passwords for
+merchant dashboard users. Generated passwords are returned only by the immediate
+create/reset response, and every mutation records the authenticated internal
+actor in the audit log.
 
 ### List Portal Users
 

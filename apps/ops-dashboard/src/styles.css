@@ -374,10 +374,6 @@ textarea {
   gap: 1rem;
 }
 
-.merchant-access-grid-single {
-  grid-template-columns: 1fr;
-}
-
 .merchant-access-column,
 .portal-user-create-panel,
 .qr-account-form-panel {
@@ -584,6 +580,16 @@ textarea {
 
 .portal-user-buttons .secondary-button {
   padding: 0.65rem 0.95rem;
+}
+
+.portal-user-role-select {
+  max-width: 100%;
+  padding: 0.5rem 0.65rem;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: #ffffff;
+  color: var(--ink);
+  font-size: 0.85rem;
 }
 
 .status-inline {

@@ -96,20 +96,108 @@ first Admin with values such as:
 - Full name: `Demo Admin`
 - Password: `DemoAdmin123!`
 
-Create a merchant and complete these actions on its detail page:
+### 1. Admin creates an internal OPS user
 
-1. Submit and approve its onboarding case.
-2. Create an API credential and keep the one-time secret visible.
-3. Create and activate a VietQR account, for example:
-   `bank_code=VCB`, `bank_bin=970436`,
-   `account_number=9704000000000001`,
-   `account_name=E2E DEMO SHOP`, and `template=compact`.
-4. Create a Merchant Dashboard user and keep the one-time password.
-5. Activate the merchant.
+After the bootstrap login, open **Internal users** and create the operator who
+will perform the day-to-day merchant onboarding:
 
-Use the merchant ID, access key, and one-time API secret in the Setup form at
-`http://127.0.0.1:8100`. The secret is kept only in the demo merchant server's
-memory and is never returned to browser JavaScript after setup.
+- Email: `demo.ops@example.com`
+- Full name: `Demo Ops Operator`
+- Role: `OPS`
+- Status: `ACTIVE`
+- Initial password: `DemoOps123!`
+
+Internal user management is an `ADMIN`-only action. Log out of the Admin
+session, then log in as `demo.ops@example.com` for the next steps.
+
+### 2. OPS creates the merchant profile
+
+Open **Merchants**, fill **Create merchant profile**, and submit these sample
+values:
+
+- Reason: `Create merchant for the E2E payment demo.`
+- Merchant id: `m_e2e_demo`
+- Merchant name: `E2E Demo Shop`
+- Legal name: `E2E Demo Shop Company Limited`
+- Contact name: `Demo Merchant Owner`
+- Contact email: `merchant.owner@example.com`
+- Contact phone: `0900000000`
+- Webhook URL: `http://127.0.0.1:8100/webhooks/payment-gateway`
+- Settlement account name: `E2E DEMO SHOP`
+- Settlement account number: `9704000000000001`
+- Settlement bank code: `VCB`
+
+The new merchant starts in `PENDING_REVIEW`. Creating the merchant and the
+following onboarding operations are deliberately available to `OPS`.
+
+### 3. OPS submits and approves onboarding
+
+Open **Onboarding** and enter:
+
+- Merchant id: `m_e2e_demo`
+- Reason: `Submit merchant for the E2E payment demo.`
+- Domain or app: `E2E Demo Shop`
+- Submitted profile JSON: `{"business_type":"online_shop"}`
+- Documents JSON: `{"business_license":"demo-license.pdf"}`
+- Review checks JSON: `{"risk_level":"LOW"}`
+
+Click **Submit onboarding case**. Select the pending case, use decision reason
+`Approve merchant for the E2E payment demo.`, decision note
+`Demo documents and low-risk checks verified.`, then approve it.
+
+### 4. OPS creates the API credential and VietQR account
+
+Return to **Merchants**, select `m_e2e_demo`, and create its initial API
+credential:
+
+- Reason: `Issue the initial credential for the E2E payment demo.`
+- Access key: `ak_e2e_demo`
+- Secret key: `DemoMerchantSecret123!`
+
+Record the secret key when entering it. The credential list only shows its last
+four characters later.
+
+In the same merchant detail, create the active VietQR receiving account:
+
+- Reason: `Configure the VietQR account for the E2E payment demo.`
+- Bank code: `VCB`
+- Bank BIN: `970436`
+- Account number: `9704000000000001`
+- Account name: `E2E DEMO SHOP`
+- Template: `compact`
+- Initial status: `ACTIVE`
+
+Use a real account owned by the team instead if the instructor will verify the
+recipient name in a banking app. Do not complete a real transfer unless that is
+intentional.
+
+### 5. OPS activates the merchant
+
+On the merchant detail page, enter action reason
+`Onboarding approved and initial credential issued for demo.` and click
+**Activate**. Activation requires approved onboarding and an active API
+credential. An active VietQR account is additionally required when the merchant
+creates a VietQR payment.
+
+### 6. OPS creates the Merchant Dashboard user
+
+Remain logged in as `demo.ops@example.com`. Open **Merchants**, select
+`m_e2e_demo`, then create the merchant-facing portal user:
+
+- Email: `merchant.admin@example.com`
+- Full name: `Demo Merchant Admin`
+- Role: `MERCHANT_ADMIN`
+- Status: `ACTIVE`
+
+Keep the generated temporary password shown once by the dashboard. This is not
+the Merchant entity and not an internal OPS account; it is the human login for
+`http://127.0.0.1:4174`. Both `ADMIN` and `OPS` can manage these portal users;
+only `ADMIN` can manage internal users, rotate credentials, or disable merchants.
+
+Finally, use `m_e2e_demo`, `ak_e2e_demo`, and
+`DemoMerchantSecret123!` in the Setup form at `http://127.0.0.1:8100`. The
+secret is kept only in the demo merchant server's memory and is never returned
+to browser JavaScript after setup.
 
 ## Instructor Walkthrough
 

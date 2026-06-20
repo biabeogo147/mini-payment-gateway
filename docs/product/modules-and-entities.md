@@ -205,7 +205,7 @@ DB rules:
 
 Notes:
 
-* merchant portal users are provisioned by internal `ADMIN` users
+* merchant portal users are provisioned by internal `ADMIN` or `OPS` users
 * plaintext passwords are returned only once on create/reset and are not stored
 * merchant portal users do not use merchant API `access_key` or `secret_key`
 

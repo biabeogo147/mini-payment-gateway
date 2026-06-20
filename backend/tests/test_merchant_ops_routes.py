@@ -219,6 +219,28 @@ class MerchantOpsRouteTest(unittest.TestCase):
         finally:
             app.dependency_overrides.clear()
 
+    def test_ops_cannot_rotate_credentials_or_disable_merchant(self) -> None:
+        from app.main import app
+
+        override_current_internal_user(app, make_internal_user(role=InternalUserRole.OPS))
+
+        try:
+            rotate_response = TestClient(app).post(
+                "/v1/ops/merchants/m_demo/credentials/rotate",
+                json=_credential_json("ak_rotated"),
+            )
+            disable_response = TestClient(app).post(
+                "/v1/ops/merchants/m_demo/disable",
+                json=_reason_json(),
+            )
+        finally:
+            app.dependency_overrides.clear()
+
+        self.assertEqual(rotate_response.status_code, 403)
+        self.assertEqual(disable_response.status_code, 403)
+        self.assertEqual(rotate_response.json()["error_code"], "INTERNAL_AUTH_FORBIDDEN")
+        self.assertEqual(disable_response.json()["error_code"], "INTERNAL_AUTH_FORBIDDEN")
+
     def test_qr_account_routes_call_service_with_merchant_id_and_actor(self) -> None:
         from app.controllers import ops_merchant_controller
         from app.main import app

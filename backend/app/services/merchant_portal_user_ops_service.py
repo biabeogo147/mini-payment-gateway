@@ -38,7 +38,7 @@ def create_user(
     merchant_id: str,
     request: CreateMerchantPortalUserRequest,
 ) -> MerchantPortalGeneratedPasswordResponse:
-    _require_admin(current_user)
+    _require_operator(current_user)
     merchant = _require_merchant(db, merchant_id)
     if merchant_user_repository.get_by_merchant_and_email(
         db,
@@ -67,7 +67,7 @@ def create_user(
         event_type="MERCHANT_USER_CREATED",
         entity_type=EntityType.MERCHANT_USER,
         entity_id=user.id,
-        actor_type=ActorType.ADMIN,
+        actor_type=_actor_type(current_user),
         actor_id=current_user.id,
         before_state=None,
         after_state=_merchant_user_state(user),
@@ -90,7 +90,7 @@ def update_user(
     role=None,
     status=None,
 ) -> MerchantPortalUserResponse:
-    _require_admin(current_user)
+    _require_operator(current_user)
     merchant = _require_merchant(db, merchant_id)
     user = _require_user(db, merchant.id, user_id)
     before_state = _merchant_user_state(user)
@@ -106,7 +106,7 @@ def update_user(
         event_type="MERCHANT_USER_UPDATED",
         entity_type=EntityType.MERCHANT_USER,
         entity_id=user.id,
-        actor_type=ActorType.ADMIN,
+        actor_type=_actor_type(current_user),
         actor_id=current_user.id,
         before_state=before_state,
         after_state=_merchant_user_state(user),
@@ -123,7 +123,7 @@ def reset_password(
     merchant_id: str,
     user_id: str,
 ) -> MerchantPortalGeneratedPasswordResponse:
-    _require_admin(current_user)
+    _require_operator(current_user)
     merchant = _require_merchant(db, merchant_id)
     user = _require_user(db, merchant.id, user_id)
     before_state = _merchant_user_state(user)
@@ -135,7 +135,7 @@ def reset_password(
         event_type="MERCHANT_USER_PASSWORD_RESET",
         entity_type=EntityType.MERCHANT_USER,
         entity_id=user.id,
-        actor_type=ActorType.ADMIN,
+        actor_type=_actor_type(current_user),
         actor_id=current_user.id,
         before_state=before_state,
         after_state=_merchant_user_state(user),
@@ -148,13 +148,19 @@ def reset_password(
     )
 
 
-def _require_admin(current_user: InternalUser) -> None:
-    if current_user.role != InternalUserRole.ADMIN:
+def _require_operator(current_user: InternalUser) -> None:
+    if current_user.role not in {InternalUserRole.ADMIN, InternalUserRole.OPS}:
         raise AppError(
             error_code="INTERNAL_AUTH_FORBIDDEN",
-            message="Admin access is required for this route.",
+            message="Internal operator access is required for this route.",
             status_code=403,
         )
+
+
+def _actor_type(current_user: InternalUser) -> ActorType:
+    if current_user.role == InternalUserRole.ADMIN:
+        return ActorType.ADMIN
+    return ActorType.OPS
 
 
 def _require_merchant(db: Session, merchant_id: str):

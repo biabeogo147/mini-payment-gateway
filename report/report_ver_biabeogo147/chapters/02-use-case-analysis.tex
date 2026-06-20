@@ -19,7 +19,8 @@ dashboard accounts. \\
 \bodyrowrule
 Ops & Internal operations user who monitors transactions, configures QR
 receiving accounts, investigates delivery issues, reviews evidence, and
-performs allowed recovery actions. \\
+performs allowed recovery actions, including provisioning and supporting
+merchant dashboard accounts. \\
 \bodyrowrule
 Merchant backend & Merchant-owned application that creates payments and refunds
 through the gateway on behalf of the merchant business. \\
@@ -88,7 +89,7 @@ DUC001 & Sign in and view operations overview & Admin or Ops & Internal users ac
 \bodyrowrule
 DUC002 & Manage merchant lifecycle & Admin or Ops & Internal users register merchants, review readiness information, manage credentials, configure QR receiving accounts, and apply lifecycle decisions. \\
 \bodyrowrule
-DUC003 & Manage merchant dashboard accounts & Admin & Merchant-facing user accounts can be created, updated, deactivated, reactivated, or reset. \\
+DUC003 & Manage merchant dashboard accounts & Admin or Ops & Merchant-facing user accounts can be created, updated, deactivated, reactivated, or reset. \\
 \bodyrowrule
 DUC004 & Inspect operational evidence & Admin or Ops & Internal users review payments, refunds, webhook history, reconciliation items, and audit evidence. \\
 \bodyrowrule
@@ -135,6 +136,7 @@ two dashboard surfaces and the actors allowed to use each one.
 
   \draw[autharrow] (ops.east) to[out=30,in=180] (duc001.west);
   \draw[autharrow] (ops.east) -- (duc002.west);
+  \draw[autharrow] (ops.east) to[out=72,in=155,looseness=1.25] (duc003.north west);
   \draw[autharrow] (ops.east) to[out=-30,in=180] (duc004.west);
 
   \draw[autharrow] (merchantUser.east) to[out=28,in=180] (duc005.west);

@@ -111,7 +111,7 @@ Examples:
 - `backend/app/services/internal_user_admin_service.py`
 - `backend/app/services/ops_dashboard_service.py`
 - `backend/app/services/merchant_portal_auth_service.py`
-- `backend/app/services/merchant_portal_user_admin_service.py`
+- `backend/app/services/merchant_portal_user_ops_service.py`
 - `backend/app/services/merchant_portal_service.py`
 
 ### Repositories
@@ -181,8 +181,9 @@ HMAC API credentials:
   change-password routes;
 - `deps.get_current_merchant_user(...)` authenticates the merchant portal
   session cookie;
-- `merchant_portal_user_admin_service` lets internal `ADMIN` users provision,
-  update, deactivate, reactivate, and reset passwords for merchant portal users;
+- `merchant_portal_user_ops_service` lets internal `ADMIN` and `OPS` users
+  provision, update, deactivate, reactivate, and reset passwords for merchant
+  portal users while preserving the authenticated actor in audit events;
 - `merchant_portal_service` backs read-only merchant-scoped dashboard summary,
   charts, analytics, explorers, profile, and credential metadata.
 

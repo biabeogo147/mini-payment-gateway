@@ -192,7 +192,7 @@ timestamps. Raw credential secrets are never returned.
 
 ## Ops Provisioning
 
-Internal `ADMIN` users manage merchant portal users through Ops routes:
+Internal `ADMIN` and `OPS` users manage merchant portal users through Ops routes:
 
 - `GET /v1/ops/merchants/{merchant_id}/portal-users`
 - `POST /v1/ops/merchants/{merchant_id}/portal-users`

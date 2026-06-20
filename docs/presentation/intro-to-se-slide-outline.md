@@ -11,7 +11,7 @@ Show the implemented actor map:
   operational evidence, internal user management, and merchant portal user
   provisioning.
 - Ops: internal day-to-day operations user for merchant lifecycle and
-  operational evidence; Ops does not provision merchant portal password access.
+  operational evidence, including merchant portal user provisioning and support.
 - Merchant backend: create/query payments and refunds through HMAC APIs.
 - Provider simulator: payment/refund result callbacks.
 - Scheduler/Timer: expiration and webhook retry triggers.
@@ -24,12 +24,12 @@ Use `docs/product/use-cases.md` as the source.
 
 Demo flow:
 
-1. Admin logs into Ops Dashboard.
-2. Admin verifies merchant readiness and merchant portal users.
+1. Admin bootstraps the system and creates an Ops user.
+2. Ops onboards the merchant and provisions its merchant portal user.
 3. Merchant user logs into Merchant Dashboard.
 4. Merchant reviews Overview and Analytics.
 5. Merchant drills into Payments, Refunds, and Webhooks.
-6. Admin shows audit/reconciliation or webhook recovery if time remains.
+6. Ops shows audit/reconciliation or webhook recovery if time remains.
 
 Avoid demoing settlement, disputes, export CSV, or merchant self-service
 onboarding because they are not implemented.
@@ -65,7 +65,8 @@ Explain why the dashboards are separate apps:
 
 - internal operations and merchant users have different permissions;
 - Merchant Dashboard is read-only and scoped by session;
-- Ops Dashboard owns Admin-only provisioning and recovery actions.
+- Ops Dashboard owns internal provisioning and recovery actions, with RBAC
+  retaining Admin-only internal-user and high-risk merchant controls.
 
 ## Slide 5 - Database Design
 

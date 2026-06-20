@@ -127,8 +127,8 @@ Important boundaries:
 - Merchant HMAC credentials are for server-to-server API calls only.
 - Merchant Dashboard users are stored in `merchant_users` and login with a
   separate session cookie.
-- Ops users are stored in `internal_users`; only `ADMIN` users can provision
-  merchant portal users.
+- Ops users are stored in `internal_users`; both `ADMIN` and `OPS` users can
+  provision and support merchant portal users.
 - Merchant Portal APIs never accept `merchant_id` from the client for scoping.
   The backend resolves merchant scope from the authenticated portal user.
 - Raw credential secrets and plaintext generated passwords are never
@@ -185,15 +185,15 @@ the signed gateway webhook informs the merchant.
 ```mermaid
 sequenceDiagram
     autonumber
-    participant Admin as Admin user
+    participant Operator as Admin or Ops user
     participant OpsUI as Ops Dashboard
     participant API as Ops API
-    participant Service as Merchant portal user admin service
+    participant Service as Merchant portal user ops service
     participant DB as PostgreSQL
 
-    Admin->>OpsUI: create or reset merchant portal user
+    Operator->>OpsUI: create, update, or reset merchant portal user
     OpsUI->>API: /v1/ops/merchants/{merchant_id}/portal-users
-    API->>API: require internal ADMIN session
+    API->>API: require internal ADMIN or OPS session
     API->>Service: create/reset/update scoped merchant user
     Service->>DB: write merchant_users and audit_logs
     DB-->>Service: persisted user

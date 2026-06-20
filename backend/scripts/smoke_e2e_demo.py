@@ -24,7 +24,9 @@ def main() -> int:
     access_key = f"ak_e2e_{suffix}"
     merchant_secret = f"merchant-e2e-secret-{suffix}"
     portal_email = f"merchant-{suffix}@example.com"
-    actor = {"actor_type": "ADMIN", "actor_id": None, "reason": "E2E visual demo smoke."}
+    ops_email = f"ops-{suffix}@example.com"
+    ops_password = f"OpsDemo-{suffix}-123!"
+    actor = {"actor_type": "OPS", "actor_id": None, "reason": "E2E visual demo smoke."}
 
     with httpx.Client(timeout=10, follow_redirects=True) as ops:
         _require_ok(ops.get(f"{gateway_url}/health"), "gateway health")
@@ -53,6 +55,31 @@ def main() -> int:
                 ),
                 "internal admin login",
             )
+
+        _require_ok(
+            ops.post(
+                f"{gateway_url}/v1/internal/users",
+                json={
+                    "email": ops_email,
+                    "full_name": "E2E Demo Ops",
+                    "role": "OPS",
+                    "password": ops_password,
+                    "status": "ACTIVE",
+                },
+            ),
+            "create internal ops user",
+        )
+        _require_ok(
+            ops.post(f"{gateway_url}/v1/internal/auth/logout"),
+            "internal admin logout",
+        )
+        _require_ok(
+            ops.post(
+                f"{gateway_url}/v1/internal/auth/login",
+                json={"email": ops_email, "password": ops_password},
+            ),
+            "internal ops login",
+        )
 
         _require_ok(
             ops.post(
@@ -216,7 +243,9 @@ def main() -> int:
         json.dumps(
             {
                 "merchant_id": merchant_id,
+                "ops_email": ops_email,
                 "portal_email": portal_email,
+                "portal_user_provisioned_by": "OPS",
                 "order_id": created["order_id"],
                 "transaction_id": created["transaction_id"],
                 "qr_reference": created["qr_reference"],
