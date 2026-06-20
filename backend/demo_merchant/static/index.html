@@ -1,0 +1,99 @@
+<!doctype html>
+<html lang="vi">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Demo Merchant - Thanh toán VietQR</title>
+    <link rel="stylesheet" href="/static/styles.css" />
+    <script src="/static/app.js" defer></script>
+  </head>
+  <body>
+    <header class="topbar">
+      <div>
+        <span class="brand-mark">MP</span>
+        <strong>Demo Merchant</strong>
+      </div>
+      <span id="connection-state" class="status-pill neutral">Chưa cấu hình</span>
+    </header>
+
+    <main>
+      <section class="page-heading">
+        <p class="eyebrow">Customer checkout</p>
+        <h1>Thanh toán VietQR</h1>
+        <p>Tạo giao dịch, quét QR và quan sát kết quả merchant nhận từ webhook.</p>
+      </section>
+
+      <section class="workspace">
+        <aside class="setup-panel">
+          <div class="section-heading">
+            <span class="step-number">1</span>
+            <div><h2>Kết nối merchant</h2><p>Nhập credential vừa tạo trong Ops Dashboard.</p></div>
+          </div>
+          <form id="setup-form" class="form-stack">
+            <label>Merchant ID<input id="merchant-id" required placeholder="m_demo" /></label>
+            <label>Access key<input id="access-key" required placeholder="ak_demo" /></label>
+            <label>Secret key<input id="secret-key" required type="password" /></label>
+            <button type="submit" class="primary">Lưu kết nối</button>
+          </form>
+
+          <div class="divider"></div>
+
+          <div class="section-heading">
+            <span class="step-number">2</span>
+            <div><h2>Tạo đơn hàng</h2><p>Số tiền VND nguyên, TTL từ 1 đến 30 phút.</p></div>
+          </div>
+          <form id="order-form" class="form-stack">
+            <label>Số tiền<input id="amount" required type="number" min="1000" step="1000" value="100000" /></label>
+            <label>Mô tả<input id="description" required value="Thanh toán đơn hàng demo" /></label>
+            <label>Thời hạn (giây)<input id="ttl" required type="number" min="60" max="1800" value="300" /></label>
+            <button id="create-order" type="submit" class="primary" disabled>Tạo payment và QR</button>
+          </form>
+        </aside>
+
+        <section class="checkout-panel" aria-live="polite">
+          <div id="empty-checkout" class="empty-state">
+            <div class="empty-icon">QR</div>
+            <h2>Chưa có giao dịch</h2>
+            <p>Kết nối merchant và tạo đơn hàng để bắt đầu.</p>
+          </div>
+
+          <div id="active-checkout" hidden>
+            <div class="checkout-header">
+              <div>
+                <p class="eyebrow">Đơn hàng <span id="order-id"></span></p>
+                <h2 id="status-title">Chờ thanh toán</h2>
+                <p id="status-message">Quét mã bằng ứng dụng ngân hàng.</p>
+              </div>
+              <span id="payment-status" class="status-pill pending">PENDING</span>
+            </div>
+
+            <div class="payment-grid">
+              <div class="qr-frame"><img id="qr-image" alt="Mã VietQR cho giao dịch" /></div>
+              <dl class="payment-details">
+                <div><dt>Số tiền</dt><dd id="payment-amount"></dd></div>
+                <div><dt>Nội dung chuyển khoản</dt><dd id="qr-reference"></dd></div>
+                <div><dt>Transaction ID</dt><dd id="transaction-id"></dd></div>
+                <div><dt>Thời gian còn lại</dt><dd id="countdown"></dd></div>
+              </dl>
+            </div>
+
+            <div class="timeline">
+              <div class="timeline-step done"><span></span><div><strong>Gateway tạo payment</strong><p>QR đã sẵn sàng để quét.</p></div></div>
+              <div id="bank-step" class="timeline-step"><span></span><div><strong>Ngân hàng phản hồi</strong><p>Chưa có callback.</p></div></div>
+              <div id="webhook-step" class="timeline-step"><span></span><div><strong>Merchant nhận webhook</strong><p>Đang chờ gateway thông báo.</p></div></div>
+            </div>
+
+            <div class="demo-controls">
+              <div><p class="eyebrow">Điều khiển demo</p><h3>Mô phỏng ngân hàng</h3></div>
+              <div class="button-row">
+                <button id="simulate-success" class="success" type="button">Thành công</button>
+                <button id="simulate-failed" class="danger" type="button">Thất bại</button>
+              </div>
+            </div>
+          </div>
+        </section>
+      </section>
+      <p id="toast" class="toast" hidden></p>
+    </main>
+  </body>
+</html>

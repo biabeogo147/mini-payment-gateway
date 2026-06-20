@@ -1,4 +1,6 @@
 import os
+import subprocess
+import sys
 import unittest
 from contextlib import contextmanager
 from datetime import datetime, timezone
@@ -130,6 +132,26 @@ class WorkerRunnerTest(unittest.TestCase):
         self.assertEqual(result.payment_expiration.failures, 1)
         self.assertEqual(result.webhook_delivery.processed, 1)
         self.assertEqual(self.db.rollback_count, 1)
+
+    def test_fresh_worker_process_loads_complete_model_metadata(self) -> None:
+        result = subprocess.run(
+            [
+                sys.executable,
+                "-c",
+                "from app.worker import runner; "
+                "from app.models.base import Base; "
+                "from app.models.payment_transaction import PaymentTransaction; "
+                "assert 'order_references' in Base.metadata.tables; "
+                "PaymentTransaction.__mapper__._sorted_tables; "
+                "print('worker-metadata-ok')",
+            ],
+            capture_output=True,
+            text=True,
+            check=False,
+        )
+
+        self.assertEqual(result.returncode, 0, result.stderr)
+        self.assertIn("worker-metadata-ok", result.stdout)
 
 
 class WorkerLocksTest(unittest.TestCase):

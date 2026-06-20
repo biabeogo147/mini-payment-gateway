@@ -29,6 +29,7 @@ from app.models.merchant import Merchant
 from app.models.merchant_credential import MerchantCredential
 from app.models.merchant_onboarding_case import MerchantOnboardingCase
 from app.models.merchant_qr_account import MerchantQrAccount
+from app.models.merchant_user import MerchantUser
 from app.models.order_reference import OrderReference
 from app.models.payment_transaction import PaymentTransaction
 from app.models.reconciliation_record import ReconciliationRecord
@@ -261,6 +262,9 @@ class PaymentRefundWebhookE2ETests(unittest.TestCase):
                     delete(MerchantQrAccount).where(
                         MerchantQrAccount.merchant_db_id.in_(merchant_ids)
                     )
+                )
+                db.execute(
+                    delete(MerchantUser).where(MerchantUser.merchant_db_id.in_(merchant_ids))
                 )
                 db.execute(delete(Merchant).where(Merchant.id.in_(merchant_ids)))
 

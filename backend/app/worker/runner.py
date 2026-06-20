@@ -10,6 +10,7 @@ from threading import Event
 from sqlalchemy.orm import Session
 
 from app.core.time import utc_now
+from app.db.base import Base as _ModelRegistry  # noqa: F401
 from app.db.session import SessionLocal
 from app.services import expiration_service, webhook_delivery_service
 from app.worker import locks
