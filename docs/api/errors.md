@@ -28,7 +28,13 @@ All API errors use the same response shape.
 | `AUTH_INVALID_CREDENTIAL` | 401 | `X-Access-Key` is not active for the merchant. |
 | `AUTH_TIMESTAMP_EXPIRED` | 401 | `X-Timestamp` is outside the 5 minute validity window. |
 | `AUTH_INVALID_SIGNATURE` | 401 | `X-Signature` does not match the canonical request signature. |
+| `PROVIDER_AUTH_MISSING_HEADER` | 401 | Required provider callback auth header is missing. |
+| `PROVIDER_AUTH_UNKNOWN_PROVIDER` | 401 | `X-Provider-Id` has no configured callback secret. |
+| `PROVIDER_AUTH_TIMESTAMP_EXPIRED` | 401 | `X-Provider-Timestamp` is invalid or outside the 5 minute window. |
+| `PROVIDER_AUTH_INVALID_SIGNATURE` | 401 | `X-Provider-Signature` does not match the callback body. |
 | `MERCHANT_NOT_ACTIVE` | 403 | Merchant is not allowed to create payment or refund. |
+| `ACTIVE_QR_ACCOUNT_REQUIRED` | 409 | Active merchant has no active QR receiving account for the pilot provider. |
+| `VIETQR_REQUIRES_WHOLE_VND` | 422 | Pilot VietQR payment requires `VND` and a whole-VND amount. |
 | `PAYMENT_PENDING_EXISTS` | 409 | A non-identical pending payment already exists for the order. |
 | `PAYMENT_ALREADY_SUCCESS` | 409 | The order already has a successful payment. |
 | `PAYMENT_NOT_FOUND` | 404 | Payment cannot be found for this merchant. |

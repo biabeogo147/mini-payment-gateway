@@ -15,6 +15,7 @@ export type EntityType =
   | "REFUND"
   | "MERCHANT"
   | "MERCHANT_CREDENTIAL"
+  | "MERCHANT_QR_ACCOUNT"
   | "ONBOARDING_CASE"
   | "WEBHOOK_EVENT"
   | "RECONCILIATION"
@@ -249,6 +250,7 @@ export interface PaymentListItem {
 
 export interface PaymentDetail extends PaymentListItem {
   description: string;
+  qr_reference: string | null;
   qr_content: string;
   qr_image_url: string | null;
   qr_image_base64: string | null;

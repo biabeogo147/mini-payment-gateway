@@ -1,0 +1,141 @@
+\chapter{System Requirements and Problem Analysis}
+
+The Mini Payment Gateway is positioned as a pilot-ready payment gateway rather
+than a full production payment platform. Its purpose is to support merchant
+onboarding, VietQR-based payment creation, asynchronous provider result
+processing, full refunds, webhook delivery, operational investigation, and
+merchant self-visibility through a separate dashboard experience.
+
+\section{Problem Context}
+
+The gateway solves two connected problems. First, merchants need a small but
+reliable payment interface for creating QR payments, receiving asynchronous
+provider outcomes, querying transaction status, and requesting full refunds.
+Second, internal operators need visibility and recovery tools because payment
+systems are asynchronous by nature: callbacks can arrive late, webhook delivery
+can fail, and merchant readiness must be enforced before money-flow APIs are
+usable.
+
+The VietQR pilot adds one more practical problem: a merchant payment is not
+usable until the gateway knows which receiving bank account should be encoded
+into the QR payload. For this reason, QR receiving accounts are controlled by
+internal operations rather than by merchant self-service. This keeps pilot
+configuration auditable and makes payment creation fail early when a merchant
+is active but not yet configured for scannable VietQR payments.
+
+The dashboard work revealed an architectural constraint that strongly shaped the
+project. A merchant-facing dashboard cannot safely be implemented as frontend
+screens alone. It requires a separate merchant-facing access model, merchant-
+scoped read capability, and internal provisioning support. Without these
+boundaries, the system would either misuse merchant integration credentials for
+human login or risk cross-merchant data exposure.
+
+\section{Implemented Scope And Non-Goals}
+
+\begin{table}[!htbp]
+\centering
+\caption{Implemented system scope}
+\begin{tabularx}{\textwidth}{L{0.24\textwidth}Y}
+\toprule
+\textbf{Area} & \textbf{Implemented capability} \\
+\midrule
+Merchant lifecycle & Create merchants, submit and review onboarding evidence, create or rotate credentials, activate, suspend, and disable merchants. \\
+\bodyrowrule
+Payments & Create dynamic VietQR payments, enforce semantic idempotency, return QR reference, EMV-compatible QR payload, and base64 PNG image, query by transaction id or order id, and process provider payment result callbacks. \\
+\bodyrowrule
+Refunds & Create full refunds, enforce refund rules, query refund state, and process provider refund result callbacks. \\
+\bodyrowrule
+Webhooks & Create durable signed outbound webhook events, store delivery attempts, apply retry policy, and support internal manual retry. \\
+\bodyrowrule
+Ops Dashboard & Internal operator interface for auth, RBAC, merchant workflows, VietQR receiving account management, evidence inspection, reconciliation, audit, internal users, and portal-user provisioning. \\
+\bodyrowrule
+Merchant Dashboard & Merchant-scoped read-only interface for overview, analytics, payments, refunds, webhooks, profile, credentials, and password change. \\
+\bodyrowrule
+Testing & Automated business-rule checks, end-to-end transaction scenarios, dashboard validation, and browser-based usability review. \\
+\bottomrule
+\end{tabularx}
+\end{table}
+
+The following items are intentionally out of scope for the implemented pilot:
+
+\begin{itemize}
+  \item settlement ledger and accounting workflows;
+  \item disputes or chargebacks;
+  \item partial refunds;
+  \item multi-provider routing;
+  \item merchant self-service onboarding;
+  \item merchant self-service QR receiving account management;
+  \item production hosted checkout pages (the repository includes only a local
+  demo merchant integration for presentation and verification);
+  \item merchant profile editing from the Merchant Dashboard;
+  \item real bank/provider settlement integration;
+  \item production-grade notification, TLS, and observability hardening.
+\end{itemize}
+
+\section{Functional Requirements}
+
+\begin{longtable}{L{0.24\textwidth}L{0.30\textwidth}L{0.36\textwidth}}
+\caption{Functional requirements}\\
+\toprule
+\textbf{Requirement group} & \textbf{Rule} & \textbf{Implemented decision} \\
+\midrule
+\endfirsthead
+\toprule
+\textbf{Requirement group} & \textbf{Rule} & \textbf{Implemented decision} \\
+\midrule
+\endhead
+Merchant lifecycle & Merchant statuses are pending review, active, rejected, suspended, and disabled. & Merchant readiness review and merchant operating status are tracked separately so approval outcome and live operating state do not become confused. \\
+\bodyrowrule
+Payment creation & One active payment is allowed per merchant and order. & A pending payment is reused only when the duplicate request is semantically identical; a completed successful payment blocks a new attempt. \\
+\bodyrowrule
+QR payment readiness & An active merchant must have one active VietQR receiving account before creating a payment. & Ops configures the receiving bank, account number, account name, and template. Payment creation returns \code{qr_reference}, \code{qr_content}, and \code{qr_image_base64}. \\
+\bodyrowrule
+Pilot QR constraints & The pilot supports VND whole-number payments only. & The transfer purpose is short, ASCII-safe, and derived from the gateway QR reference so it can be matched against callback evidence. \\
+\bodyrowrule
+Payment states & Persisted states are pending, successful, failed, and expired. & External outcome evidence finalizes pending payments, while late or mismatched evidence is routed to reconciliation. \\
+\bodyrowrule
+Refunds & Only full refunds are implemented; refund eligibility expires after a limited business window. & Refund records move through pending, refunded, and refund failed states. Partial refunds are rejected by design. \\
+\bodyrowrule
+Webhooks & Successful merchant acknowledgement marks delivery success; failed delivery activates controlled retry. & Delivery attempts are preserved as evidence; exhausted events become failed and can later be retried by internal operators when eligible. \\
+\bodyrowrule
+Provider callbacks & External payment and refund callbacks must be authenticated. & The simulator/provider callback surface requires provider id, timestamp, and HMAC signature headers before applying state transitions. \\
+\bodyrowrule
+Dashboards & Ops and Merchant users require different surfaces. & Ops Dashboard is internal and mutable; Merchant Dashboard is read-only except password change. \\
+\bottomrule
+\end{longtable}
+
+\section{Security And Data Requirements}
+
+Each access boundary uses a matching authentication model. Merchant backends use
+signed integration credentials. Internal users authenticate through an internal
+session model. Merchant dashboard users authenticate through a separate
+merchant-scoped session model. This separation prevents human-facing access from
+reusing merchant integration secrets and keeps merchant visibility within the
+correct tenant boundary.
+
+The system also enforces persistence rules where practical:
+
+\begin{itemize}
+  \item one active credential per merchant;
+  \item one active VietQR receiving account per merchant and provider;
+  \item one pending payment per merchant and order;
+  \item one logical refund per merchant refund reference;
+  \item at most one successful full refund per payment;
+  \item positive monetary values and non-negative attempt counters;
+  \item merchant-scoped analytics indexes for payment, refund, and webhook
+  records.
+\end{itemize}
+
+\section{Operational Requirements}
+
+The gateway must remain supportable by internal operators. Every important
+manual action carries an audit reason, and audit rows capture the event code,
+entity identity, actor type, actor id, before and after snapshots, and
+timestamp. Sensitive fields such as raw credential secrets are masked in
+responses and audit snapshots.
+
+The merchant-facing dashboard must help merchants inspect their own data without
+seeing internal reconciliation workflows, raw credential secrets, or data owned
+by other merchants. This requirement drives the separate merchant-facing access
+boundary and the rule that post-login dashboard reads never rely on a
+client-supplied merchant identifier as the source of scope.

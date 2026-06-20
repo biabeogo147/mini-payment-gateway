@@ -374,17 +374,15 @@ textarea {
   gap: 1rem;
 }
 
-.merchant-access-grid-single {
-  grid-template-columns: 1fr;
-}
-
 .merchant-access-column,
-.portal-user-create-panel {
+.portal-user-create-panel,
+.qr-account-form-panel {
   display: grid;
   gap: 1rem;
 }
 
-.portal-user-create-panel {
+.portal-user-create-panel,
+.qr-account-form-panel {
   padding-top: 1rem;
   border-top: 1px solid var(--line);
 }
@@ -471,7 +469,8 @@ textarea {
 }
 
 .recent-payments-list,
-.portal-users-list {
+.portal-users-list,
+.qr-account-list {
   max-height: clamp(18rem, 38vh, 28rem);
 }
 
@@ -581,6 +580,16 @@ textarea {
 
 .portal-user-buttons .secondary-button {
   padding: 0.65rem 0.95rem;
+}
+
+.portal-user-role-select {
+  max-width: 100%;
+  padding: 0.5rem 0.65rem;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: #ffffff;
+  color: var(--ink);
+  font-size: 0.85rem;
 }
 
 .status-inline {
@@ -772,6 +781,7 @@ textarea {
   .activity-list-scroll,
   .recent-payments-list,
   .portal-users-list,
+  .qr-account-list,
   .recent-audit-list {
     max-height: min(62vh, 30rem);
     padding-right: 0.2rem;

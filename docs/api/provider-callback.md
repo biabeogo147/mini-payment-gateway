@@ -1,16 +1,39 @@
 # Provider Callback API
 
 Provider callback APIs receive payment and refund results from the bank,
-provider, or simulator. In the MVP, the simulator can call these endpoints from
-the local environment without provider-grade signing.
+provider, or simulator. Pilot callbacks require provider HMAC headers.
+
+## Authentication Headers
+
+Every provider callback request must include:
+
+- `X-Provider-Id`: provider id configured in `PROVIDER_CALLBACK_SECRETS`.
+- `X-Provider-Timestamp`: request timestamp; valid for 5 minutes.
+- `X-Provider-Signature`: HMAC-SHA256 signature.
+
+Canonical signing string:
+
+```text
+{timestamp}.{method}.{path}.{body_sha256_hex}
+```
+
+Signature:
+
+```text
+hex(hmac_sha256(provider_secret, signing_string))
+```
+
+Local default:
+
+```text
+PROVIDER_CALLBACK_SECRETS=simulator=dev-insecure-provider-callback-secret-change-me
+```
 
 ## Payment Callback
 
 `POST /v1/provider/callbacks/payment`
 
-Implementation status: implemented in phase 04 for payment callbacks. Provider
-signing is still out of MVP scope; this endpoint is trusted simulator/provider
-traffic in local/internal environments.
+Implementation status: implemented for signed simulator/provider callbacks.
 
 ### Request
 

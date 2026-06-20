@@ -1,0 +1,90 @@
+\newcolumntype{Y}{>{\raggedright\arraybackslash}X}
+\newcolumntype{L}[1]{>{\raggedright\arraybackslash}p{#1}}
+\newcommand{\bodyrowrule}{\specialrule{0.3pt}{0.12em}{0.12em}}
+
+\lstdefinestyle{mpglisting}{
+  backgroundcolor=\color{codeBg},
+  basicstyle=\ttfamily\small,
+  breaklines=true,
+  columns=fullflexible,
+  frame=single,
+  rulecolor=\color{mpgMuted!35},
+  framerule=0.4pt,
+  xleftmargin=0.4em,
+  xrightmargin=0.4em,
+  aboveskip=0.8em,
+  belowskip=0.8em
+}
+\lstdefinelanguage{json}{
+  basicstyle=\ttfamily\small,
+  showstringspaces=false,
+  breaklines=true,
+  morestring=[b]",
+  stringstyle=\color{mpgTeal},
+  morecomment=[l]{//},
+  commentstyle=\color{mpgMuted},
+  morekeywords={true,false,null}
+}
+\lstset{style=mpglisting}
+
+\tikzset{
+  box/.style={
+    draw=mpgNavy!35,
+    rounded corners=3pt,
+    fill=mpgPaper,
+    align=center,
+    minimum height=10mm,
+    inner sep=5pt,
+    font=\small
+  },
+  actor/.style={
+    draw=mpgTeal!55,
+    rounded corners=3pt,
+    fill=mpgMint,
+    align=center,
+    minimum height=10mm,
+    inner sep=5pt,
+    font=\small
+  },
+  boundary/.style={
+    draw=mpgNavy!45,
+    dashed,
+    rounded corners=5pt,
+    inner sep=7pt
+  },
+  db/.style={
+    cylinder,
+    shape border rotate=90,
+    aspect=0.22,
+    draw=mpgNavy!45,
+    fill=mpgPaper,
+    align=center,
+    minimum height=14mm,
+    minimum width=24mm,
+    font=\small
+  },
+  arrow/.style={-{Latex[length=2.2mm]}, thick, draw=mpgNavy!75},
+  autharrow/.style={-{Latex[length=2.2mm]}, thick, draw=mpgTeal}
+}
+
+\newcommand{\safeimage}[3][0.92\linewidth]{%
+  \IfFileExists{figures/#2}{%
+    \includegraphics[width=#1]{figures/#2}%
+  }{%
+    \fbox{%
+      \begin{minipage}[c][0.24\textheight][c]{#1}
+        \centering
+        \vspace{0.5em}
+        \textbf{Screenshot placeholder}\\[0.4em]
+        \texttt{figures/#2}\\[0.4em]
+        #3
+      \end{minipage}
+    }%
+  }%
+}
+
+\newcommand{\apiendpoint}[2]{\texttt{#1 #2}}
+\newcommand{\routecell}[1]{\begin{tabular}[t]{@{}l@{}}#1\end{tabular}}
+\newcommand{\apiid}[1]{\texttt{#1}}
+\newcommand{\code}[1]{\texttt{\detokenize{#1}}}
+\newcommand{\frontchapter}[1]{\chapter*{#1}\addcontentsline{toc}{chapter}{#1}}

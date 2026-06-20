@@ -1,0 +1,81 @@
+\documentclass[11pt,a4paper,oneside]{report}
+
+\newcommand{\DocumentTitle}{System Design and Implementation Report}
+\newcommand{\DocumentSummary}{This report presents the Mini Payment Gateway as an academic software engineering project. It explains the system requirements, VietQR pilot payment flow, architecture, data model, user interfaces, core design decisions, API boundaries, and evaluation approach in a reader-first form.}
+
+\input{shared/metadata.tex}
+\input{shared/preamble.tex}
+\input{shared/macros.tex}
+
+\begin{document}
+
+\hypersetup{pageanchor=false}
+\begin{titlepage}
+  \centering
+  \vspace*{0.5cm}
+  \IfFileExists{figures/Logo_DHBK_HN.png}{%
+    \includegraphics[height=3cm]{figures/Logo_DHBK_HN.png}\par
+    \vspace{0.8cm}
+  }{}
+  {\Large \InstitutionName \par}
+  \vspace{1.3cm}
+  {\Huge\bfseries \ProjectTitle \par}
+  \vspace{0.4cm}
+  {\LARGE \DocumentTitle \par}
+  \vspace{1cm}
+  {\Large \CourseName \par}
+  \vfill
+  \begin{tabular}{rl}
+    \textbf{Group:} & \GroupName \\
+    \textbf{Instructor:} & \InstructorName \\
+    \textbf{Authors:} &
+      \begin{tabular}[t]{@{}ll@{}}
+        \textbf{Name} & \textbf{Student ID} \\
+        Le Nguyen Phuoc Thanh & 20235561 \\
+        Hoang Van Nhan & 20235542 \\
+        Ngo Minh Quang & 20235550 \\
+        Vu Tran An Khanh & 20235514 \\
+        Do Hoang Nam Khanh & 20235511
+      \end{tabular} \\
+    \textbf{Date:} & \SubmissionDate \\
+  \end{tabular}
+  \vfill
+  \begin{minipage}{0.82\textwidth}
+    \small
+    \DocumentSummary
+  \end{minipage}
+\end{titlepage}
+\clearpage
+\hypersetup{pageanchor=true}
+
+\pagenumbering{roman}
+
+\tableofcontents
+
+\clearpage
+\pagenumbering{arabic}
+
+\input{chapters/01-system-requirements-and-problem-analysis.tex}
+\input{chapters/02-use-case-analysis.tex}
+\input{chapters/03-user-stories.tex}
+\input{chapters/04-system-architecture.tex}
+\input{chapters/05-component-architecture-and-design.tex}
+\input{chapters/06-database-design.tex}
+\input{chapters/07-user-interface-design.tex}
+\input{chapters/08-component-implementation.tex}
+\input{chapters/09-api-design-and-implementation.tex}
+\input{chapters/10-testing-and-evaluation.tex}
+
+\clearpage
+\phantomsection
+\addcontentsline{toc}{chapter}{Full Entity Diagram}
+\begin{landscape}
+\begin{figure}[p]
+  \centering
+  \includegraphics[width=0.95\linewidth,height=0.86\textheight,keepaspectratio]{figures/ERD.png}
+  \caption{Full entity diagram. This page provides the complete entity-level view that complements the simplified database overview in Figure~\ref{fig:logical-entity-overview}.}
+  \label{fig:full-entity-diagram}
+\end{figure}
+\end{landscape}
+
+\end{document}

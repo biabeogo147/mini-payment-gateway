@@ -5,14 +5,18 @@ import subprocess
 import sys
 import threading
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
+from pathlib import Path
 from uuid import uuid4
+
+sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
 from sqlalchemy import select
 
 from app.db.session import SessionLocal
-from app.models.enums import CredentialStatus, MerchantStatus
+from app.models.enums import CredentialStatus, MerchantQrAccountStatus, MerchantStatus, QrProvider
 from app.models.merchant import Merchant
 from app.models.merchant_credential import MerchantCredential
+from app.models.merchant_qr_account import MerchantQrAccount
 from app.models.payment_transaction import PaymentTransaction
 from app.models.webhook_delivery_attempt import WebhookDeliveryAttempt
 from app.models.webhook_event import WebhookEvent
@@ -87,6 +91,7 @@ def seed_merchant(webhook_url: str) -> dict[str, str]:
     merchant_id = f"m_phase6_{suffix}"
     access_key = f"ak_phase6_{suffix}"
     secret = f"phase6-secret-{suffix}"
+    account_number = f"9704{int(suffix, 16):010d}"
     with SessionLocal() as db:
         merchant = Merchant(
             merchant_id=merchant_id,
@@ -105,6 +110,18 @@ def seed_merchant(webhook_url: str) -> dict[str, str]:
             status=CredentialStatus.ACTIVE,
         )
         db.add(credential)
+        db.add(
+            MerchantQrAccount(
+                merchant_db_id=merchant.id,
+                provider=QrProvider.VIETQR,
+                bank_code="VCB",
+                bank_bin="970436",
+                account_number=account_number,
+                account_name="PHASE SIX SMOKE",
+                template="compact",
+                status=MerchantQrAccountStatus.ACTIVE,
+            )
+        )
         db.commit()
     return {
         "merchant_id": merchant_id,

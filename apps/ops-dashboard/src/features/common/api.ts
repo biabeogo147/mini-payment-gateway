@@ -14,6 +14,8 @@ export type OnboardingCaseStatus =
   | "APPROVED"
   | "REJECTED";
 export type CredentialStatus = "ACTIVE" | "INACTIVE" | "ROTATED";
+export type QrProvider = "VIETQR";
+export type MerchantQrAccountStatus = "ACTIVE" | "INACTIVE";
 export type PaymentStatus = "PENDING" | "SUCCESS" | "FAILED" | "EXPIRED";
 export type RefundStatus =
   | "REFUND_PENDING"
@@ -31,6 +33,7 @@ export type EntityType =
   | "REFUND"
   | "MERCHANT"
   | "MERCHANT_CREDENTIAL"
+  | "MERCHANT_QR_ACCOUNT"
   | "ONBOARDING_CASE"
   | "WEBHOOK_EVENT"
   | "RECONCILIATION"
@@ -130,6 +133,20 @@ export interface MerchantCredential {
   created_at: string;
 }
 
+export interface MerchantQrAccount {
+  qr_account_id: string;
+  merchant_id?: string;
+  provider: QrProvider;
+  bank_code: string;
+  bank_bin: string;
+  account_number: string;
+  account_name: string;
+  template: string;
+  status: MerchantQrAccountStatus;
+  created_at: string | null;
+  updated_at: string | null;
+}
+
 export interface OnboardingCaseDetail {
   case_id: string;
   status: OnboardingCaseStatus;
@@ -211,6 +228,7 @@ export interface PaymentListItem {
 
 export interface PaymentDetail extends PaymentListItem {
   description: string;
+  qr_reference: string | null;
   qr_content: string;
   qr_image_url: string | null;
   qr_image_base64: string | null;
@@ -295,6 +313,7 @@ export interface MerchantDetail {
   updated_at: string;
   onboarding_case: OnboardingCaseDetail | null;
   credentials: MerchantCredential[];
+  qr_accounts: MerchantQrAccount[];
   recent_payments: PaymentListItem[];
   recent_refunds: RefundListItem[];
   recent_webhooks: WebhookEventListItem[];
@@ -398,6 +417,10 @@ export interface CredentialOpsResponse {
   expired_at: string | null;
   rotated_at: string | null;
 }
+
+export type QrAccountOpsResponse = MerchantQrAccount & {
+  merchant_id: string;
+};
 
 export interface WebhookRetryResponse {
   event_id: string;
@@ -616,6 +639,79 @@ export async function getMerchantOnboardingCase(merchantId: string) {
 export async function listMerchantCredentials(merchantId: string) {
   return apiFetch<{ credentials: MerchantCredential[] }>(
     `/v1/ops/merchants/${merchantId}/credentials`,
+  );
+}
+
+export async function createQrAccount(
+  merchantId: string,
+  payload: {
+    reason: string;
+    provider?: QrProvider;
+    bank_code: string;
+    bank_bin: string;
+    account_number: string;
+    account_name: string;
+    template: string;
+    status: MerchantQrAccountStatus;
+  },
+) {
+  const { reason, ...rest } = payload;
+  return apiFetch<QrAccountOpsResponse>(
+    `/v1/ops/merchants/${merchantId}/qr-accounts`,
+    {
+      method: "POST",
+      bodyJson: buildOpsBody(rest, reason),
+    },
+  );
+}
+
+export async function updateQrAccount(
+  merchantId: string,
+  qrAccountId: string,
+  payload: {
+    reason: string;
+    bank_code?: string;
+    bank_bin?: string;
+    account_number?: string;
+    account_name?: string;
+    template?: string;
+  },
+) {
+  const { reason, ...rest } = payload;
+  return apiFetch<QrAccountOpsResponse>(
+    `/v1/ops/merchants/${merchantId}/qr-accounts/${qrAccountId}`,
+    {
+      method: "PATCH",
+      bodyJson: buildOpsBody(rest, reason),
+    },
+  );
+}
+
+export async function activateQrAccount(
+  merchantId: string,
+  qrAccountId: string,
+  reason: string,
+) {
+  return apiFetch<QrAccountOpsResponse>(
+    `/v1/ops/merchants/${merchantId}/qr-accounts/${qrAccountId}/activate`,
+    {
+      method: "POST",
+      bodyJson: { actor: buildActor(reason) },
+    },
+  );
+}
+
+export async function deactivateQrAccount(
+  merchantId: string,
+  qrAccountId: string,
+  reason: string,
+) {
+  return apiFetch<QrAccountOpsResponse>(
+    `/v1/ops/merchants/${merchantId}/qr-accounts/${qrAccountId}/deactivate`,
+    {
+      method: "POST",
+      bodyJson: { actor: buildActor(reason) },
+    },
   );
 }
 

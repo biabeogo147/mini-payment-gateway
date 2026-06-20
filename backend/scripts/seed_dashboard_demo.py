@@ -20,23 +20,27 @@ from app.models.enums import (
     CredentialStatus,
     DeliveryAttemptResult,
     EntityType,
+    MerchantQrAccountStatus,
     MerchantStatus,
     MerchantUserRole,
     MerchantUserStatus,
     OnboardingCaseStatus,
     PaymentStatus,
+    QrProvider,
     RefundStatus,
     WebhookEventStatus,
 )
 from app.models.merchant import Merchant
 from app.models.merchant_credential import MerchantCredential
 from app.models.merchant_onboarding_case import MerchantOnboardingCase
+from app.models.merchant_qr_account import MerchantQrAccount
 from app.models.merchant_user import MerchantUser
 from app.models.order_reference import OrderReference
 from app.models.payment_transaction import PaymentTransaction
 from app.models.refund_transaction import RefundTransaction
 from app.models.webhook_delivery_attempt import WebhookDeliveryAttempt
 from app.models.webhook_event import WebhookEvent
+from app.services.qr_service import generate_vietqr_payment_qr
 
 
 MERCHANT_ID = os.getenv("DASHBOARD_DEMO_MERCHANT_ID", "m_demo_dashboard")
@@ -50,12 +54,14 @@ def main() -> None:
         merchant = _upsert_merchant(db)
         _upsert_onboarding_case(db, merchant)
         _upsert_credential(db, merchant)
+        qr_account = _upsert_qr_account(db, merchant)
         _upsert_merchant_user(db, merchant)
 
         payments = [
             _upsert_payment(
                 db,
                 merchant,
+                qr_account,
                 transaction_id="pay_demo_001",
                 order_id="ORDER-DEMO-001",
                 amount=Decimal("125000.00"),
@@ -69,6 +75,7 @@ def main() -> None:
             _upsert_payment(
                 db,
                 merchant,
+                qr_account,
                 transaction_id="pay_demo_002",
                 order_id="ORDER-DEMO-002",
                 amount=Decimal("999000.00"),
@@ -82,6 +89,7 @@ def main() -> None:
             _upsert_payment(
                 db,
                 merchant,
+                qr_account,
                 transaction_id="pay_demo_003",
                 order_id="ORDER-DEMO-003",
                 amount=Decimal("450000.00"),
@@ -95,6 +103,7 @@ def main() -> None:
             _upsert_payment(
                 db,
                 merchant,
+                qr_account,
                 transaction_id="pay_demo_004",
                 order_id="ORDER-DEMO-004",
                 amount=Decimal("320000.00"),
@@ -110,6 +119,7 @@ def main() -> None:
             _upsert_payment(
                 db,
                 merchant,
+                qr_account,
                 transaction_id="pay_demo_005",
                 order_id="ORDER-DEMO-005",
                 amount=Decimal("780000.00"),
@@ -204,6 +214,29 @@ def _upsert_credential(db, merchant: Merchant) -> MerchantCredential:
     return credential
 
 
+def _upsert_qr_account(db, merchant: Merchant) -> MerchantQrAccount:
+    qr_account = db.scalar(
+        select(MerchantQrAccount).where(
+            MerchantQrAccount.merchant_db_id == merchant.id,
+            MerchantQrAccount.provider == QrProvider.VIETQR,
+        )
+    )
+    if qr_account is None:
+        qr_account = MerchantQrAccount(
+            merchant_db_id=merchant.id,
+            provider=QrProvider.VIETQR,
+        )
+        db.add(qr_account)
+    qr_account.bank_code = "VCB"
+    qr_account.bank_bin = "970436"
+    qr_account.account_number = "9704000000000001"
+    qr_account.account_name = "DEMO MERCHANT DASHBOARD"
+    qr_account.template = "compact"
+    qr_account.status = MerchantQrAccountStatus.ACTIVE
+    db.flush()
+    return qr_account
+
+
 def _upsert_merchant_user(db, merchant: Merchant) -> MerchantUser:
     user = db.scalar(
         select(MerchantUser).where(
@@ -228,6 +261,7 @@ def _upsert_merchant_user(db, merchant: Merchant) -> MerchantUser:
 def _upsert_payment(
     db,
     merchant: Merchant,
+    qr_account: MerchantQrAccount,
     *,
     transaction_id: str,
     order_id: str,
@@ -270,9 +304,15 @@ def _upsert_payment(
     payment.currency = "VND"
     payment.description = description
     payment.status = status
-    payment.qr_content = f"DEMOQR|{MERCHANT_ID}|{order_id}|{amount}"
+    payment.qr_reference = f"PDEMO{transaction_id[-3:]}"
+    generated_qr = generate_vietqr_payment_qr(
+        qr_account=qr_account,
+        amount=amount,
+        qr_reference=payment.qr_reference,
+    )
+    payment.qr_content = generated_qr.qr_content
     payment.qr_image_url = None
-    payment.qr_image_base64 = None
+    payment.qr_image_base64 = generated_qr.qr_image_base64
     payment.external_reference = external_reference
     payment.idempotency_key = f"demo-{transaction_id}"
     payment.expire_at = expire_at

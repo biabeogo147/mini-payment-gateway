@@ -1,0 +1,71 @@
+\usepackage[a4paper,margin=1in]{geometry}
+\usepackage[T1]{fontenc}
+\usepackage[utf8]{inputenc}
+\usepackage{lmodern}
+\usepackage{graphicx}
+\usepackage{xcolor}
+\usepackage{hyperref}
+\usepackage{booktabs}
+\usepackage{tabularx}
+\usepackage{longtable}
+\usepackage{array}
+\usepackage{enumitem}
+\usepackage{float}
+\usepackage[section]{placeins}
+\usepackage{caption}
+\usepackage{subcaption}
+\usepackage{listings}
+\usepackage{tikz}
+\usepackage{pdflscape}
+
+\usetikzlibrary{arrows.meta,positioning,fit,shapes.geometric}
+\graphicspath{{figures/}}
+
+\definecolor{mpgNavy}{HTML}{0E2A36}
+\definecolor{mpgTeal}{HTML}{0B797C}
+\definecolor{mpgMint}{HTML}{DDF3EA}
+\definecolor{mpgWarn}{HTML}{C8892E}
+\definecolor{mpgDanger}{HTML}{B54B42}
+\definecolor{mpgPaper}{HTML}{F7F8FA}
+\definecolor{mpgInk}{HTML}{17202A}
+\definecolor{mpgMuted}{HTML}{4E5D78}
+\definecolor{codeBg}{HTML}{F4F6F8}
+
+\hypersetup{
+  colorlinks=true,
+  linkcolor=mpgTeal,
+  urlcolor=mpgTeal,
+  citecolor=mpgTeal,
+  pdftitle={\ProjectTitle: \DocumentTitle},
+  pdfauthor={\AuthorList}
+}
+
+\setlist[itemize]{leftmargin=1.5em,itemsep=0.2em,topsep=0.2em}
+\setlist[enumerate]{leftmargin=1.7em,itemsep=0.2em,topsep=0.2em}
+\renewcommand{\arraystretch}{1.18}
+\setlength{\parskip}{0.45em}
+\setlength{\parindent}{0pt}
+\setcounter{tocdepth}{2}
+\setcounter{secnumdepth}{2}
+\setcounter{topnumber}{3}
+\setcounter{totalnumber}{4}
+\renewcommand{\topfraction}{0.9}
+\renewcommand{\textfraction}{0.08}
+\renewcommand{\floatpagefraction}{0.8}
+\setlength{\textfloatsep}{12pt plus 2pt minus 4pt}
+\setlength{\floatsep}{10pt plus 2pt minus 2pt}
+\setlength{\intextsep}{10pt plus 2pt minus 2pt}
+
+% Keep chapter openings compact so early section content is not stranded on the
+% following page.
+\makeatletter
+\patchcmd{\@makechapterhead}{\vspace*{50\p@}}{\vspace*{22\p@}}{}{}
+\patchcmd{\@makechapterhead}{\vskip 40\p@}{\vskip 22\p@}{}{}
+\patchcmd{\@makeschapterhead}{\vspace*{50\p@}}{\vspace*{22\p@}}{}{}
+\patchcmd{\@makeschapterhead}{\vskip 40\p@}{\vskip 22\p@}{}{}
+\makeatother
+
+\captionsetup{
+  font=small,
+  labelfont=bf
+}

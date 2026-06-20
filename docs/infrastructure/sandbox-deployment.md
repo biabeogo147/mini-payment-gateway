@@ -119,6 +119,7 @@ Success means:
 
 - `postgres` is healthy
 - `backend` is healthy
+- `worker` is healthy
 - `ops-dashboard` is healthy
 - `merchant-dashboard` is healthy
 
@@ -150,7 +151,8 @@ Treat the deploy as complete only when all three layers are true:
 ### Layer 2: Host Runtime
 
 - host checkout is the expected commit
-- `postgres`, `backend`, `ops-dashboard`, and `merchant-dashboard` are healthy
+- `postgres`, `backend`, `worker`, `ops-dashboard`, and `merchant-dashboard`
+  are healthy
 
 ### Layer 3: Application
 
@@ -271,6 +273,19 @@ sudo -u github-runner bash -lc 'cd /opt/mini-payment-gateway && docker compose -
 sudo -u github-runner bash -lc 'cd /opt/mini-payment-gateway && docker compose -f docker-compose.sandbox.yml ps'
 ```
 
+### Worker Container Is Restarting Or Unhealthy
+
+Usually means database connectivity or worker configuration is invalid. The
+sandbox worker healthcheck uses `WORKER_HEARTBEAT_PATH` and defaults to
+`/tmp/worker.heartbeat`.
+
+Check:
+
+```bash
+sudo -u github-runner bash -lc 'cd /opt/mini-payment-gateway && docker compose -f docker-compose.sandbox.yml logs --tail 100 worker'
+sudo -u github-runner bash -lc 'cd /opt/mini-payment-gateway && docker compose -f docker-compose.sandbox.yml ps worker'
+```
+
 ### Dashboard Root Fails
 
 Usually means the dashboard container did not start correctly or the published
@@ -312,6 +327,12 @@ Backend logs:
 
 ```bash
 sudo -u github-runner bash -lc 'cd /opt/mini-payment-gateway && docker compose -f docker-compose.sandbox.yml logs --tail 100 backend'
+```
+
+Worker logs:
+
+```bash
+sudo -u github-runner bash -lc 'cd /opt/mini-payment-gateway && docker compose -f docker-compose.sandbox.yml logs --tail 100 worker'
 ```
 
 Dashboard logs:

@@ -3,7 +3,7 @@ import unittest
 from sqlalchemy import CheckConstraint, Index
 
 from app.db.base import Base
-from app.models.enums import EntityType, MerchantStatus
+from app.models.enums import EntityType, MerchantQrAccountStatus, MerchantStatus, QrProvider
 
 
 class SchemaContractTest(unittest.TestCase):
@@ -45,6 +45,14 @@ class SchemaContractTest(unittest.TestCase):
         self.assertIn("MERCHANT_CREDENTIAL", values)
         self.assertIn("ONBOARDING_CASE", values)
         self.assertIn("INTERNAL_USER", values)
+        self.assertIn("MERCHANT_QR_ACCOUNT", values)
+
+    def test_qr_account_enums_match_pilot_contract(self) -> None:
+        self.assertEqual([provider.value for provider in QrProvider], ["VIETQR"])
+        self.assertEqual(
+            [status.value for status in MerchantQrAccountStatus],
+            ["ACTIVE", "INACTIVE"],
+        )
 
     def test_internal_users_table_includes_phase_10_auth_columns(self) -> None:
         internal_user_columns = Base.metadata.tables["internal_users"].c
@@ -58,6 +66,35 @@ class SchemaContractTest(unittest.TestCase):
         active_index = self._find_index(indexes, "ux_merchant_credentials_active_per_merchant")
         self.assertTrue(active_index.unique)
         self.assertEqual([column.name for column in active_index.columns], ["merchant_db_id"])
+        self.assertEqual(
+            str(active_index.dialect_options["postgresql"]["where"]),
+            "status = 'ACTIVE'",
+        )
+
+    def test_merchant_qr_accounts_table_shape_and_active_unique_constraint(self) -> None:
+        qr_columns = Base.metadata.tables["merchant_qr_accounts"].c
+
+        expected_columns = {
+            "id",
+            "merchant_db_id",
+            "provider",
+            "bank_code",
+            "bank_bin",
+            "account_number",
+            "account_name",
+            "template",
+            "status",
+            "created_at",
+            "updated_at",
+        }
+        self.assertTrue(expected_columns.issubset(set(qr_columns.keys())))
+
+        active_index = self._find_index(
+            Base.metadata.tables["merchant_qr_accounts"].indexes,
+            "ux_merchant_qr_accounts_active_provider_per_merchant",
+        )
+        self.assertTrue(active_index.unique)
+        self.assertEqual([column.name for column in active_index.columns], ["merchant_db_id", "provider"])
         self.assertEqual(
             str(active_index.dialect_options["postgresql"]["where"]),
             "status = 'ACTIVE'",

@@ -20,8 +20,8 @@ and simple worker health/heartbeat instrumentation.
 
 ## Implementation Status
 
-Planning only. Do not implement this phase until the user explicitly requests
-it.
+Implemented in the pilot VietQR API branch after the user explicitly requested
+product completion beyond MVP.
 
 This plan assumes:
 
@@ -33,8 +33,9 @@ This plan assumes:
 - sandbox CI/CD from phase 09 can be extended to start and deploy one worker
   service alongside the backend API.
 
-Use the current repository checkout directly. Do not create a branch or worktree
-unless the user asks for one. Commit only when requested.
+This branch implements the worker in `backend/app/worker/*`, adds local and
+sandbox Compose services, and documents worker operation in the runbook and
+infrastructure docs. Commit only when requested.
 
 ## Scope
 

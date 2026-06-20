@@ -1,0 +1,152 @@
+\chapter{Use-Case Analysis}
+
+This chapter describes the actors that interact with the Mini Payment Gateway
+and the main use cases the system supports. The focus is the business role of
+each actor and the expected system outcome.
+
+\section{Actor Overview}
+
+\begin{table}[!htbp]
+\centering
+\caption{Implemented actors}
+\begin{tabularx}{\textwidth}{L{0.25\textwidth}Y}
+\toprule
+\textbf{Actor} & \textbf{Role in the system} \\
+\midrule
+Admin & Privileged internal user who manages internal accounts, merchant
+readiness, merchant credentials, VietQR receiving accounts, and merchant
+dashboard accounts. \\
+\bodyrowrule
+Ops & Internal operations user who monitors transactions, configures QR
+receiving accounts, investigates delivery issues, reviews evidence, and
+performs allowed recovery actions, including provisioning and supporting
+merchant dashboard accounts. \\
+\bodyrowrule
+Merchant backend & Merchant-owned application that creates payments and refunds
+through the gateway on behalf of the merchant business. \\
+\bodyrowrule
+Merchant dashboard user & Human merchant representative who signs in to inspect
+transactions, analytics, profile information, and credential metadata. \\
+\bodyrowrule
+Provider callback source & External payment-result source that signs callback
+messages and confirms payment and refund outcomes. \\
+\bodyrowrule
+Scheduled trigger & Time-based trigger that activates expiration handling and
+webhook retry processing. \\
+\bottomrule
+\end{tabularx}
+\end{table}
+
+\section{Core Gateway Use Cases}
+
+\begin{longtable}{L{0.11\textwidth}L{0.25\textwidth}L{0.18\textwidth}L{0.34\textwidth}}
+\caption{Core gateway use cases}\\
+\toprule
+\textbf{ID} & \textbf{Use case} & \textbf{Primary actor} & \textbf{System outcome} \\
+\midrule
+\endfirsthead
+\toprule
+\textbf{ID} & \textbf{Use case} & \textbf{Primary actor} & \textbf{System outcome} \\
+\midrule
+\endhead
+UC001 & Onboard and activate merchant & Admin or Ops & Merchant profile, review evidence, access credentials, VietQR receiving account, and operational status are established before live transaction activity. \\
+\bodyrowrule
+UC002 & Create dynamic VietQR payment & Merchant backend & A pending payment request is created and a scannable VietQR payload, QR reference, and PNG image are returned for customer-facing checkout. \\
+\bodyrowrule
+UC003 & Process payment result callback & Provider callback source & Callback evidence is stored and the payment moves to a final state or to manual review when evidence is ambiguous. \\
+\bodyrowrule
+UC004 & Create full refund and process result & Merchant backend and provider callback source & A full refund request is created and later finalized from external confirmation. \\
+\bodyrowrule
+UC005 & Deliver webhook with retry and manual recovery & Scheduled trigger and internal operator & Merchant notification attempts are recorded, retries are controlled, and failed deliveries can be retried safely. \\
+\bottomrule
+\end{longtable}
+
+The following diagram summarizes the core gateway use cases only. Dashboard
+screens are intentionally excluded so the diagram stays focused on the main
+money-flow and notification responsibilities of the gateway itself.
+
+\begin{figure}
+    \centering
+    \includegraphics[width=1\linewidth]{figures/general-usecase.png}
+    \caption{Core gateway use-case diagram. The diagram focuses on merchant
+readiness, payment or refund state changes, and notification or evidence
+handling inside the gateway.}
+\end{figure}
+
+\section{Dashboard Use Cases}
+
+\begin{longtable}{L{0.11\textwidth}L{0.26\textwidth}L{0.18\textwidth}L{0.27\textwidth}}
+\caption{Dashboard use cases}\\
+\toprule
+\textbf{ID} & \textbf{Use case} & \textbf{Actor} & \textbf{System outcome} \\
+\midrule
+\endfirsthead
+\toprule
+\textbf{ID} & \textbf{Use case} & \textbf{Actor} & \textbf{System outcome} \\
+\midrule
+\endhead
+DUC001 & Sign in and view operations overview & Admin or Ops & Internal users access a consolidated operational view of merchants, transactions, delivery issues, and pending reviews. \\
+\bodyrowrule
+DUC002 & Manage merchant lifecycle & Admin or Ops & Internal users register merchants, review readiness information, manage credentials, configure QR receiving accounts, and apply lifecycle decisions. \\
+\bodyrowrule
+DUC003 & Manage merchant dashboard accounts & Admin or Ops & Merchant-facing user accounts can be created, updated, deactivated, reactivated, or reset. \\
+\bodyrowrule
+DUC004 & Inspect operational evidence & Admin or Ops & Internal users review payments, refunds, webhook history, reconciliation items, and audit evidence. \\
+\bodyrowrule
+DUC005 & Sign in and maintain account access & Merchant dashboard user & Merchant representatives authenticate securely and can change their own password. \\
+\bodyrowrule
+DUC006 & View overview and analytics & Merchant dashboard user & Merchant representatives view summarized activity and trend information for a selected reporting window. \\
+\bodyrowrule
+DUC007 & Explore payment, refund, and webhook records & Merchant dashboard user & Merchant representatives review transaction and notification history, including stored QR reference and QR payload evidence, that belongs only to their merchant account. \\
+\bodyrowrule
+DUC008 & View profile and credential metadata & Merchant dashboard user & Merchant representatives can read merchant profile information and masked credential details without seeing raw secrets. \\
+\bottomrule
+\end{longtable}
+
+The dashboard use cases are separated from the core gateway use cases because
+they describe human-facing visibility and operational control rather than the
+merchant money-flow API. Figure~\ref{fig:dashboard-use-case-diagram} shows the
+two dashboard surfaces and the actors allowed to use each one.
+
+\begin{figure}[!htbp]
+\centering
+\resizebox{\textwidth}{!}{%
+\begin{tikzpicture}[x=1cm,y=1cm]
+  \node[actor, text width=22mm] (admin) at (0,0) {Admin};
+  \node[actor, text width=22mm] (ops) at (0,-1.5) {Ops};
+  \node[actor, text width=27mm] (merchantUser) at (0,-5.0) {Merchant dashboard\\user};
+
+  \node[box, text width=34mm] (duc001) at (3.2,0.3) {DUC001\\Sign in and view operations overview};
+  \node[box, text width=34mm] (duc002) at (3.2,-1.1) {DUC002\\Manage merchant lifecycle and QR accounts};
+  \node[box, text width=34mm] (duc004) at (3.2,-2.5) {DUC004\\Inspect operational evidence};
+  \node[box, text width=34mm] (duc003) at (7.4,-1.1) {DUC003\\Manage merchant dashboard accounts};
+
+  \node[box, text width=34mm] (duc005) at (3.2,-4.2) {DUC005\\Sign in and maintain account access};
+  \node[box, text width=34mm] (duc006) at (7.4,-4.2) {DUC006\\View overview and analytics};
+  \node[box, text width=34mm] (duc007) at (3.2,-5.8) {DUC007\\Explore payment, refund, and webhook records};
+  \node[box, text width=34mm] (duc008) at (7.4,-5.8) {DUC008\\View profile and credential metadata};
+
+  \node[boundary, fit=(duc001)(duc002)(duc003)(duc004), label=above:{Ops Dashboard}] (opsBoundary) {};
+  \node[boundary, fit=(duc005)(duc006)(duc007)(duc008), label=below:{Merchant Dashboard}] (merchantBoundary) {};
+
+  \draw[autharrow] (admin.east) to[out=5,in=180] (duc001.west);
+  \draw[autharrow] (admin.east) to[out=-10,in=180] (duc002.west);
+  \draw[autharrow] (admin.east) to[out=-24,in=180] (duc004.west);
+  \draw[autharrow] (admin.east) to[out=-4,in=180] (duc003.west);
+
+  \draw[autharrow] (ops.east) to[out=30,in=180] (duc001.west);
+  \draw[autharrow] (ops.east) -- (duc002.west);
+  \draw[autharrow] (ops.east) to[out=72,in=155,looseness=1.25] (duc003.north west);
+  \draw[autharrow] (ops.east) to[out=-30,in=180] (duc004.west);
+
+  \draw[autharrow] (merchantUser.east) to[out=28,in=180] (duc005.west);
+  \draw[autharrow] (merchantUser.east) to[out=18,in=180] (duc006.west);
+  \draw[autharrow] (merchantUser.east) to[out=-15,in=180] (duc007.west);
+  \draw[autharrow] (merchantUser.east) to[out=-28,in=180] (duc008.west);
+\end{tikzpicture}
+}
+\caption{Dashboard use-case diagram. Internal users operate the Ops Dashboard,
+while merchant representatives use a separate merchant-scoped dashboard for
+read-only visibility and account maintenance.}
+\label{fig:dashboard-use-case-diagram}
+\end{figure}

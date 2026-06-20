@@ -65,7 +65,9 @@ class PaymentSchemaTest(unittest.TestCase):
             currency="VND",
             description="Demo QR payment",
             status=PaymentStatus.PENDING,
+            qr_reference="PABC123456789",
             qr_content="MINI_GATEWAY|...",
+            qr_image_base64="data:image/png;base64,abc",
             expire_at=expire_at,
         )
 
@@ -75,6 +77,8 @@ class PaymentSchemaTest(unittest.TestCase):
         self.assertEqual(response.order_id, "ORDER-1001")
         self.assertEqual(response.merchant_id, "m_demo")
         self.assertEqual(response.qr_content, "MINI_GATEWAY|...")
+        self.assertEqual(response.qr_reference, "PABC123456789")
+        self.assertEqual(response.qr_image_base64, "data:image/png;base64,abc")
         self.assertEqual(response.status, PaymentStatus.PENDING)
         self.assertEqual(response.expire_at, expire_at)
 
@@ -94,6 +98,37 @@ class QrServiceTest(unittest.TestCase):
             qr_content,
             "MINI_GATEWAY|merchant_id=m_demo|transaction_id=pay_123|amount=100000.00|currency=VND",
         )
+
+    def test_vietqr_content_is_parseable_and_png_base64_is_data_url(self) -> None:
+        from vietnam_qr_pay import QRPay
+
+        from app.models.merchant_qr_account import MerchantQrAccount
+        from app.services.qr_service import generate_qr_reference, generate_vietqr_payment_qr
+
+        qr_account = MerchantQrAccount(
+            bank_code="VCB",
+            bank_bin="970436",
+            account_number="9704361234567890",
+            account_name="DEMO MERCHANT LLC",
+            template="compact",
+        )
+        reference = generate_qr_reference("pay_1234567890abcdef")
+
+        self.assertLessEqual(len(reference), 13)
+        generated = generate_vietqr_payment_qr(
+            qr_account=qr_account,
+            amount=Decimal("100000.00"),
+            qr_reference=reference,
+        )
+
+        parsed = QRPay(generated.qr_content)
+        self.assertTrue(parsed.is_valid)
+        self.assertEqual(parsed.consumer.bank_bin, "970436")
+        self.assertEqual(parsed.consumer.bank_number, "9704361234567890")
+        self.assertEqual(parsed.amount, "100000")
+        self.assertEqual(parsed.currency, "704")
+        self.assertEqual(parsed.additional_data.purpose, reference)
+        self.assertTrue(generated.qr_image_base64.startswith("data:image/png;base64,"))
 
     def test_create_payment_request_resolves_expire_at_from_ttl(self) -> None:
         from app.schemas.payment import CreatePaymentRequest
@@ -141,7 +176,9 @@ class PaymentRepositoryTest(unittest.TestCase):
             amount=Decimal("100000.00"),
             currency="VND",
             description="Demo QR payment",
+            qr_reference="PABC123456789",
             qr_content="MINI_GATEWAY|...",
+            qr_image_base64="data:image/png;base64,abc",
             expire_at=expire_at,
             idempotency_key="idem-1",
         )
@@ -150,6 +187,8 @@ class PaymentRepositoryTest(unittest.TestCase):
         self.assertTrue(db.flushed)
         self.assertEqual(payment.status, PaymentStatus.PENDING)
         self.assertEqual(payment.transaction_id, "pay_123")
+        self.assertEqual(payment.qr_reference, "PABC123456789")
+        self.assertEqual(payment.qr_image_base64, "data:image/png;base64,abc")
         self.assertEqual(payment.idempotency_key, "idem-1")
 
 
@@ -214,7 +253,65 @@ class PaymentServiceTest(unittest.TestCase):
         self.assertEqual(order_reference.latest_payment_transaction_id, payment.id)
         self.assertEqual(response.transaction_id, payment.transaction_id)
         self.assertEqual(response.qr_content, payment.qr_content)
-        self.assertIn("merchant_id=m_demo", response.qr_content)
+        self.assertEqual(response.qr_reference, payment.qr_reference)
+        self.assertTrue(response.qr_content.startswith("000201"))
+        self.assertTrue(response.qr_image_base64.startswith("data:image/png;base64,"))
+
+    def test_create_payment_requires_active_qr_account(self) -> None:
+        from app.core.errors import AppError
+        from app.services.payment_service import create_payment
+
+        db = _FakeDb()
+        store = _PaymentStore(qr_account=None)
+
+        with store.patched_repositories():
+            with self.assertRaises(AppError) as error:
+                create_payment(
+                    db=db,
+                    authenticated_merchant=self.authenticated,
+                    request=self.request,
+                    idempotency_key="idem-1",
+                    now=self.now,
+                )
+
+        self.assertEqual(error.exception.error_code, "ACTIVE_QR_ACCOUNT_REQUIRED")
+        self.assertEqual(error.exception.status_code, 409)
+
+    def test_create_payment_rejects_non_vnd_or_fractional_vnd_for_vietqr(self) -> None:
+        from app.core.errors import AppError
+        from app.schemas.payment import CreatePaymentRequest
+        from app.services.payment_service import create_payment
+
+        for request in (
+            CreatePaymentRequest(
+                order_id="ORDER-USD",
+                amount="100000.00",
+                currency="USD",
+                description="USD QR payment",
+                ttl_seconds=900,
+            ),
+            CreatePaymentRequest(
+                order_id="ORDER-FRACTION",
+                amount="100000.50",
+                currency="VND",
+                description="Fractional QR payment",
+                ttl_seconds=900,
+            ),
+        ):
+            with self.subTest(order_id=request.order_id):
+                db = _FakeDb()
+                store = _PaymentStore()
+                with store.patched_repositories():
+                    with self.assertRaises(AppError) as error:
+                        create_payment(
+                            db=db,
+                            authenticated_merchant=self.authenticated,
+                            request=request,
+                            idempotency_key="idem-1",
+                            now=self.now,
+                        )
+
+                self.assertEqual(error.exception.error_code, "VIETQR_REQUIRES_WHOLE_VND")
 
     def test_duplicate_pending_semantically_identical_returns_existing_transaction(self) -> None:
         from app.services.payment_service import create_payment
@@ -353,9 +450,13 @@ class _FakeDb:
 
 
 class _PaymentStore:
-    def __init__(self) -> None:
+    def __init__(self, qr_account="default") -> None:
         self.order_references = {}
         self.payments = []
+        if qr_account == "default":
+            self.qr_account = _qr_account(uuid4())
+        else:
+            self.qr_account = qr_account
 
     def patched_repositories(self):
         return _PatchGroup(
@@ -386,6 +487,10 @@ class _PaymentStore:
             patch(
                 "app.services.payment_service.payment_repository.create",
                 side_effect=self.create_payment,
+            ),
+            patch(
+                "app.services.payment_service.merchant_qr_account_repository.get_active_by_merchant_provider",
+                side_effect=self.get_active_qr_account,
             ),
         )
 
@@ -438,6 +543,28 @@ class _PaymentStore:
         )
         self.payments.append(payment)
         return payment
+
+    def get_active_qr_account(self, db, merchant_db_id, provider):
+        if self.qr_account is not None:
+            self.qr_account.merchant_db_id = merchant_db_id
+        return self.qr_account
+
+
+def _qr_account(merchant_db_id):
+    from app.models.enums import MerchantQrAccountStatus, QrProvider
+    from app.models.merchant_qr_account import MerchantQrAccount
+
+    return MerchantQrAccount(
+        id=uuid4(),
+        merchant_db_id=merchant_db_id,
+        provider=QrProvider.VIETQR,
+        bank_code="VCB",
+        bank_bin="970436",
+        account_number="9704361234567890",
+        account_name="DEMO MERCHANT LLC",
+        template="compact",
+        status=MerchantQrAccountStatus.ACTIVE,
+    )
 
 
 class _PatchGroup:

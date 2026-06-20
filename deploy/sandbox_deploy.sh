@@ -53,7 +53,7 @@ probe_host_for_bind_addr() {
 print_failure_context() {
   log "Deployment failed. Recent compose state and logs:"
   docker compose -f "$COMPOSE_FILE" ps || true
-  docker compose -f "$COMPOSE_FILE" logs --tail 100 backend ops-dashboard merchant-dashboard postgres || true
+  docker compose -f "$COMPOSE_FILE" logs --tail 100 backend worker ops-dashboard merchant-dashboard postgres || true
 }
 
 trap 'print_failure_context' ERR
@@ -95,8 +95,8 @@ git fetch --prune origin main
 git checkout main
 git pull --ff-only origin main
 
-log "Building backend and dashboard images"
-docker compose -f "$COMPOSE_FILE" build backend ops-dashboard merchant-dashboard
+log "Building backend, worker, and dashboard images"
+docker compose -f "$COMPOSE_FILE" build backend worker ops-dashboard merchant-dashboard
 
 log "Starting PostgreSQL"
 docker compose -f "$COMPOSE_FILE" up -d postgres
@@ -104,8 +104,8 @@ docker compose -f "$COMPOSE_FILE" up -d postgres
 log "Applying Alembic migrations"
 docker compose -f "$COMPOSE_FILE" run --rm backend python -m alembic upgrade head
 
-log "Starting backend and dashboards"
-docker compose -f "$COMPOSE_FILE" up -d backend ops-dashboard merchant-dashboard
+log "Starting backend, worker, and dashboards"
+docker compose -f "$COMPOSE_FILE" up -d backend worker ops-dashboard merchant-dashboard
 
 log "Polling backend health endpoint: $HEALTH_URL"
 for ((attempt = 1; attempt <= HEALTH_ATTEMPTS; attempt++)); do

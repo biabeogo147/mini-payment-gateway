@@ -1,0 +1,122 @@
+\chapter{Component Implementation}
+
+\section{Gateway Transaction Handling}
+
+The implemented gateway centers on controlled transaction state changes. A
+merchant payment request becomes a pending payment only after merchant access,
+merchant operating status, and QR readiness are validated. A refund request is
+accepted only when the original payment is
+eligible for a full refund. External payment and refund evidence is stored
+before the gateway applies final state transitions so that business outcomes are
+always supported by durable evidence.
+
+Four implementation decisions are especially important:
+
+\begin{itemize}
+  \item merchant readiness is checked before live transaction creation;
+  \item active VietQR receiving account configuration is required before QR
+  payment creation;
+  \item payment creation uses business-aware duplicate handling so that
+  equivalent pending requests can be reused safely;
+  \item ambiguous external evidence creates a manual-review path instead of
+  silently overriding internal state.
+\end{itemize}
+
+\section{VietQR Generation}
+
+VietQR generation is implemented as an application-level payment concern rather
+than as a frontend-only display feature. When the Merchant API accepts a
+payment, the gateway derives a short QR reference, builds a VietQR transfer
+payload from the active merchant QR account, and renders a PNG image as a
+base64 data URL. The response therefore contains both machine-readable payload
+data and an immediately displayable QR image.
+
+The implementation deliberately applies pilot constraints before generating QR
+data. Amounts must be whole-number VND values, the transfer purpose is derived
+from the gateway QR reference, and payment creation fails if the merchant has no
+active QR receiving account. Duplicate equivalent pending payment requests
+reuse the existing stored QR evidence, which keeps checkout retry behavior
+predictable for merchant backends.
+
+\section{Demo Merchant Integration}
+
+The local demo merchant is implemented as a small FastAPI package under
+\code{backend/demo_merchant}. It serves its own Vietnamese HTML, CSS, and
+JavaScript checkout while keeping integration credentials on the server side.
+For payment creation it serializes the exact request body, calculates the body
+SHA-256 digest, signs the canonical merchant string, and calls the existing
+\code{POST /v1/payments} contract without changing the public gateway API.
+
+The bank simulator follows the same separation. A checkout button asks the demo
+merchant server to send a timestamped provider-HMAC callback; it does not set
+the order status itself. The demo order remains pending with an
+\code{AWAITING_WEBHOOK} notification state until the worker sends a merchant
+webhook. The receiving route verifies the event id, timestamp window, body
+digest, and HMAC, and stores processed event ids so duplicate deliveries return
+success without applying the state twice.
+
+The demo merchant uses in-memory state intentionally. This keeps it a clear
+reference integration rather than a second business database and allows each
+presentation run to reset by restarting the process or calling its demo-only
+reset endpoint.
+
+\section{Internal Operations Support}
+
+Internal operations functions are implemented as explicit support workflows
+rather than as incidental administrative tools. Internal users can register
+merchants, review readiness information, issue or rotate merchant credentials,
+configure VietQR receiving accounts, inspect transactions, review audit
+history, and resolve operational incidents.
+
+Sensitive internal actions are traceable. When an internal user changes
+merchant access, resolves reconciliation issues, or performs recovery actions,
+the system preserves the action reason and related evidence so the operational
+history remains understandable after the fact.
+
+\section{Merchant Dashboard Support}
+
+Merchant-facing implementation follows the architectural boundary already
+defined for separate merchant dashboard access. Human merchant users sign in
+with dedicated dashboard accounts, and post-login reads derive merchant scope
+from the authenticated session rather than from request parameters.
+
+This design supports the merchant dashboard in four ways:
+
+\begin{itemize}
+  \item overview and analytics views can summarize merchant activity for a
+  selected reporting window;
+  \item detail views can expose payments, refunds, and notification history
+  without leaking data across merchants;
+  \item profile and credential screens can show useful metadata while keeping
+  raw secrets hidden;
+  \item password maintenance remains a user-facing self-service workflow rather
+  than an operational workaround.
+\end{itemize}
+
+\section{Asynchronous Control Functions}
+
+The implementation wires the asynchronous design model into concrete control
+functions needed for time-based and retry-based behavior:
+
+\begin{itemize}
+  \item expiration handling for overdue pending payments;
+  \item creation of merchant notification events after final payment or refund
+  outcomes;
+  \item notification delivery processing with retry awareness and delivery
+  history;
+  \item reconciliation support for late, mismatched, or otherwise ambiguous
+  external evidence;
+  \item manual retry support for eligible failed merchant notifications.
+\end{itemize}
+
+These functions are exposed through the worker entry point
+\code{python -m app.worker.main}. The worker uses database locking so that
+multiple worker processes do not process the same expiration or webhook retry
+job at the same time. The functions remain separate from ordinary request
+handling so payment outcomes, notification delivery, and operational recovery
+stay understandable as related but distinct behaviors.
+
+For the classroom flow the worker interval is set to one second. Its model
+registry is loaded before job execution so payment expiration flushes can
+resolve every SQLAlchemy foreign-key table, and PostgreSQL advisory locks keep
+expiration and due-webhook work safe when more than one worker is running.

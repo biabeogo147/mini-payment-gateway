@@ -17,7 +17,7 @@ Preconditions:
 - Database migrations are applied.
 - The API is running.
 - Ops actor exists, or internal ops authentication is bypassed for MVP.
-- Provider is a simulator or trusted test caller.
+- Provider simulator has a configured callback HMAC secret.
 
 ### Step 1: Ops Registers Merchant
 
@@ -37,20 +37,22 @@ DB Effects:
 - `merchant_onboarding_cases`: insert/update and approve case.
 - `audit_logs`: insert onboarding submission and approval events.
 
-### Step 3: Ops Creates Credential And Activates Merchant
+### Step 3: Ops Creates Credential, QR Account, And Activates Merchant
 
 Detail: `scenarios/merchant.md` / `ONB-04`.
 
 DB Effects:
 
 - `merchant_credentials`: insert active credential.
+- `merchant_qr_accounts`: insert active VietQR receiving account.
 - `merchants`: update `PENDING_REVIEW -> ACTIVE`.
-- `audit_logs`: insert credential and activation events.
+- `audit_logs`: insert credential, QR account, and activation events.
 
 Automation Notes:
 
-- Phase 08 uses the phase 07 ops APIs for merchant setup, credential creation,
-  and activation. Direct DB seed remains available only in older smoke scripts.
+- Pilot E2E uses the ops APIs for merchant setup, credential creation, VietQR
+  account configuration, and activation. Direct DB seed remains available only
+  in smoke scripts.
 
 ### Step 4: Merchant Creates Payment
 
@@ -59,9 +61,10 @@ Detail: `scenarios/payment.md` / `PAY-01`.
 DB Effects:
 
 - `order_references`: insert merchant order reference.
-- `payment_transactions`: insert `PENDING` payment.
+- `payment_transactions`: insert `PENDING` payment with `qr_reference`,
+  VietQR `qr_content`, and PNG `qr_image_base64`.
 
-### Step 5: Provider Marks Payment Success
+### Step 5: Provider Marks Payment Success With HMAC
 
 Detail: `callback.md` / `CB-01`.
 
@@ -97,7 +100,7 @@ DB Effects:
 
 - `refund_transactions`: insert `REFUND_PENDING`.
 
-### Step 9: Provider Marks Refund Success
+### Step 9: Provider Marks Refund Success With HMAC
 
 Detail: `refund.md` / `REF-04`.
 

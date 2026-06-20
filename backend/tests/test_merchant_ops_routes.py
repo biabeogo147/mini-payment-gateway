@@ -5,8 +5,8 @@ from uuid import uuid4
 
 from fastapi.testclient import TestClient
 
-from app.models.enums import CredentialStatus, InternalUserRole, MerchantStatus, OnboardingCaseStatus
-from app.schemas.ops import CredentialOpsResponse, MerchantOpsResponse, OnboardingCaseResponse
+from app.models.enums import CredentialStatus, InternalUserRole, MerchantQrAccountStatus, MerchantStatus, OnboardingCaseStatus, QrProvider
+from app.schemas.ops import CredentialOpsResponse, MerchantOpsResponse, OnboardingCaseResponse, QrAccountOpsResponse
 from tests.internal_auth_test_utils import make_internal_user, override_current_internal_user
 
 
@@ -219,6 +219,96 @@ class MerchantOpsRouteTest(unittest.TestCase):
         finally:
             app.dependency_overrides.clear()
 
+    def test_ops_cannot_rotate_credentials_or_disable_merchant(self) -> None:
+        from app.main import app
+
+        override_current_internal_user(app, make_internal_user(role=InternalUserRole.OPS))
+
+        try:
+            rotate_response = TestClient(app).post(
+                "/v1/ops/merchants/m_demo/credentials/rotate",
+                json=_credential_json("ak_rotated"),
+            )
+            disable_response = TestClient(app).post(
+                "/v1/ops/merchants/m_demo/disable",
+                json=_reason_json(),
+            )
+        finally:
+            app.dependency_overrides.clear()
+
+        self.assertEqual(rotate_response.status_code, 403)
+        self.assertEqual(disable_response.status_code, 403)
+        self.assertEqual(rotate_response.json()["error_code"], "INTERNAL_AUTH_FORBIDDEN")
+        self.assertEqual(disable_response.json()["error_code"], "INTERNAL_AUTH_FORBIDDEN")
+
+    def test_qr_account_routes_call_service_with_merchant_id_and_actor(self) -> None:
+        from app.controllers import ops_merchant_controller
+        from app.main import app
+
+        db = object()
+        qr_account_id = str(uuid4())
+        self._override_db(app, db)
+        override_current_internal_user(app, make_internal_user())
+        response_body = QrAccountOpsResponse(
+            qr_account_id=qr_account_id,
+            merchant_id="m_demo",
+            provider=QrProvider.VIETQR,
+            bank_code="VCB",
+            bank_bin="970436",
+            account_number="9704361234567890",
+            account_name="DEMO MERCHANT LLC",
+            template="compact",
+            status=MerchantQrAccountStatus.ACTIVE,
+        )
+
+        route_cases = (
+            (
+                "post",
+                "/v1/ops/merchants/m_demo/qr-accounts",
+                "create_qr_account",
+                _qr_account_json(),
+            ),
+            (
+                "patch",
+                f"/v1/ops/merchants/m_demo/qr-accounts/{qr_account_id}",
+                "update_qr_account",
+                _qr_account_update_json(),
+            ),
+            (
+                "post",
+                f"/v1/ops/merchants/m_demo/qr-accounts/{qr_account_id}/activate",
+                "activate_qr_account",
+                _reason_json(),
+            ),
+            (
+                "post",
+                f"/v1/ops/merchants/m_demo/qr-accounts/{qr_account_id}/deactivate",
+                "deactivate_qr_account",
+                _reason_json(),
+            ),
+        )
+
+        try:
+            for method, path, service_name, body in route_cases:
+                with self.subTest(path=path):
+                    with patch.object(
+                        ops_merchant_controller.merchant_ops_service,
+                        service_name,
+                        return_value=response_body,
+                    ) as service:
+                        response = getattr(TestClient(app), method)(path, json=body)
+
+                    self.assertEqual(response.status_code, 200)
+                    self.assertEqual(response.json()["qr_account_id"], qr_account_id)
+                    kwargs = service.call_args.kwargs
+                    self.assertIs(kwargs["db"], db)
+                    self.assertEqual(kwargs["merchant_id"], "m_demo")
+                    self.assertEqual(kwargs["actor"].reason, "Ops action.")
+                    if "{" not in path and service_name != "create_qr_account":
+                        self.assertEqual(kwargs["qr_account_id"], qr_account_id)
+        finally:
+            app.dependency_overrides.clear()
+
     def _override_db(self, app, db) -> None:
         from app.controllers.deps import get_db
 
@@ -279,6 +369,26 @@ def _credential_json(access_key: str) -> dict:
 
 def _reason_json() -> dict:
     return {"actor": _actor_json()}
+
+
+def _qr_account_json() -> dict:
+    return {
+        "actor": _actor_json(),
+        "provider": "VIETQR",
+        "bank_code": "VCB",
+        "bank_bin": "970436",
+        "account_number": "9704361234567890",
+        "account_name": "DEMO MERCHANT LLC",
+        "template": "compact",
+        "status": "ACTIVE",
+    }
+
+
+def _qr_account_update_json() -> dict:
+    return {
+        "actor": _actor_json(),
+        "account_name": "UPDATED DEMO MERCHANT LLC",
+    }
 
 
 if __name__ == "__main__":

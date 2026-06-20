@@ -4,10 +4,18 @@ from uuid import UUID
 
 from pydantic import BaseModel, ConfigDict, Field, field_serializer
 
-from app.models.enums import ActorType, CredentialStatus, MerchantStatus, OnboardingCaseStatus
+from app.models.enums import (
+    ActorType,
+    CredentialStatus,
+    MerchantQrAccountStatus,
+    MerchantStatus,
+    OnboardingCaseStatus,
+    QrProvider,
+)
 from app.models.merchant import Merchant
 from app.models.merchant_credential import MerchantCredential
 from app.models.merchant_onboarding_case import MerchantOnboardingCase
+from app.models.merchant_qr_account import MerchantQrAccount
 
 
 class OpsActorContext(BaseModel):
@@ -131,6 +139,68 @@ class CredentialOpsResponse(BaseModel):
             status=credential.status,
             expired_at=credential.expired_at,
             rotated_at=credential.rotated_at,
+        )
+
+
+class CreateQrAccountRequest(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    actor: OpsActorContext
+    provider: QrProvider = QrProvider.VIETQR
+    bank_code: str = Field(min_length=1, max_length=32)
+    bank_bin: str = Field(min_length=6, max_length=16, pattern=r"^[0-9]+$")
+    account_number: str = Field(min_length=1, max_length=64)
+    account_name: str = Field(min_length=1, max_length=255)
+    template: str = Field(default="compact", min_length=1, max_length=32)
+    status: MerchantQrAccountStatus = MerchantQrAccountStatus.ACTIVE
+
+
+class UpdateQrAccountRequest(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    actor: OpsActorContext
+    bank_code: str | None = Field(default=None, min_length=1, max_length=32)
+    bank_bin: str | None = Field(default=None, min_length=6, max_length=16, pattern=r"^[0-9]+$")
+    account_number: str | None = Field(default=None, min_length=1, max_length=64)
+    account_name: str | None = Field(default=None, min_length=1, max_length=255)
+    template: str | None = Field(default=None, min_length=1, max_length=32)
+
+
+class QrAccountOpsResponse(BaseModel):
+    qr_account_id: str
+    merchant_id: str
+    provider: QrProvider
+    bank_code: str
+    bank_bin: str
+    account_number: str
+    account_name: str
+    template: str
+    status: MerchantQrAccountStatus
+    created_at: datetime | None = None
+    updated_at: datetime | None = None
+
+    @field_serializer("created_at", "updated_at")
+    def serialize_timestamp(self, value: datetime | None) -> str | None:
+        return _serialize_datetime(value)
+
+    @classmethod
+    def from_qr_account(
+        cls,
+        qr_account: MerchantQrAccount,
+        merchant_id: str,
+    ) -> "QrAccountOpsResponse":
+        return cls(
+            qr_account_id=str(qr_account.id),
+            merchant_id=merchant_id,
+            provider=qr_account.provider,
+            bank_code=qr_account.bank_code,
+            bank_bin=qr_account.bank_bin,
+            account_number=qr_account.account_number,
+            account_name=qr_account.account_name,
+            template=qr_account.template,
+            status=qr_account.status,
+            created_at=qr_account.created_at,
+            updated_at=qr_account.updated_at,
         )
 
 

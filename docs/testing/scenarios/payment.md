@@ -9,13 +9,13 @@ cd backend
 python scripts/smoke_payment_api.py
 ```
 
-The smoke script seeds an active merchant and credential, creates a payment,
-queries it by transaction id, queries it by order id, and verifies PostgreSQL
-state.
+The smoke script seeds an active merchant, active credential, and active VietQR
+receiving account, creates a payment, queries it by transaction id, queries it
+by order id, and verifies PostgreSQL state.
 
 ## PAY-01 Active Merchant Creates Payment
 
-Implementation Status: Implemented with DB seed - phase 03.
+Implementation Status: Implemented with VietQR generation for the pilot branch.
 
 Actor: Merchant backend.
 
@@ -56,9 +56,10 @@ Response:
   "transaction_id": "pay_...",
   "order_id": "ORDER-1001",
   "merchant_id": "m_demo",
-  "qr_content": "MINI_GATEWAY|merchant_id=m_demo|transaction_id=pay_...|amount=100000.00|currency=VND",
+  "qr_reference": "PABC123456789",
+  "qr_content": "000201...",
   "qr_image_url": null,
-  "qr_image_base64": null,
+  "qr_image_base64": "data:image/png;base64,...",
   "status": "PENDING",
   "expire_at": "2026-04-29T10:15:00Z"
 }
@@ -67,7 +68,7 @@ Response:
 DB Effects:
 
 - `order_references`: insert row if this merchant order does not exist.
-- `payment_transactions`: insert row with `status=PENDING`.
+- `payment_transactions`: insert row with `status=PENDING` and VietQR fields.
 - `order_references`: set `latest_payment_transaction_id`.
 
 State Transition: none to payment `PENDING`.
@@ -76,7 +77,9 @@ Expected Assertions:
 
 - `INITIATED` is never persisted.
 - One active pending payment exists for `merchant_db_id + order_id`.
-- QR content includes merchant id, transaction id, amount, and currency.
+- QR content is parseable VietQR/EMV and `qr_reference` is at most 13 chars.
+- Missing active QR account is rejected with `ACTIVE_QR_ACCOUNT_REQUIRED`.
+- Non-VND or fractional-VND requests are rejected for the pilot VietQR flow.
 
 ## PAY-02 Merchant Queries Payment By Transaction Id
 
@@ -95,9 +98,10 @@ Response:
   "transaction_id": "pay_...",
   "order_id": "ORDER-1001",
   "merchant_id": "m_demo",
-  "qr_content": "MINI_GATEWAY|...",
+  "qr_reference": "PABC123456789",
+  "qr_content": "000201...",
   "qr_image_url": null,
-  "qr_image_base64": null,
+  "qr_image_base64": "data:image/png;base64,...",
   "status": "PENDING",
   "expire_at": "2026-04-29T10:15:00Z"
 }

@@ -80,6 +80,7 @@ def get_merchant_detail(db: Session, *, merchant_id: str) -> MerchantDetailRespo
         )
     merchant, onboarding_case = bundle
     credentials = ops_dashboard_repository.list_credentials_for_merchant(db, merchant.id)
+    qr_accounts = ops_dashboard_repository.list_qr_accounts_for_merchant(db, merchant.id)
     recent_payments = ops_dashboard_repository.list_payments(db, merchant_id=merchant_id, limit=5)
     recent_refunds = ops_dashboard_repository.list_refunds(db, merchant_id=merchant_id, limit=5)
     recent_webhooks = ops_dashboard_repository.list_webhooks(db, merchant_id=merchant_id, limit=5)
@@ -87,6 +88,7 @@ def get_merchant_detail(db: Session, *, merchant_id: str) -> MerchantDetailRespo
     if onboarding_case is not None:
         entity_refs.append((EntityType.ONBOARDING_CASE, onboarding_case.id))
     entity_refs.extend((EntityType.MERCHANT_CREDENTIAL, credential.id) for credential in credentials)
+    entity_refs.extend((EntityType.MERCHANT_QR_ACCOUNT, qr_account.id) for qr_account in qr_accounts)
     recent_audit_logs = ops_dashboard_repository.list_recent_audit_logs_for_entities(
         db,
         entity_refs=entity_refs,
@@ -96,6 +98,7 @@ def get_merchant_detail(db: Session, *, merchant_id: str) -> MerchantDetailRespo
         merchant=merchant,
         onboarding_case=onboarding_case,
         credentials=credentials,
+        qr_accounts=qr_accounts,
         recent_payments=recent_payments,
         recent_refunds=recent_refunds,
         recent_webhooks=recent_webhooks,

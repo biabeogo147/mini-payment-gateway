@@ -46,6 +46,13 @@
           "ensure('refund_reason', 'QA Postman refund');",
           "ensure('reconciliation_mismatch_amount', '99999.00');",
           "ensure('provider_source_type', 'SIMULATOR');",
+          "ensure('provider_id', 'simulator');",
+          "ensure('provider_callback_secret', 'dev-insecure-provider-callback-secret-change-me');",
+          "ensure('qr_bank_code', 'VCB');",
+          "ensure('qr_bank_bin', '970436');",
+          "ensure('qr_account_number', '9704000000000001');",
+          "ensure('qr_account_name', 'QA DEMO MERCHANT');",
+          "ensure('qr_template', 'compact');",
           "ensure('ops_reason', 'QA via Postman');",
           "ensure('lock_idempotency_key', 'false');",
           "",
@@ -80,6 +87,29 @@
           "  pm.request.headers.upsert({ key: 'X-Timestamp', value: timestamp });",
           "  pm.request.headers.upsert({ key: 'X-Signature', value: signature });",
           "  pm.request.headers.upsert({ key: 'X-Idempotency-Key', value: pm.environment.get('idempotency_key') || '' });",
+          "}",
+          "",
+          "const requiresProviderAuth = path.startsWith('/v1/provider/callbacks');",
+          "if (requiresProviderAuth) {",
+          "  const method = pm.request.method.toUpperCase();",
+          "  const timestamp = new Date().toISOString();",
+          "  let rawBody = '';",
+          "  if (pm.request.body && pm.request.body.mode === 'raw') {",
+          "    rawBody = pm.variables.replaceIn(pm.request.body.raw || '');",
+          "  }",
+          "  const bodyHash = CryptoJS.SHA256(CryptoJS.enc.Utf8.parse(rawBody)).toString(CryptoJS.enc.Hex);",
+          "  const signingString = `${timestamp}.${method}.${path}.${bodyHash}`;",
+          "  const secret = pm.environment.get('provider_callback_secret') || '';",
+          "  const signature = CryptoJS.HmacSHA256(signingString, secret).toString(CryptoJS.enc.Hex);",
+          "",
+          "  pm.environment.set('provider_timestamp', timestamp);",
+          "  pm.environment.set('provider_body_sha256_hex', bodyHash);",
+          "  pm.environment.set('provider_signing_string', signingString);",
+          "  pm.environment.set('provider_signature', signature);",
+          "",
+          "  pm.request.headers.upsert({ key: 'X-Provider-Id', value: pm.environment.get('provider_id') || 'simulator' });",
+          "  pm.request.headers.upsert({ key: 'X-Provider-Timestamp', value: timestamp });",
+          "  pm.request.headers.upsert({ key: 'X-Provider-Signature', value: signature });",
           "}"
         ]
       }
@@ -95,7 +125,7 @@
             "type": "text/javascript",
             "exec": [
               "pm.test('Health returns 200', function () { pm.response.to.have.status(200); });",
-              "const data = pm.response.json();",
+              "var data = pm.response.json();",
               "pm.test('Health body is ok', function () { pm.expect(data.status).to.eql('ok'); });"
             ]
           }
@@ -111,6 +141,39 @@
       "name": "E2E-01 Merchant Onboarding To Successful Payment And Refund",
       "item": [
         {
+          "name": "Internal Login",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Internal login returns 200', function () { pm.response.to.have.status(200); });",
+                  "var data = pm.response.json();",
+                  "pm.test('Internal login is ADMIN or OPS', function () {",
+                  "  pm.expect(['ADMIN', 'OPS']).to.include(data.user.role);",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "description": "Logs in an internal Admin/Ops user so subsequent Ops API setup calls carry the internal session cookie.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\"email\":\"{{internal_email}}\",\"password\":\"{{internal_password}}\"}"
+            },
+            "url": "{{baseUrl}}/v1/internal/auth/login"
+          }
+        },
+        {
           "name": "Create Merchant",
           "event": [
             {
@@ -119,7 +182,7 @@
                 "type": "text/javascript",
                 "exec": [
                   "pm.test('Create merchant returns 200', function () { pm.response.to.have.status(200); });",
-                  "const data = pm.response.json();",
+                  "var data = pm.response.json();",
                   "if (data.merchant_id) { pm.environment.set('merchant_id', data.merchant_id); }"
                 ]
               }
@@ -208,7 +271,7 @@
                 "type": "text/javascript",
                 "exec": [
                   "pm.test('Create credential returns 200', function () { pm.response.to.have.status(200); });",
-                  "const data = pm.response.json();",
+                  "var data = pm.response.json();",
                   "if (data.access_key) { pm.environment.set('access_key', data.access_key); }"
                 ]
               }
@@ -228,6 +291,37 @@
               "raw": "{\"actor\":{\"actor_type\":\"OPS\",\"actor_id\":null,\"reason\":\"{{ops_reason}}\"},\"access_key\":\"{{access_key}}\",\"secret_key\":\"{{merchant_secret}}\"}"
             },
             "url": "{{baseUrl}}/v1/ops/merchants/{{merchant_id}}/credentials"
+          }
+        },
+        {
+          "name": "Create QR Account",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Create QR account returns 200', function () { pm.response.to.have.status(200); });",
+                  "var data = pm.response.json();",
+                  "if (data.qr_account_id) { pm.environment.set('qr_account_id', data.qr_account_id); }"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "description": "Configures the active VietQR receiving account required before payment creation.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\"actor\":{\"actor_type\":\"OPS\",\"actor_id\":null,\"reason\":\"{{ops_reason}}\"},\"provider\":\"VIETQR\",\"bank_code\":\"{{qr_bank_code}}\",\"bank_bin\":\"{{qr_bank_bin}}\",\"account_number\":\"{{qr_account_number}}\",\"account_name\":\"{{qr_account_name}}\",\"template\":\"{{qr_template}}\",\"status\":\"ACTIVE\"}"
+            },
+            "url": "{{baseUrl}}/v1/ops/merchants/{{merchant_id}}/qr-accounts"
           }
         },
         {
@@ -268,7 +362,13 @@
                 "type": "text/javascript",
                 "exec": [
                   "pm.test('Create payment returns 200', function () { pm.response.to.have.status(200); });",
-                  "const data = pm.response.json();",
+                  "var data = pm.response.json();",
+                  "pm.test('Create payment returns VietQR fields', function () {",
+                  "  pm.expect(data.qr_reference).to.be.a('string');",
+                  "  pm.expect(data.qr_reference.length).to.be.at.most(13);",
+                  "  pm.expect(data.qr_content).to.match(/^000201/);",
+                  "  pm.expect(data.qr_image_base64).to.match(/^data:image\\/png;base64,/);",
+                  "});",
                   "if (data.transaction_id) { pm.environment.set('payment_transaction_id', data.transaction_id); }",
                   "if (data.order_id) { pm.environment.set('order_id', data.order_id); }"
                 ]
@@ -367,7 +467,7 @@
                 "type": "text/javascript",
                 "exec": [
                   "pm.test('Create refund returns 200', function () { pm.response.to.have.status(200); });",
-                  "const data = pm.response.json();",
+                  "var data = pm.response.json();",
                   "if (data.refund_transaction_id) { pm.environment.set('refund_transaction_id', data.refund_transaction_id); }",
                   "if (data.refund_id) { pm.environment.set('refund_id', data.refund_id); }"
                 ]
@@ -466,7 +566,7 @@
                 "type": "text/javascript",
                 "exec": [
                   "pm.test('List reconciliation returns 200', function () { pm.response.to.have.status(200); });",
-                  "const data = pm.response.json();",
+                  "var data = pm.response.json();",
                   "if (data.records && data.records.length > 0 && data.records[0].record_id) {",
                   "  pm.environment.set('reconciliation_record_id', data.records[0].record_id);",
                   "}"
@@ -509,7 +609,7 @@
                 "type": "text/javascript",
                 "exec": [
                   "pm.test('Payment create returns 200', function () { pm.response.to.have.status(200); });",
-                  "const data = pm.response.json();",
+                  "var data = pm.response.json();",
                   "if (data.transaction_id) { pm.environment.set('payment_transaction_id', data.transaction_id); }",
                   "if (data.order_id) { pm.environment.set('order_id', data.order_id); }"
                 ]
@@ -526,7 +626,7 @@
                 "type": "text/javascript",
                 "exec": [
                   "pm.test('Create payment returns 200', function () { pm.response.to.have.status(200); });",
-                  "const data = pm.response.json();",
+                  "var data = pm.response.json();",
                   "if (data.transaction_id) { pm.environment.set('payment_transaction_id', data.transaction_id); }",
                   "if (data.order_id) { pm.environment.set('order_id', data.order_id); }"
                 ]
@@ -558,7 +658,7 @@
                 "type": "text/javascript",
                 "exec": [
                   "pm.test('Status is 409', function () { pm.response.to.have.status(409); });",
-                  "const data = pm.response.json();",
+                  "var data = pm.response.json();",
                   "pm.test('Error code is PAYMENT_PENDING_EXISTS', function () { pm.expect(data.error_code).to.eql('PAYMENT_PENDING_EXISTS'); });"
                 ]
               }
@@ -598,7 +698,7 @@
                 "type": "text/javascript",
                 "exec": [
                   "pm.test('Status is 4xx', function () { pm.expect(pm.response.code).to.be.within(400, 499); });",
-                  "const data = pm.response.json();",
+                  "var data = pm.response.json();",
                   "pm.test('Error code is AUTH_INVALID_SIGNATURE', function () { pm.expect(data.error_code).to.eql('AUTH_INVALID_SIGNATURE'); });"
                 ]
               }
@@ -658,7 +758,7 @@
                 "type": "text/javascript",
                 "exec": [
                   "pm.test('Status is 409', function () { pm.response.to.have.status(409); });",
-                  "const data = pm.response.json();",
+                  "var data = pm.response.json();",
                   "pm.test('Error code is PAYMENT_ALREADY_SUCCESS', function () { pm.expect(data.error_code).to.eql('PAYMENT_ALREADY_SUCCESS'); });"
                 ]
               }
@@ -709,7 +809,7 @@
                 "type": "text/javascript",
                 "exec": [
                   "pm.test('Payment create returns 200', function () { pm.response.to.have.status(200); });",
-                  "const data = pm.response.json();",
+                  "var data = pm.response.json();",
                   "if (data.transaction_id) { pm.environment.set('payment_transaction_id', data.transaction_id); }",
                   "if (data.order_id) { pm.environment.set('order_id', data.order_id); }"
                 ]
@@ -764,7 +864,7 @@
                 "type": "text/javascript",
                 "exec": [
                   "pm.test('List reconciliation returns 200', function () { pm.response.to.have.status(200); });",
-                  "const data = pm.response.json();",
+                  "var data = pm.response.json();",
                   "if (data.records && data.records.length > 0 && data.records[0].record_id) {",
                   "  pm.environment.set('reconciliation_record_id', data.records[0].record_id);",
                   "}"
@@ -876,7 +976,7 @@
                 "type": "text/javascript",
                 "exec": [
                   "pm.test('Status is 403', function () { pm.response.to.have.status(403); });",
-                  "const data = pm.response.json();",
+                  "var data = pm.response.json();",
                   "pm.test('Error code is MERCHANT_NOT_ACTIVE', function () { pm.expect(data.error_code).to.eql('MERCHANT_NOT_ACTIVE'); });"
                 ]
               }
@@ -922,7 +1022,7 @@
                 "type": "text/javascript",
                 "exec": [
                   "pm.test('Status is 403', function () { pm.response.to.have.status(403); });",
-                  "const data = pm.response.json();",
+                  "var data = pm.response.json();",
                   "pm.test('Error code is MERCHANT_NOT_ACTIVE', function () { pm.expect(data.error_code).to.eql('MERCHANT_NOT_ACTIVE'); });"
                 ]
               }

@@ -6,16 +6,20 @@ import subprocess
 import sys
 import time
 from datetime import datetime, timezone
+from pathlib import Path
 from urllib.error import HTTPError, URLError
 from urllib.request import Request, urlopen
 from uuid import uuid4
 
+sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
+
 from sqlalchemy import select
 
 from app.db.session import SessionLocal
-from app.models.enums import CredentialStatus, MerchantStatus
+from app.models.enums import CredentialStatus, MerchantQrAccountStatus, MerchantStatus, QrProvider
 from app.models.merchant import Merchant
 from app.models.merchant_credential import MerchantCredential
+from app.models.merchant_qr_account import MerchantQrAccount
 from app.models.payment_transaction import PaymentTransaction
 
 
@@ -54,7 +58,9 @@ def main() -> None:
                     "by_order_transaction": by_order["transaction_id"],
                     "db_status": db_row["status"],
                     "db_amount": db_row["amount"],
-                    "db_qr_has_transaction_id": db_row["qr_has_transaction_id"],
+                    "db_qr_reference": db_row["qr_reference"],
+                    "db_qr_is_vietqr": db_row["qr_is_vietqr"],
+                    "db_qr_image_is_data_url": db_row["qr_image_is_data_url"],
                 },
                 sort_keys=True,
             )
@@ -72,6 +78,7 @@ def seed_merchant() -> dict[str, str]:
     merchant_id = f"m_phase3_{suffix}"
     access_key = f"ak_phase3_{suffix}"
     secret = f"phase3-secret-{suffix}"
+    account_number = f"9704{int(suffix, 16):010d}"
     with SessionLocal() as db:
         merchant = Merchant(
             merchant_id=merchant_id,
@@ -89,6 +96,18 @@ def seed_merchant() -> dict[str, str]:
             status=CredentialStatus.ACTIVE,
         )
         db.add(credential)
+        db.add(
+            MerchantQrAccount(
+                merchant_db_id=merchant.id,
+                provider=QrProvider.VIETQR,
+                bank_code="VCB",
+                bank_bin="970436",
+                account_number=account_number,
+                account_name="PHASE SMOKE MERCHANT",
+                template="compact",
+                status=MerchantQrAccountStatus.ACTIVE,
+            )
+        )
         db.commit()
     return {
         "merchant_id": merchant_id,
@@ -185,6 +204,25 @@ def signed_headers(
     return headers
 
 
+def signed_provider_headers(
+    method: str,
+    path: str,
+    body: bytes,
+    *,
+    provider_id: str = "simulator",
+    secret: str = "dev-insecure-provider-callback-secret-change-me",
+) -> dict[str, str]:
+    timestamp = datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
+    body_hash = hashlib.sha256(body).hexdigest()
+    signing_string = f"{timestamp}.{method}.{path}.{body_hash}"
+    signature = hmac.new(secret.encode("utf-8"), signing_string.encode("utf-8"), hashlib.sha256).hexdigest()
+    return {
+        "X-Provider-Id": provider_id,
+        "X-Provider-Timestamp": timestamp,
+        "X-Provider-Signature": signature,
+    }
+
+
 def get_payment_db_row(transaction_id: str) -> dict[str, str | bool]:
     with SessionLocal() as db:
         payment = db.scalar(select(PaymentTransaction).where(PaymentTransaction.transaction_id == transaction_id))
@@ -195,7 +233,9 @@ def get_payment_db_row(transaction_id: str) -> dict[str, str | bool]:
             "order_id": payment.order_id,
             "status": payment.status.value,
             "amount": str(payment.amount),
-            "qr_has_transaction_id": transaction_id in payment.qr_content,
+            "qr_reference": payment.qr_reference,
+            "qr_is_vietqr": payment.qr_content.startswith("000201"),
+            "qr_image_is_data_url": bool(payment.qr_image_base64 and payment.qr_image_base64.startswith("data:image/png;base64,")),
         }
 
 

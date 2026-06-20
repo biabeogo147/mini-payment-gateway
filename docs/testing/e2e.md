@@ -62,7 +62,8 @@ Implemented now:
   and internal user admin routes.
 - Ops Dashboard read APIs for summary, charts, merchants, payments, refunds,
   webhooks, reconciliation, audit, and internal users.
-- Merchant portal user provisioning through Admin-only Ops routes.
+- Merchant portal user provisioning through Admin/Ops routes with actor-aware
+  audit evidence.
 - Merchant Portal auth with separate HttpOnly session cookie.
 - Merchant Dashboard read APIs for summary, charts, analytics, payments,
   refunds, webhooks, profile, and credential metadata.
@@ -75,6 +76,12 @@ Implemented now:
   - late success callback reconciliation and ops resolution;
   - webhook retry exhaustion, manual retry audit, and suspended merchant
     payment/refund rejection.
+- Local demo merchant API and Vietnamese checkout for real merchant HMAC
+  payment creation, scannable VietQR display, signed provider simulation,
+  verified/idempotent webhook receipt, and visible final order state.
+- Real-HTTP smoke scripts for both successful and failed payment outcomes. The
+  scripts provision unique merchants through Ops APIs and poll until the worker
+  webhook reaches the demo merchant.
 
 Not implemented yet:
 
@@ -140,9 +147,9 @@ Not implemented yet:
 | WH-05 HTTP 2xx marks webhook delivered | Gateway worker | `scenarios/webhook.md` | merchant webhook URL | `webhook_events`, `webhook_delivery_attempts` | Implemented with DB seed | Phase 06 |
 | WH-10 Ops manual retry sends failed event again | Gateway worker, Ops | `scenarios/webhook.md` | `POST /v1/ops/webhooks/{event_id}/retry` | `webhook_events`, `webhook_delivery_attempts`, `audit_logs` | Implemented | Phase 06, Phase 07 |
 | OPS-01 Ops suspends merchant | Ops | `scenarios/ops.md` | suspend API | `merchants`, `audit_logs` | Implemented | Phase 07 |
-| OPS-02 Ops disables merchant | Ops | `scenarios/ops.md` | disable API | `merchants`, `audit_logs` | Implemented | Phase 07 |
-| OPS-03 Credential rotation | Ops | `scenarios/ops.md` | `/v1/ops/merchants/{merchant_id}/credentials/rotate` | `merchant_credentials`, `audit_logs` | Implemented | Phase 07 |
-| OPS-04 Admin provisions merchant portal user | Admin | `matrix.md` | `/v1/ops/merchants/{merchant_id}/portal-users` | `merchant_users`, `audit_logs` | Implemented | Phase 11 |
+| OPS-02 Admin disables merchant | Admin | `scenarios/ops.md` | disable API | `merchants`, `audit_logs` | Implemented | Phase 07 |
+| OPS-03 Admin rotates credentials | Admin | `scenarios/ops.md` | `/v1/ops/merchants/{merchant_id}/credentials/rotate` | `merchant_credentials`, `audit_logs` | Implemented | Phase 07 |
+| OPS-04 Internal operator provisions merchant portal user | Admin/Ops | `matrix.md` | `/v1/ops/merchants/{merchant_id}/portal-users` | `merchant_users`, `audit_logs` | Implemented | Phase 11 |
 | PORTAL-01 Merchant portal auth | Merchant portal user | `matrix.md` | `/v1/merchant-portal/auth/*` | `merchant_users`, `audit_logs` | Implemented | Phase 11 |
 | PORTAL-02 Merchant dashboard read APIs | Merchant portal user | `matrix.md` | `/v1/merchant-portal/dashboard/*`, explorers, profile, credentials | merchant-owned records | Implemented | Phase 11 |
 | PORTAL-03 Merchant analytics | Merchant portal user | `matrix.md` | `/v1/merchant-portal/analytics` | payment/refund/webhook aggregates | Implemented | Phase 12 |
@@ -171,7 +178,14 @@ python scripts/smoke_provider_callback_api.py
 python scripts/smoke_refund_api.py
 python scripts/smoke_webhook_api.py
 python scripts/smoke_ops_reconciliation_api.py
+python scripts/smoke_e2e_demo.py --outcome success
+python scripts/smoke_e2e_demo.py --outcome failed
 ```
+
+The last two commands require the gateway on port `8000`, the worker, and the
+demo merchant on port `8100`. See
+`../getting-started/e2e-payment-demo.md` for the complete five-terminal setup
+and instructor walkthrough.
 
 See `scenarios/payment.md`, `scenarios/callback.md`, `scenarios/refund.md`, `scenarios/webhook.md`, `scenarios/merchant.md`, `scenarios/ops.md`,
 and `scenarios/reconciliation.md` for the API and DB effects of these runnable slices.

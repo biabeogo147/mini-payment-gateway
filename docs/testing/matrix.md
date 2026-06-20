@@ -48,9 +48,9 @@ Status values:
 | ONB-03 | Ops approves onboarding case | Service, route, smoke | Phase 07 | Covered with DB seed | Yes | `backend/tests/test_merchant_ops_service.py`, `backend/tests/test_merchant_ops_routes.py`, `backend/scripts/smoke_ops_reconciliation_api.py` |
 | ONB-04 | Ops activates merchant with approved onboarding and active credential | Service, route, smoke | Phase 07 | Covered with DB seed | Yes | `backend/tests/test_merchant_ops_service.py`, `backend/tests/test_merchant_ops_routes.py`, `backend/scripts/smoke_ops_reconciliation_api.py` |
 | OPS-01 | Ops suspends merchant | Service, route | Phase 07 | Covered | Yes | `backend/tests/test_merchant_ops_service.py`, `backend/tests/test_merchant_ops_routes.py` |
-| OPS-02 | Ops disables merchant | Service, route | Phase 07 | Covered | Yes | `backend/tests/test_merchant_ops_service.py`, `backend/tests/test_merchant_ops_routes.py` |
-| OPS-03 | Credential rotation leaves one active credential | Service, route | Phase 07 | Covered | Yes | `backend/tests/test_merchant_ops_service.py`, `backend/tests/test_merchant_ops_routes.py` |
-| OPS-04 | Admin manages merchant portal users | Route, service | Phase 11 | Covered | Yes | `backend/tests/test_ops_merchant_portal_user_routes.py`, `backend/tests/test_merchant_portal_schema_contract.py` |
+| OPS-02 | Admin disables merchant; Ops is rejected | Service, route | Phase 07 | Covered | Yes | `backend/tests/test_merchant_ops_service.py`, `backend/tests/test_merchant_ops_routes.py` |
+| OPS-03 | Admin credential rotation leaves one active credential; Ops is rejected | Service, route | Phase 07 | Covered | Yes | `backend/tests/test_merchant_ops_service.py`, `backend/tests/test_merchant_ops_routes.py` |
+| OPS-04 | Admin/Ops manage merchant portal users with actor-aware audit | Route, service, smoke | Phase 11 | Covered | Yes | `backend/tests/test_ops_merchant_portal_user_routes.py`, `backend/tests/test_merchant_portal_user_ops_service.py`, `backend/scripts/smoke_e2e_demo.py` |
 | PORTAL-01 | Merchant portal login/logout/me/change-password | Route | Phase 11 | Covered | Yes | `backend/tests/test_merchant_portal_auth_routes.py` |
 | PORTAL-02 | Inactive merchant portal user is rejected | Route | Phase 11 | Covered | Yes | `backend/tests/test_merchant_portal_auth_routes.py` |
 | PORTAL-03 | Merchant portal explorers are merchant-scoped | Route | Phase 11 | Covered | Yes | `backend/tests/test_merchant_portal_routes.py` |

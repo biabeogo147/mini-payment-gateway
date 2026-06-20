@@ -15,6 +15,7 @@ class Settings:
     merchant_auth_cookie_name: str
     merchant_auth_ttl_seconds: int
     merchant_auth_cookie_secure: bool
+    provider_callback_secrets: dict[str, str]
 
 
 @lru_cache
@@ -45,6 +46,10 @@ def get_settings() -> Settings:
         ),
         merchant_auth_ttl_seconds=_env_int("MERCHANT_AUTH_TTL_SECONDS", 12 * 60 * 60),
         merchant_auth_cookie_secure=_env_bool("MERCHANT_AUTH_COOKIE_SECURE", False),
+        provider_callback_secrets=_env_provider_callback_secrets(
+            "PROVIDER_CALLBACK_SECRETS",
+            "simulator=dev-insecure-provider-callback-secret-change-me",
+        ),
     )
 
 
@@ -60,3 +65,17 @@ def _env_int(name: str, default: int) -> int:
     if value is None:
         return default
     return int(value)
+
+
+def _env_provider_callback_secrets(name: str, default: str) -> dict[str, str]:
+    value = os.getenv(name, default)
+    secrets: dict[str, str] = {}
+    for item in value.split(","):
+        pair = item.strip()
+        if not pair:
+            continue
+        provider_id, separator, secret = pair.partition("=")
+        if separator == "" or provider_id.strip() == "" or secret == "":
+            continue
+        secrets[provider_id.strip().lower()] = secret
+    return secrets

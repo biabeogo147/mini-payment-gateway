@@ -11,6 +11,8 @@ flowchart LR
     admin["Admin / Ops user"]
     merchant_user["Merchant portal user"]
     merchant_backend["Merchant backend"]
+    demo_merchant["Demo merchant backend + checkout\nFastAPI on :8100"]
+    customer["Customer / banking app"]
     provider["Provider simulator"]
     scheduler["Scheduler / timer"]
 
@@ -23,12 +25,15 @@ flowchart LR
     admin --> ops_ui
     merchant_user --> merchant_ui
     merchant_backend --> api
+    customer --> demo_merchant
+    demo_merchant --> api
     provider --> api
     scheduler --> api
     ops_ui --> api
     merchant_ui --> api
     api --> db
     api --> merchant_webhook
+    api --> demo_merchant
 ```
 
 The system has three user-facing API surfaces:
@@ -41,6 +46,10 @@ The system has three user-facing API surfaces:
 
 Provider callbacks and scheduler-triggered jobs are separate system inputs. They
 do not use the merchant dashboard session or merchant HMAC credentials.
+
+The demo merchant is a local integration example, not a fourth gateway API
+surface. Its server keeps the merchant API secret in memory, signs Merchant API
+requests, renders the customer checkout, and accepts signed gateway webhooks.
 
 ## Runtime Containers
 
@@ -80,6 +89,10 @@ The frontend apps are separate containers in sandbox deployment:
 - `merchant-dashboard` serves the merchant portal UI on port `4174`.
 - Both proxy `/api` to the FastAPI backend in local and container deployment.
 
+For the end-to-end classroom demo, `demo_merchant` runs directly from `.venv`
+on port `8100`. It is intentionally not added to Docker Compose and is not part
+of the production gateway deployment topology.
+
 ## Trust Boundaries
 
 ```mermaid
@@ -114,8 +127,8 @@ Important boundaries:
 - Merchant HMAC credentials are for server-to-server API calls only.
 - Merchant Dashboard users are stored in `merchant_users` and login with a
   separate session cookie.
-- Ops users are stored in `internal_users`; only `ADMIN` users can provision
-  merchant portal users.
+- Ops users are stored in `internal_users`; both `ADMIN` and `OPS` users can
+  provision and support merchant portal users.
 - Merchant Portal APIs never accept `merchant_id` from the client for scoping.
   The backend resolves merchant scope from the authenticated portal user.
 - Raw credential secrets and plaintext generated passwords are never
@@ -127,6 +140,7 @@ Important boundaries:
 | --- | --- |
 | Ops Dashboard | Internal workflow UI for merchant lifecycle, credentials, reconciliation, audit, internal users, and merchant portal user provisioning. |
 | Merchant Dashboard | Read-only merchant portal for overview, analytics, payments, refunds, webhooks, profile, credentials, and password change. |
+| Demo merchant | Local merchant backend and checkout that signs payment requests, shows VietQR, simulates provider callbacks, verifies webhook HMAC, and displays terminal order state. |
 | Controllers | Define routes, dependencies, auth boundaries, and response models. |
 | Services | Enforce payment, refund, webhook, auth, merchant lifecycle, audit, and analytics rules. |
 | Repositories | Own focused SQLAlchemy aggregate and lookup queries. |
@@ -157,20 +171,29 @@ sequenceDiagram
     API-->>Merchant: payment id, status, QR payload
 ```
 
+### Visible End-To-End Payment Demo
+
+The full visual sequence, including first-Admin bootstrap, merchant setup,
+customer QR scan, provider callback, worker delivery, and merchant checkout
+result, is maintained as PlantUML source in
+`diagrams/e2e-payment-demo.puml`. The critical boundary is that scanning a QR
+does not call the gateway. The bank/provider callback informs the gateway, and
+the signed gateway webhook informs the merchant.
+
 ### Admin Provisions A Merchant Portal User
 
 ```mermaid
 sequenceDiagram
     autonumber
-    participant Admin as Admin user
+    participant Operator as Admin or Ops user
     participant OpsUI as Ops Dashboard
     participant API as Ops API
-    participant Service as Merchant portal user admin service
+    participant Service as Merchant portal user ops service
     participant DB as PostgreSQL
 
-    Admin->>OpsUI: create or reset merchant portal user
+    Operator->>OpsUI: create, update, or reset merchant portal user
     OpsUI->>API: /v1/ops/merchants/{merchant_id}/portal-users
-    API->>API: require internal ADMIN session
+    API->>API: require internal ADMIN or OPS session
     API->>Service: create/reset/update scoped merchant user
     Service->>DB: write merchant_users and audit_logs
     DB-->>Service: persisted user

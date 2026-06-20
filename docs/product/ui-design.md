@@ -14,7 +14,7 @@ and workflows are different.
 | Merchant Dashboard | Merchant users | Read merchant-scoped payment, refund, webhook, profile, credential, and analytics data. | `4174` |
 
 The split prevents merchant users from seeing internal audit/reconciliation
-controls and keeps Admin-only password provisioning inside the internal Ops
+controls and keeps merchant portal user provisioning inside the internal Ops
 surface.
 
 ## Ops Dashboard

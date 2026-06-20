@@ -92,9 +92,10 @@ Important invariants should be enforced in DB where practical:
 # 3. Operational requirements
 
 * ops/admin owns merchant review, merchant state changes, and manual webhook retry
-* internal `ADMIN` users own merchant portal user creation, update,
-  deactivation/reactivation, and password reset
-* `OPS` users cannot manage internal users or merchant portal passwords
+* internal `ADMIN` and `OPS` users can create, update, deactivate/reactivate,
+  and reset passwords for merchant portal users
+* `OPS` users cannot manage internal users, rotate merchant credentials, or
+  disable merchants
 * Merchant Dashboard is read-only except for local password change
 * audit log must support entity-specific events for at least `MERCHANT`, `MERCHANT_CREDENTIAL`, `ONBOARDING_CASE`, `PAYMENT`, `REFUND`, `WEBHOOK_EVENT`, `RECONCILIATION`, `INTERNAL_USER`, and `MERCHANT_USER`
 * support and ops must be able to search payment by both `order_id` and `transaction_id`

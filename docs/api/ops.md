@@ -31,8 +31,8 @@ Role model:
 - `ADMIN`: full access, including internal user management, merchant disable,
   and credential rotation.
 - `OPS`: standard operating access for onboarding, payment/refund/webhook
-  support, reconciliation resolution, and merchant lifecycle actions short of
-  the admin-only actions above.
+  support, reconciliation resolution, merchant portal user management, and
+  merchant lifecycle actions short of the admin-only actions above.
 
 Ops write routes still require an `actor` object in the request body because
 the user-supplied `reason` remains part of the audit trail. `actor_type` and
@@ -71,6 +71,10 @@ Merchant read and portal user APIs:
 - `GET /v1/ops/merchants/{merchant_id}`
 - `GET /v1/ops/merchants/{merchant_id}/onboarding-case`
 - `GET /v1/ops/merchants/{merchant_id}/credentials`
+- `POST /v1/ops/merchants/{merchant_id}/qr-accounts`
+- `PATCH /v1/ops/merchants/{merchant_id}/qr-accounts/{qr_account_id}`
+- `POST /v1/ops/merchants/{merchant_id}/qr-accounts/{qr_account_id}/activate`
+- `POST /v1/ops/merchants/{merchant_id}/qr-accounts/{qr_account_id}/deactivate`
 - `GET /v1/ops/merchants/{merchant_id}/portal-users`
 - `POST /v1/ops/merchants/{merchant_id}/portal-users`
 - `PATCH /v1/ops/merchants/{merchant_id}/portal-users/{user_id}`
@@ -101,9 +105,11 @@ Audit and reconciliation:
 
 ## Merchant Portal User Management
 
-Merchant portal user management is `ADMIN`-only. `OPS` users can continue the
-standard operational workflows, but they cannot create merchant dashboard users,
-change portal roles/status, or reset merchant portal passwords.
+Merchant portal user management is available to both `ADMIN` and `OPS` internal
+users. Both roles can list, create, change role/status, and reset passwords for
+merchant dashboard users. Generated passwords are returned only by the immediate
+create/reset response, and every mutation records the authenticated internal
+actor in the audit log.
 
 ### List Portal Users
 
@@ -424,6 +430,71 @@ Errors:
 
 - `MERCHANT_NOT_FOUND` with HTTP 404.
 - `ACTIVE_CREDENTIAL_NOT_FOUND` with HTTP 404.
+
+## QR Receiving Accounts
+
+Ops manages merchant QR receiving accounts. Merchant self-service QR account
+configuration is out of pilot scope.
+
+### Create QR Account
+
+`POST /v1/ops/merchants/{merchant_id}/qr-accounts`
+
+Creates a VietQR receiving account and writes `MERCHANT_QR_ACCOUNT_CREATED`.
+Only one active account per merchant and provider is allowed.
+
+Request:
+
+```json
+{
+  "actor": {
+    "actor_type": "OPS",
+    "actor_id": null,
+    "reason": "Configure VietQR receiving account."
+  },
+  "provider": "VIETQR",
+  "bank_code": "VCB",
+  "bank_bin": "970436",
+  "account_number": "9704000000000001",
+  "account_name": "DEMO MERCHANT",
+  "template": "compact",
+  "status": "ACTIVE"
+}
+```
+
+Response:
+
+```json
+{
+  "qr_account_id": "qr-account-uuid",
+  "merchant_id": "m_demo",
+  "provider": "VIETQR",
+  "bank_code": "VCB",
+  "bank_bin": "970436",
+  "account_number": "9704000000000001",
+  "account_name": "DEMO MERCHANT",
+  "template": "compact",
+  "status": "ACTIVE",
+  "created_at": "2026-06-16T00:00:00Z",
+  "updated_at": "2026-06-16T00:00:00Z"
+}
+```
+
+### Update, Activate, Deactivate
+
+- `PATCH /v1/ops/merchants/{merchant_id}/qr-accounts/{qr_account_id}` updates
+  bank/account/template fields and writes `MERCHANT_QR_ACCOUNT_UPDATED`.
+- `POST /v1/ops/merchants/{merchant_id}/qr-accounts/{qr_account_id}/activate`
+  activates one account and deactivates the prior active account for the same
+  provider.
+- `POST /v1/ops/merchants/{merchant_id}/qr-accounts/{qr_account_id}/deactivate`
+  marks the account inactive.
+
+Errors:
+
+- `MERCHANT_NOT_FOUND` with HTTP 404.
+- `QR_ACCOUNT_NOT_FOUND` with HTTP 404.
+- `ACTIVE_QR_ACCOUNT_EXISTS` with HTTP 409.
 
 ## Reconciliation
 

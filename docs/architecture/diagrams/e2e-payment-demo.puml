@@ -1,0 +1,50 @@
+@startuml
+title End-to-End VietQR Payment Demo
+
+actor "Admin / Ops" as Admin
+participant "Ops Dashboard\n:4173" as Ops
+participant "Gateway API\n:8000" as Gateway
+database PostgreSQL as DB
+participant "Demo merchant backend\n+ checkout :8100" as Merchant
+actor Customer
+participant "Customer banking app" as BankApp
+participant "Bank/provider simulator" as Provider
+participant "Gateway worker" as Worker
+
+Admin -> Ops: Bootstrap first Admin
+Admin -> Ops: Create and approve merchant
+Ops -> Gateway: Credential, VietQR account, portal user, activate
+Gateway -> DB: Persist config and audit evidence
+
+Admin -> Merchant: Enter merchant_id, access_key, secret once
+Customer -> Merchant: Create checkout order
+Merchant -> Gateway: POST /v1/payments + merchant HMAC
+Gateway -> DB: Persist PENDING payment and VietQR evidence
+Gateway --> Merchant: qr_reference, qr_content, qr_image_base64
+Merchant --> Customer: Display amount, transfer content, QR, countdown
+
+Customer -> BankApp: Scan the VietQR image
+note right of BankApp
+  Scanning fills bank, account,
+  amount, and transfer content.
+  It does not call the gateway.
+end note
+
+Provider -> Gateway: POST signed provider callback (SUCCESS/FAILED)
+Gateway -> DB: Persist callback and final payment state
+Gateway -> DB: Create PENDING webhook event
+Merchant --> Customer: Bank responded; waiting for gateway webhook
+
+Worker -> DB: Lock and load due webhook
+Worker -> Merchant: Signed payment webhook
+Merchant -> Merchant: Verify HMAC/timestamp and deduplicate event_id
+Merchant --> Worker: HTTP 2xx
+Worker -> DB: Store delivery attempt and DELIVERED state
+Customer -> Merchant: Poll order every second
+Merchant --> Customer: Show SUCCESS, FAILED, or EXPIRED
+
+note over Provider
+  The simulator replaces a real bank/provider callback only.
+  The generated VietQR itself is scannable by a real banking app.
+end note
+@enduml

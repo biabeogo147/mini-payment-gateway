@@ -46,6 +46,13 @@
           "ensure('refund_reason', 'QA Postman refund');",
           "ensure('reconciliation_mismatch_amount', '99999.00');",
           "ensure('provider_source_type', 'SIMULATOR');",
+          "ensure('provider_id', 'simulator');",
+          "ensure('provider_callback_secret', 'dev-insecure-provider-callback-secret-change-me');",
+          "ensure('qr_bank_code', 'VCB');",
+          "ensure('qr_bank_bin', '970436');",
+          "ensure('qr_account_number', '9704000000000001');",
+          "ensure('qr_account_name', 'QA DEMO MERCHANT');",
+          "ensure('qr_template', 'compact');",
           "ensure('ops_reason', 'QA via Postman');",
           "ensure('lock_idempotency_key', 'false');",
           "",
@@ -80,6 +87,29 @@
           "  pm.request.headers.upsert({ key: 'X-Timestamp', value: timestamp });",
           "  pm.request.headers.upsert({ key: 'X-Signature', value: signature });",
           "  pm.request.headers.upsert({ key: 'X-Idempotency-Key', value: pm.environment.get('idempotency_key') || '' });",
+          "}",
+          "",
+          "const requiresProviderAuth = path.startsWith('/v1/provider/callbacks');",
+          "if (requiresProviderAuth) {",
+          "  const method = pm.request.method.toUpperCase();",
+          "  const timestamp = new Date().toISOString();",
+          "  let rawBody = '';",
+          "  if (pm.request.body && pm.request.body.mode === 'raw') {",
+          "    rawBody = pm.variables.replaceIn(pm.request.body.raw || '');",
+          "  }",
+          "  const bodyHash = CryptoJS.SHA256(CryptoJS.enc.Utf8.parse(rawBody)).toString(CryptoJS.enc.Hex);",
+          "  const signingString = `${timestamp}.${method}.${path}.${bodyHash}`;",
+          "  const secret = pm.environment.get('provider_callback_secret') || '';",
+          "  const signature = CryptoJS.HmacSHA256(signingString, secret).toString(CryptoJS.enc.Hex);",
+          "",
+          "  pm.environment.set('provider_timestamp', timestamp);",
+          "  pm.environment.set('provider_body_sha256_hex', bodyHash);",
+          "  pm.environment.set('provider_signing_string', signingString);",
+          "  pm.environment.set('provider_signature', signature);",
+          "",
+          "  pm.request.headers.upsert({ key: 'X-Provider-Id', value: pm.environment.get('provider_id') || 'simulator' });",
+          "  pm.request.headers.upsert({ key: 'X-Provider-Timestamp', value: timestamp });",
+          "  pm.request.headers.upsert({ key: 'X-Provider-Signature', value: signature });",
           "}"
         ]
       }
@@ -228,6 +258,37 @@
               "raw": "{\"actor\":{\"actor_type\":\"OPS\",\"actor_id\":null,\"reason\":\"{{ops_reason}}\"},\"access_key\":\"{{access_key}}\",\"secret_key\":\"{{merchant_secret}}\"}"
             },
             "url": "{{baseUrl}}/v1/ops/merchants/{{merchant_id}}/credentials"
+          }
+        },
+        {
+          "name": "Create QR Account",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Create QR account returns 200', function () { pm.response.to.have.status(200); });",
+                  "const data = pm.response.json();",
+                  "if (data.qr_account_id) { pm.environment.set('qr_account_id', data.qr_account_id); }"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "description": "Configures the active VietQR receiving account required before payment creation.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\"actor\":{\"actor_type\":\"OPS\",\"actor_id\":null,\"reason\":\"{{ops_reason}}\"},\"provider\":\"VIETQR\",\"bank_code\":\"{{qr_bank_code}}\",\"bank_bin\":\"{{qr_bank_bin}}\",\"account_number\":\"{{qr_account_number}}\",\"account_name\":\"{{qr_account_name}}\",\"template\":\"{{qr_template}}\",\"status\":\"ACTIVE\"}"
+            },
+            "url": "{{baseUrl}}/v1/ops/merchants/{{merchant_id}}/qr-accounts"
           }
         },
         {

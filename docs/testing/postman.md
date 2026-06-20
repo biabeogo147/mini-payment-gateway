@@ -113,6 +113,8 @@ same Postman workspace. They share the same environment.
 Most important variables:
 
 - `baseUrl`
+- `internal_email`
+- `internal_password`
 - `merchant_id`
 - `access_key`
 - `merchant_secret`
@@ -161,6 +163,28 @@ rotation tests.
 - `refund_reason`
 - `reconciliation_mismatch_amount`
 
+## Internal Ops Authentication
+
+Ops setup requests require an internal Admin/Ops session cookie. The
+`happy-path` collection includes an `Internal Login` request before the E2E-01
+Ops setup steps. Set these variables before running that folder:
+
+- `internal_email`
+- `internal_password`
+
+Newman example:
+
+```bash
+npx --yes newman run postman/scenarios/happy-path.collection.json \
+  -e postman/mini-payment-gateway.sandbox.environment.json \
+  --folder "E2E-01 Merchant Onboarding To Successful Payment And Refund" \
+  --env-var baseUrl=http://127.0.0.1:8000 \
+  --env-var internal_email="<admin-email>" \
+  --env-var internal_password="<admin-password>" \
+  --env-var provider_id=simulator \
+  --env-var provider_callback_secret=dev-insecure-provider-callback-secret-change-me
+```
+
 ## Merchant HMAC Authentication
 
 Merchant-facing payment and refund endpoints require HMAC headers.
@@ -182,6 +206,17 @@ QA/QC do not need to build the HMAC manually for normal runs.
 
 Some scenario collections intentionally override these headers to test auth
 failures, rotated credentials, and cross-merchant access checks.
+
+## Provider Callback HMAC Authentication
+
+Provider callback requests require:
+
+- `X-Provider-Id`
+- `X-Provider-Timestamp`
+- `X-Provider-Signature`
+
+The happy-path and callback collections generate these headers automatically
+from `provider_id` and `provider_callback_secret`.
 
 ## Recommended Usage Pattern
 

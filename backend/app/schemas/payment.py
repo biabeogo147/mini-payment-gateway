@@ -38,6 +38,7 @@ class PaymentResponse(BaseModel):
     transaction_id: str
     order_id: str
     merchant_id: str
+    qr_reference: str | None = None
     qr_content: str
     qr_image_url: str | None = None
     qr_image_base64: str | None = None
@@ -50,6 +51,7 @@ class PaymentResponse(BaseModel):
             transaction_id=payment.transaction_id,
             order_id=payment.order_id,
             merchant_id=merchant_id,
+            qr_reference=payment.qr_reference,
             qr_content=payment.qr_content,
             qr_image_url=payment.qr_image_url,
             qr_image_base64=payment.qr_image_base64,

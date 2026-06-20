@@ -277,6 +277,75 @@ class MerchantOpsServiceTest(unittest.TestCase):
         self.assertNotIn("old-secret", str(audit.before_state_json))
         self.assertNotIn("new-secret", str(audit.after_state_json))
 
+    def test_create_qr_account_requires_single_active_account_and_records_audit(self) -> None:
+        from app.core.errors import AppError
+        from app.models.enums import EntityType, MerchantQrAccountStatus, QrProvider
+        from app.services.merchant_ops_service import create_qr_account
+
+        merchant = _merchant()
+        db = _FakeDb()
+        store = _MerchantOpsStore(merchants=[merchant])
+
+        with store.patched_repositories():
+            response = create_qr_account(
+                db,
+                "m_demo",
+                _create_qr_account_request(self.actor, account_number="9704361234567890"),
+                self.actor,
+                now=self.now,
+            )
+
+        qr_account = store.qr_accounts[0]
+        self.assertTrue(db.committed)
+        self.assertEqual(response.merchant_id, "m_demo")
+        self.assertEqual(response.provider, QrProvider.VIETQR)
+        self.assertEqual(response.status, MerchantQrAccountStatus.ACTIVE)
+        self.assertEqual(qr_account.bank_bin, "970436")
+        self.assertEqual(qr_account.account_number, "9704361234567890")
+        audit = db.audit_logs[0]
+        self.assertEqual(audit.event_type, "MERCHANT_QR_ACCOUNT_CREATED")
+        self.assertEqual(audit.entity_type, EntityType.MERCHANT_QR_ACCOUNT)
+        self.assertEqual(audit.after_state_json["account_number"], "9704361234567890")
+
+        with store.patched_repositories():
+            with self.assertRaises(AppError) as error:
+                create_qr_account(
+                    _FakeDb(),
+                    "m_demo",
+                    _create_qr_account_request(self.actor, account_number="9704369999999999"),
+                    self.actor,
+                    now=self.now,
+                )
+
+        self.assertEqual(error.exception.error_code, "ACTIVE_QR_ACCOUNT_EXISTS")
+        self.assertEqual(error.exception.status_code, 409)
+
+    def test_activate_qr_account_deactivates_existing_active_account(self) -> None:
+        from app.models.enums import MerchantQrAccountStatus
+        from app.services.merchant_ops_service import activate_qr_account
+
+        merchant = _merchant()
+        active = _qr_account(merchant.id, account_number="111111", status=MerchantQrAccountStatus.ACTIVE)
+        inactive = _qr_account(merchant.id, account_number="222222", status=MerchantQrAccountStatus.INACTIVE)
+        db = _FakeDb()
+        store = _MerchantOpsStore(merchants=[merchant], qr_accounts=[active, inactive])
+
+        with store.patched_repositories():
+            response = activate_qr_account(
+                db,
+                "m_demo",
+                str(inactive.id),
+                _reason_request(self.actor),
+                self.actor,
+                now=self.now,
+            )
+
+        self.assertTrue(db.committed)
+        self.assertEqual(response.status, MerchantQrAccountStatus.ACTIVE)
+        self.assertEqual(active.status, MerchantQrAccountStatus.INACTIVE)
+        self.assertEqual(inactive.status, MerchantQrAccountStatus.ACTIVE)
+        self.assertEqual(db.audit_logs[0].event_type, "MERCHANT_QR_ACCOUNT_ACTIVATED")
+
 
 class _FakeDb:
     def __init__(self) -> None:
@@ -301,10 +370,11 @@ class _FakeDb:
 
 
 class _MerchantOpsStore:
-    def __init__(self, merchants=None, onboarding_cases=None, credentials=None) -> None:
+    def __init__(self, merchants=None, onboarding_cases=None, credentials=None, qr_accounts=None) -> None:
         self.merchants = merchants or []
         self.onboarding_cases = onboarding_cases or []
         self.credentials = credentials or []
+        self.qr_accounts = qr_accounts or []
 
     def patched_repositories(self):
         return _PatchGroup(
@@ -343,6 +413,22 @@ class _MerchantOpsStore:
             patch(
                 "app.services.merchant_ops_service.credential_repository.save",
                 side_effect=self.save_credential,
+            ),
+            patch(
+                "app.services.merchant_ops_service.merchant_qr_account_repository.get_active_by_merchant_provider",
+                side_effect=self.get_active_qr_account,
+            ),
+            patch(
+                "app.services.merchant_ops_service.merchant_qr_account_repository.get_by_id",
+                side_effect=self.get_qr_account_by_id,
+            ),
+            patch(
+                "app.services.merchant_ops_service.merchant_qr_account_repository.create",
+                side_effect=self.create_qr_account,
+            ),
+            patch(
+                "app.services.merchant_ops_service.merchant_qr_account_repository.save",
+                side_effect=self.save_qr_account,
             ),
         )
 
@@ -413,6 +499,41 @@ class _MerchantOpsStore:
     def save_credential(self, db, credential):
         return credential
 
+    def get_active_qr_account(self, db, merchant_db_id, provider):
+        from app.models.enums import MerchantQrAccountStatus
+
+        for qr_account in self.qr_accounts:
+            if (
+                qr_account.merchant_db_id == merchant_db_id
+                and qr_account.provider == provider
+                and qr_account.status == MerchantQrAccountStatus.ACTIVE
+            ):
+                return qr_account
+        return None
+
+    def get_qr_account_by_id(self, db, qr_account_id):
+        for qr_account in self.qr_accounts:
+            if str(qr_account.id) == str(qr_account_id):
+                return qr_account
+        return None
+
+    def create_qr_account(self, db, **kwargs):
+        qr_account = _qr_account(
+            merchant_db_id=kwargs["merchant_db_id"],
+            provider=kwargs["provider"],
+            bank_code=kwargs["bank_code"],
+            bank_bin=kwargs["bank_bin"],
+            account_number=kwargs["account_number"],
+            account_name=kwargs["account_name"],
+            template=kwargs["template"],
+            status=kwargs["status"],
+        )
+        self.qr_accounts.append(qr_account)
+        return qr_account
+
+    def save_qr_account(self, db, qr_account):
+        return qr_account
+
 
 class _PatchGroup:
     def __init__(self, *patches) -> None:
@@ -465,6 +586,32 @@ def _credential(merchant_db_id, access_key="ak_demo", secret_key="super-secret")
         secret_key_encrypted=secret_key,
         secret_key_last4=secret_key[-4:],
         status=CredentialStatus.ACTIVE,
+    )
+
+
+def _qr_account(
+    merchant_db_id,
+    provider=None,
+    bank_code="VCB",
+    bank_bin="970436",
+    account_number="9704361234567890",
+    account_name="DEMO MERCHANT LLC",
+    template="compact",
+    status=None,
+):
+    from app.models.enums import MerchantQrAccountStatus, QrProvider
+    from app.models.merchant_qr_account import MerchantQrAccount
+
+    return MerchantQrAccount(
+        id=uuid4(),
+        merchant_db_id=merchant_db_id,
+        provider=provider or QrProvider.VIETQR,
+        bank_code=bank_code,
+        bank_bin=bank_bin,
+        account_number=account_number,
+        account_name=account_name,
+        template=template,
+        status=status or MerchantQrAccountStatus.ACTIVE,
     )
 
 
@@ -524,6 +671,21 @@ def _rotate_credential_request(actor, access_key, secret_key):
         actor=actor,
         access_key=access_key,
         secret_key=secret_key,
+    )
+
+
+def _create_qr_account_request(actor, account_number):
+    from app.schemas.ops import CreateQrAccountRequest
+
+    return CreateQrAccountRequest(
+        actor=actor,
+        provider="VIETQR",
+        bank_code="VCB",
+        bank_bin="970436",
+        account_number=account_number,
+        account_name="DEMO MERCHANT LLC",
+        template="compact",
+        status="ACTIVE",
     )
 
 

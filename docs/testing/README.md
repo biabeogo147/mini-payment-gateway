@@ -27,6 +27,8 @@ This folder maps business scenarios to automated checks.
 cd backend
 python -m unittest discover tests -v
 python -m unittest tests.test_e2e_payment_refund_webhook -v
+python scripts/smoke_e2e_demo.py --outcome success
+python scripts/smoke_e2e_demo.py --outcome failed
 ```
 
 Dashboard verification from the repository root:
@@ -57,13 +59,16 @@ available.
 
 Ops Dashboard:
 
-- login as an internal Admin user;
+- login as an internal Ops user;
 - open Overview and confirm metrics/charts render without horizontal overflow;
 - open Merchants, select a merchant, and inspect status, onboarding,
   credentials, and portal users;
 - create or reset a merchant portal user and confirm the generated password is
   shown only in the immediate response;
-- verify `OPS` users cannot manage internal users or merchant portal passwords;
+- create, update, deactivate/reactivate, and reset a merchant portal user as
+  `OPS`, confirming generated passwords appear only in the immediate response;
+- verify `OPS` users cannot manage internal users, rotate credentials, or
+  disable merchants;
 - open Payments, Refunds, Webhooks, Reconciliation, and Audit detail pages.
 
 Merchant Dashboard:

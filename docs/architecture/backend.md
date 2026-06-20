@@ -39,6 +39,7 @@ backend/app/
   services/      Business rules and workflow orchestration
   repositories/  Database lookup and persistence helpers
   models/        SQLAlchemy schema, enums, and relationships
+  worker/        Background worker loop, config, and advisory locks
   db/            SQLAlchemy engine/session wiring
   core/          Shared config, errors, security, and time helpers
   main.py        FastAPI app assembly
@@ -99,6 +100,7 @@ Examples:
 - `backend/app/services/auth_service.py`
 - `backend/app/services/merchant_readiness_service.py`
 - `backend/app/services/payment_service.py`
+- `backend/app/services/qr_service.py`
 - `backend/app/services/refund_service.py`
 - `backend/app/services/audit_service.py`
 - `backend/app/services/merchant_ops_service.py`
@@ -109,7 +111,7 @@ Examples:
 - `backend/app/services/internal_user_admin_service.py`
 - `backend/app/services/ops_dashboard_service.py`
 - `backend/app/services/merchant_portal_auth_service.py`
-- `backend/app/services/merchant_portal_user_admin_service.py`
+- `backend/app/services/merchant_portal_user_ops_service.py`
 - `backend/app/services/merchant_portal_service.py`
 
 ### Repositories
@@ -126,6 +128,7 @@ Examples:
 - `backend/app/repositories/merchant_repository.py`
 - `backend/app/repositories/credential_repository.py`
 - `backend/app/repositories/payment_repository.py`
+- `backend/app/repositories/merchant_qr_account_repository.py`
 - `backend/app/repositories/order_reference_repository.py`
 - `backend/app/repositories/webhook_repository.py`
 - `backend/app/repositories/audit_repository.py`
@@ -178,14 +181,30 @@ HMAC API credentials:
   change-password routes;
 - `deps.get_current_merchant_user(...)` authenticates the merchant portal
   session cookie;
-- `merchant_portal_user_admin_service` lets internal `ADMIN` users provision,
-  update, deactivate, reactivate, and reset passwords for merchant portal users;
+- `merchant_portal_user_ops_service` lets internal `ADMIN` and `OPS` users
+  provision, update, deactivate, reactivate, and reset passwords for merchant
+  portal users while preserving the authenticated actor in audit events;
 - `merchant_portal_service` backs read-only merchant-scoped dashboard summary,
   charts, analytics, explorers, profile, and credential metadata.
 
 Merchant Portal routes must derive merchant scope from the authenticated
 `MerchantUser`. They must not accept a client-supplied `merchant_id` for data
 scoping.
+
+### Worker Layer
+
+The pilot worker runs inside the backend package as `python -m app.worker.main`.
+It uses the same SQLAlchemy session wiring and service layer as the API.
+
+Worker jobs:
+
+- payment expiration via `expiration_service.expire_overdue_payments`;
+- due webhook delivery and retry via
+  `webhook_delivery_service.deliver_due_webhooks`.
+
+Each job uses a PostgreSQL advisory lock. If another worker already holds the
+job lock, the cycle logs a skip and tries again on the next interval. Batch
+sizes and intervals are environment-driven.
 
 ### Readiness And E2E Layer
 
