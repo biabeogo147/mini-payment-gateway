@@ -5,11 +5,12 @@ bootstrap an Admin, onboard a merchant, create a scannable VietQR payment,
 simulate the bank result, deliver the gateway webhook, and let the merchant
 checkout show the final status.
 
-The gateway remains API-only. `backend/demo_merchant/` is a separate local
-merchant backend and checkout used to show how a real merchant integrates the
-gateway. The VietQR image can be scanned by a banking app; the two simulation
-buttons replace only the provider/bank callback because this repository is not
-connected to a real bank.
+The gateway remains API-only. `backend/demo_merchant/` is a separate merchant
+backend and checkout used to show how a real merchant integrates the gateway.
+It can run locally from `.venv` or as the sandbox `demo-merchant` service. The
+VietQR image can be scanned by a banking app; the two simulation buttons replace
+only the provider/bank callback because this repository is not connected to a
+real bank.
 
 ## Prerequisites
 
@@ -87,6 +88,27 @@ Open these pages:
 - Gateway OpenAPI: `http://127.0.0.1:8000/docs`
 - Demo merchant checkout: `http://127.0.0.1:8100`
 
+## Sandbox-Hosted Demo
+
+The sandbox deployment starts the Demo Merchant App automatically with the
+gateway. Open the checkout from a LAN client at:
+
+```text
+http://<sandbox-host>:8100
+```
+
+For the current sandbox this is `http://192.168.1.199:8100`. Configure the
+merchant credential webhook with the internal Compose URL, which is reachable
+by the gateway worker:
+
+```text
+http://demo-merchant:8100/webhooks/payment-gateway
+```
+
+Do not use the browser-facing host URL as the container-to-container webhook
+address. Demo setup and orders remain in memory and reset whenever the
+`demo-merchant` container restarts.
+
 ## Demo Data
 
 The reset leaves no users. On the Ops Dashboard bootstrap screen, create the
@@ -122,7 +144,8 @@ values:
 - Contact name: `Demo Merchant Owner`
 - Contact email: `merchant.owner@example.com`
 - Contact phone: `0900000000`
-- Webhook URL: `http://127.0.0.1:8100/webhooks/payment-gateway`
+- Webhook URL for local `.venv`: `http://127.0.0.1:8100/webhooks/payment-gateway`
+- Webhook URL for sandbox Compose: `http://demo-merchant:8100/webhooks/payment-gateway`
 - Settlement account name: `E2E DEMO SHOP`
 - Settlement account number: `9704000000000001`
 - Settlement bank code: `VCB`
@@ -195,9 +218,10 @@ the Merchant entity and not an internal OPS account; it is the human login for
 only `ADMIN` can manage internal users, rotate credentials, or disable merchants.
 
 Finally, use `m_e2e_demo`, `ak_e2e_demo`, and
-`DemoMerchantSecret123!` in the Setup form at `http://127.0.0.1:8100`. The
-secret is kept only in the demo merchant server's memory and is never returned
-to browser JavaScript after setup.
+`DemoMerchantSecret123!` in the Setup form at `http://127.0.0.1:8100` locally
+or `http://192.168.1.199:8100` on the sandbox. The secret is kept only in the
+demo merchant server's memory and is never returned to browser JavaScript after
+setup.
 
 ## Instructor Walkthrough
 
@@ -253,11 +277,12 @@ For the existing Postman/Newman pilot scenario and exact command, see
 
 - `ModuleNotFoundError: qrcode`: run the editable install with the same
   `.venv` Python used to start the backend.
-- Checkout remains on "waiting for gateway": confirm the worker terminal is
-  running with a one-second interval and the merchant webhook URL points to
-  `http://127.0.0.1:8100/webhooks/payment-gateway`.
+- Checkout remains on "waiting for gateway": confirm the worker is running and
+  the merchant webhook URL is `http://127.0.0.1:8100/webhooks/payment-gateway`
+  locally or `http://demo-merchant:8100/webhooks/payment-gateway` on sandbox.
 - Provider callback is rejected: the gateway and demo merchant must use the
-  same simulator secret from `PROVIDER_CALLBACK_SECRETS` and
+  same simulator secret. Sandbox selects it from `PROVIDER_CALLBACK_SECRETS`;
+  local development may set either that mapping or
   `DEMO_PROVIDER_CALLBACK_SECRET`.
 - Webhook is rejected: configure the demo merchant with the exact API secret
   returned when the Ops credential was created.

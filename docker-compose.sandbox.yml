@@ -75,6 +75,33 @@ services:
       timeout: 5s
       retries: 6
 
+  demo-merchant:
+    build:
+      context: ./backend
+    restart: unless-stopped
+    environment:
+      GATEWAY_BASE_URL: http://backend:8000
+      DEMO_PROVIDER_ID: ${DEMO_PROVIDER_ID:-simulator}
+      PROVIDER_CALLBACK_SECRETS: ${PROVIDER_CALLBACK_SECRETS:?PROVIDER_CALLBACK_SECRETS is required for sandbox}
+      DEMO_MODE: ${DEMO_MODE:-true}
+    depends_on:
+      backend:
+        condition: service_healthy
+    command: bash -lc "uvicorn demo_merchant.main:app --host 0.0.0.0 --port 8100"
+    ports:
+      - "${DEMO_MERCHANT_BIND_ADDR:-127.0.0.1}:${DEMO_MERCHANT_PORT:-8100}:8100"
+    healthcheck:
+      test:
+        [
+          "CMD",
+          "python",
+          "-c",
+          "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8100/health').read()",
+        ]
+      interval: 10s
+      timeout: 5s
+      retries: 6
+
   ops-dashboard:
     build:
       context: .

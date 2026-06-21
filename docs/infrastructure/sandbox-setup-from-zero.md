@@ -176,6 +176,10 @@ Minimum categories that must be present:
   - `MERCHANT_AUTH_COOKIE_NAME`
   - `MERCHANT_AUTH_TTL_SECONDS`
   - `MERCHANT_AUTH_COOKIE_SECURE`
+- provider and demo merchant:
+  - `PROVIDER_CALLBACK_SECRETS`
+  - `DEMO_PROVIDER_ID`
+  - `DEMO_MODE`
 - published bind/port values:
   - `POSTGRES_BIND_ADDR`
   - `POSTGRES_PORT`
@@ -185,6 +189,8 @@ Minimum categories that must be present:
   - `OPS_DASHBOARD_PORT`
   - `MERCHANT_DASHBOARD_BIND_ADDR`
   - `MERCHANT_DASHBOARD_PORT`
+  - `DEMO_MERCHANT_BIND_ADDR`
+  - `DEMO_MERCHANT_PORT`
 
 Minimum example:
 
@@ -206,6 +212,10 @@ MERCHANT_AUTH_COOKIE_NAME=mini_payment_gateway_merchant_session
 MERCHANT_AUTH_TTL_SECONDS=43200
 MERCHANT_AUTH_COOKIE_SECURE=false
 
+PROVIDER_CALLBACK_SECRETS=simulator=replace-with-a-provider-callback-secret
+DEMO_PROVIDER_ID=simulator
+DEMO_MODE=true
+
 POSTGRES_BIND_ADDR=127.0.0.1
 POSTGRES_PORT=5432
 BACKEND_BIND_ADDR=127.0.0.1
@@ -214,12 +224,16 @@ OPS_DASHBOARD_BIND_ADDR=127.0.0.1
 OPS_DASHBOARD_PORT=4173
 MERCHANT_DASHBOARD_BIND_ADDR=127.0.0.1
 MERCHANT_DASHBOARD_PORT=4174
+DEMO_MERCHANT_BIND_ADDR=127.0.0.1
+DEMO_MERCHANT_PORT=8100
 ```
 
 Important notes:
 
 - keep `DATABASE_URL` pointed at the Docker service host `postgres`
 - use different long random values for internal and merchant auth secrets
+- keep the provider callback secret stable across deploys; the demo merchant
+  selects the `DEMO_PROVIDER_ID` entry from `PROVIDER_CALLBACK_SECRETS`
 - use `127.0.0.1` for host-only publishing
 - use the sandbox LAN IP when internal clients should connect directly
 - do not commit the real `.env`
@@ -251,7 +265,8 @@ sudo -u github-runner bash -lc 'cd /opt/mini-payment-gateway && bash deploy/sand
 What this proves:
 
 - checkout, Docker, database, and migrations all work on the host
-- backend and both dashboards can start before GitHub Actions is involved
+- backend, worker, demo merchant, and both dashboards can start before GitHub
+  Actions is involved
 
 Verify using the configured published host and ports:
 
@@ -260,13 +275,16 @@ sudo -u github-runner bash -lc 'cd /opt/mini-payment-gateway && docker compose -
 curl -fsS http://<configured-host>:8000/health
 curl -fsS http://<configured-host>:4173/
 curl -fsS http://<configured-host>:4174/
+curl -fsS http://<configured-host>:8100/health
 curl -fsS http://<configured-host>:8000/v1/internal/auth/bootstrap-status
 ```
 
 Success means:
 
-- `postgres`, `backend`, `ops-dashboard`, and `merchant-dashboard` are up
+- `postgres`, `backend`, `worker`, `demo-merchant`, `ops-dashboard`, and
+  `merchant-dashboard` are up
 - backend health returns `{"status":"ok"}`
+- demo merchant health returns a JSON object with `"status":"ok"`
 - both dashboard roots return HTML
 
 ## Step 8: Register The Self-Hosted Runner
@@ -358,6 +376,7 @@ You are done when all of these are true:
 - the self-hosted runner is online
 - workflow deploy succeeds
 - backend health passes
+- demo merchant health passes
 - both dashboard roots respond
 
 ## Handoff After Day-0
