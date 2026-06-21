@@ -188,6 +188,31 @@ Run the commands from:
 - Step 6: Verify Container State
 - Step 7: Verify Application Endpoints
 
+## Reset Sandbox Demo Data
+
+Use this only when the sandbox must return to a clean first-admin state for a
+new demonstration. It removes all business data but preserves schema migration
+history.
+
+```bash
+sudo -u github-runner bash -lc '
+  cd /opt/mini-payment-gateway &&
+  bash deploy/reset_sandbox_demo.sh --confirm-reset
+'
+```
+
+The script performs these operations in order:
+
+1. validates `APP_ENV=sandbox`, Compose, and PostgreSQL;
+2. stops `backend`, `worker`, and `demo-merchant`;
+3. writes a timestamped compressed `pg_dump` to
+   `/home/github-runner/backups/mini-payment-gateway/`;
+4. truncates public business tables while excluding `alembic_version`;
+5. restarts services and checks backend and Demo Merchant health.
+
+If truncate fails after services stop, an exit trap attempts to start the three
+services again. Inspect the printed backup path before retrying.
+
 ## Rollback Model
 
 Preferred recovery path:
@@ -375,6 +400,12 @@ Manual deploy:
 
 ```bash
 sudo -u github-runner bash -lc 'cd /opt/mini-payment-gateway && bash deploy/sandbox_deploy.sh'
+```
+
+Reset sandbox demo data:
+
+```bash
+sudo -u github-runner bash -lc 'cd /opt/mini-payment-gateway && bash deploy/reset_sandbox_demo.sh --confirm-reset'
 ```
 
 Runner status:
