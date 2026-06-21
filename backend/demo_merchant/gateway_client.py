@@ -22,6 +22,20 @@ class GatewayClient:
         self.settings = settings
         self._http_client = http_client
 
+    def verify_integration(self, *, integration: MerchantIntegration) -> dict:
+        path = "/v1/merchant/auth/verify"
+        body = b""
+        headers = build_merchant_headers(
+            merchant_id=integration.merchant_id,
+            access_key=integration.access_key,
+            secret=integration.secret_key,
+            method="GET",
+            path=path,
+            body=body,
+            now=_utc_now(),
+        )
+        return self._request("GET", path, body, headers)
+
     def create_payment(
         self,
         *,
@@ -79,10 +93,18 @@ class GatewayClient:
         return self._post(path, body, headers)
 
     def _post(self, path: str, body: bytes, headers: dict[str, str]) -> dict:
+        return self._request("POST", path, body, headers)
+
+    def _request(self, method: str, path: str, body: bytes, headers: dict[str, str]) -> dict:
         owns_client = self._http_client is None
         client = self._http_client or httpx.Client(timeout=self.settings.request_timeout_seconds)
         try:
-            response = client.post(f"{self.settings.gateway_base_url}{path}", content=body, headers=headers)
+            response = client.request(
+                method,
+                f"{self.settings.gateway_base_url}{path}",
+                content=body,
+                headers=headers,
+            )
         except httpx.RequestError as exc:
             raise GatewayClientError(f"Gateway request failed: {exc}") from exc
         finally:

@@ -69,17 +69,25 @@ def create_app(
 
     @app.get("/health")
     def health() -> dict:
-        return {"status": "ok", "configured": resolved_store.integration() is not None}
+        integration = resolved_store.integration()
+        return {
+            "status": "ok",
+            "configured": integration is not None,
+            "merchant_id": integration.merchant_id if integration else None,
+        }
 
     @app.put("/api/setup")
     def setup(request: SetupRequest) -> dict:
-        resolved_store.set_integration(
-            MerchantIntegration(
-                merchant_id=request.merchant_id,
-                access_key=request.access_key,
-                secret_key=request.secret_key,
-            )
+        integration = MerchantIntegration(
+            merchant_id=request.merchant_id,
+            access_key=request.access_key,
+            secret_key=request.secret_key,
         )
+        try:
+            gateway.verify_integration(integration=integration)
+        except GatewayClientError as exc:
+            raise HTTPException(status_code=exc.status_code, detail=str(exc)) from exc
+        resolved_store.set_integration(integration)
         return {"configured": True, "merchant_id": request.merchant_id}
 
     @app.post("/api/orders")

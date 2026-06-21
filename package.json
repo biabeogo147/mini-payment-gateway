@@ -15,6 +15,7 @@
     "merchant-dashboard:build": "npm --workspace @mini-payment-gateway/merchant-dashboard run build",
     "merchant-dashboard:typecheck": "npm --workspace @mini-payment-gateway/merchant-dashboard run typecheck",
     "merchant-dashboard:test": "npm --workspace @mini-payment-gateway/merchant-dashboard run test",
-    "merchant-dashboard:preview": "npm --workspace @mini-payment-gateway/merchant-dashboard run preview"
+    "merchant-dashboard:preview": "npm --workspace @mini-payment-gateway/merchant-dashboard run preview",
+    "demo-merchant:test": "node --test backend/tests/demo_merchant_ui.test.mjs"
   }
 }
