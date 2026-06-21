@@ -24,6 +24,25 @@ Signature:
 hex(hmac_sha256(secret_key, signing_string))
 ```
 
+## Verify Credential
+
+`GET /v1/merchant/auth/verify`
+
+This side-effect-free endpoint verifies the same merchant HMAC used by payment
+requests. A successful response confirms that the merchant id, active access
+key, secret, timestamp, and signature are valid:
+
+```json
+{
+  "authenticated": true,
+  "merchant_id": "m_demo"
+}
+```
+
+Demo Merchant calls this endpoint before retaining a submitted credential, so
+an invalid credential is rejected during setup instead of during payment
+creation.
+
 ## Create Payment
 
 `POST /v1/payments`

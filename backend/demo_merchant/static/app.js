@@ -1,4 +1,9 @@
-const state = { configured: false, order: null, pollTimer: null, countdownTimer: null };
+const state = {
+  configured: false,
+  order: null,
+  pollTimer: null,
+  countdownTimer: null,
+};
 
 const $ = (id) => document.getElementById(id);
 
@@ -13,11 +18,8 @@ $("setup-form").addEventListener("submit", async (event) => {
         secret_key: $("secret-key").value,
       },
     });
-    state.configured = true;
     $("secret-key").value = "";
-    $("create-order").disabled = false;
-    $("connection-state").textContent = `Đã kết nối ${result.merchant_id}`;
-    $("connection-state").className = "status-pill success-state";
+    setConnected(result.merchant_id);
     toast("Đã lưu credential ở demo merchant backend.");
   } catch (error) {
     toast(error.message, true);
@@ -47,6 +49,9 @@ $("order-form").addEventListener("submit", async (event) => {
 
 $("simulate-success").addEventListener("click", () => simulate("SUCCESS"));
 $("simulate-failed").addEventListener("click", () => simulate("FAILED"));
+$("new-order").addEventListener("click", resetCurrentOrder);
+
+hydrateConnection();
 
 async function simulate(status) {
   if (!state.order) return;
@@ -78,8 +83,7 @@ async function refreshOrder() {
     state.order = await api(`/api/orders/${encodeURIComponent(state.order.order_id)}`);
     renderOrder();
     if (["SUCCESS", "FAILED", "EXPIRED"].includes(state.order.status)) {
-      clearInterval(state.pollTimer);
-      clearInterval(state.countdownTimer);
+      stopTimers();
     }
   } catch (error) {
     toast(error.message, true);
@@ -99,16 +103,7 @@ function renderOrder() {
   $("payment-status").textContent = order.status;
   $("payment-status").className = `status-pill ${order.status.toLowerCase()}`;
 
-  const bankStep = $("bank-step");
-  const webhookStep = $("webhook-step");
-  if (order.notification_state === "AWAITING_WEBHOOK" || order.notification_state === "WEBHOOK_RECEIVED") {
-    bankStep.className = "timeline-step done";
-    bankStep.querySelector("p").textContent = "Callback đã được gateway chấp nhận.";
-  }
-  if (order.notification_state === "WEBHOOK_RECEIVED") {
-    webhookStep.className = `timeline-step done ${order.status === "FAILED" ? "failed-step" : ""}`;
-    webhookStep.querySelector("p").textContent = `Đã nhận ${order.webhook_event_id}.`;
-  }
+  renderTimeline(order);
 
   const messages = {
     PENDING: [
@@ -122,8 +117,122 @@ function renderOrder() {
     EXPIRED: ["Giao dịch đã hết hạn", "Vui lòng tạo payment mới."],
   };
   [$("status-title").textContent, $("status-message").textContent] = messages[order.status] || messages.PENDING;
+  const isTerminal = ["SUCCESS", "FAILED", "EXPIRED"].includes(order.status);
+  setTerminalControls(isTerminal);
   setSimulationBusy(order.notification_state === "AWAITING_WEBHOOK" || order.status !== "PENDING");
   renderCountdown();
+}
+
+function renderTimeline(order) {
+  setTimelineStep("bank-step", {
+    className: "timeline-step",
+    title: "Ngân hàng phản hồi",
+    message: "Chưa có callback.",
+  });
+  setTimelineStep("webhook-step", {
+    className: "timeline-step",
+    title: "Merchant nhận webhook",
+    message: "Đang chờ gateway thông báo.",
+  });
+
+  if (order.status === "SUCCESS") {
+    setTimelineStep("bank-step", {
+      className: "timeline-step done",
+      title: "Ngân hàng xác nhận thanh toán",
+      message: "Callback SUCCESS đã được gateway xử lý.",
+    });
+    setTimelineStep("webhook-step", {
+      className: "timeline-step done",
+      title: "Merchant nhận kết quả thành công",
+      message: `Đã nhận ${order.webhook_event_id}.`,
+    });
+    return;
+  }
+
+  if (order.status === "FAILED") {
+    setTimelineStep("bank-step", {
+      className: "timeline-step done failed-step",
+      title: "Ngân hàng từ chối giao dịch",
+      message: "Callback FAILED đã được gateway xử lý.",
+    });
+    setTimelineStep("webhook-step", {
+      className: "timeline-step done failed-step",
+      title: "Merchant nhận kết quả thất bại",
+      message: `Đã nhận ${order.webhook_event_id}.`,
+    });
+    return;
+  }
+
+  if (order.status === "EXPIRED") {
+    setTimelineStep("bank-step", {
+      className: "timeline-step expired-step",
+      title: "Không có callback ngân hàng",
+      message: "Payment hết hạn trước khi có phản hồi.",
+    });
+    setTimelineStep("webhook-step", {
+      className: "timeline-step done expired-step",
+      title: "Merchant nhận thông báo hết hạn",
+      message: `Worker đã gửi webhook ${order.webhook_event_id}.`,
+    });
+    return;
+  }
+
+  if (order.notification_state === "AWAITING_WEBHOOK") {
+    setTimelineStep("bank-step", {
+      className: "timeline-step awaiting-step",
+      title: "Ngân hàng đã gửi kết quả",
+      message: "Gateway đã xử lý callback, đang chờ gửi webhook.",
+    });
+  }
+}
+
+function setTimelineStep(id, { className, title, message }) {
+  const step = $(id);
+  step.className = className;
+  step.querySelector("strong").textContent = title;
+  step.querySelector("p").textContent = message;
+}
+
+function setTerminalControls(isTerminal) {
+  $("simulate-success").hidden = isTerminal;
+  $("simulate-failed").hidden = isTerminal;
+  $("new-order").hidden = !isTerminal;
+  $("demo-control-eyebrow").textContent = isTerminal ? "Giao dịch hoàn tất" : "Điều khiển demo";
+  $("demo-control-title").textContent = isTerminal ? "Sẵn sàng cho payment tiếp theo" : "Mô phỏng ngân hàng";
+}
+
+function resetCurrentOrder() {
+  stopTimers();
+  state.order = null;
+  $("active-checkout").hidden = true;
+  $("empty-checkout").hidden = false;
+  setTerminalControls(false);
+  setSimulationBusy(false);
+  setBusy(false);
+  toast("Đã sẵn sàng tạo giao dịch mới.");
+}
+
+async function hydrateConnection() {
+  try {
+    const health = await api("/health");
+    if (health.configured) setConnected(health.merchant_id);
+  } catch (_error) {
+    // The healthcheck will be retried naturally when the user saves credentials.
+  }
+}
+
+function setConnected(merchantId) {
+  state.configured = true;
+  $("create-order").disabled = false;
+  $("connection-state").textContent = merchantId ? `Đã kết nối ${merchantId}` : "Đã kết nối";
+  $("connection-state").className = "status-pill success-state";
+}
+
+function stopTimers() {
+  clearInterval(state.pollTimer);
+  clearInterval(state.countdownTimer);
+  state.pollTimer = null;
+  state.countdownTimer = null;
 }
 
 function renderCountdown() {

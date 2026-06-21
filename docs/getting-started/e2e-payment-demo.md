@@ -246,7 +246,9 @@ Finally, use `m_e2e_demo`, `ak_e2e_demo`, and
 `DemoMerchantSecret123!` in the Setup form at `http://127.0.0.1:8100` locally
 or `http://192.168.1.199:8100` on the sandbox. The secret is kept only in the
 demo merchant server's memory and is never returned to browser JavaScript after
-setup.
+setup. **Lưu kết nối** first sends a signed, side-effect-free verification
+request to the gateway. The connected badge is shown only after the gateway
+accepts the merchant id, access key, and secret.
 
 ## Instructor Walkthrough
 
@@ -272,10 +274,26 @@ setup.
    evidence.
 8. Repeat with **Thất bại** to demonstrate the failure reason and failed final
    state.
+9. Click **Tạo giao dịch mới** to clear only the completed checkout. The demo
+   merchant keeps its in-memory credential, so the next payment can be created
+   without reconnecting. Reloading the page also restores this connection while
+   the demo merchant process remains alive.
 
 The important boundary is: scanning the QR opens or fills the banking app; it
 does not call the gateway. The bank/provider result callback is what informs
 the gateway, and the signed gateway webhook is what informs the merchant.
+
+The three terminal states intentionally follow different paths:
+
+- `SUCCESS`: the bank simulator sends a signed `SUCCESS` callback, the gateway
+  applies it, and the worker delivers `payment.succeeded` to the merchant.
+- `FAILED`: the simulator sends a valid signed `FAILED` callback to represent a
+  bank/provider rejection. "Callback processed" means its evidence and HMAC
+  were accepted; the business result is still a failed payment. The worker then
+  delivers `payment.failed`.
+- `EXPIRED`: no bank callback occurs. The gateway worker detects that a pending
+  payment passed `expire_at`, marks it expired, and delivers `payment.expired`
+  to the merchant.
 
 ## Automated HTTP Smoke
 

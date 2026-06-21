@@ -57,6 +57,7 @@ button { min-height: 40px; padding: 0 16px; border: 0; border-radius: 6px; font-
 .primary { color: #ffffff; background: #0b797c; }
 .success { color: #ffffff; background: #177245; }
 .danger { color: #ffffff; background: #b64545; }
+.secondary { color: #26343b; background: #ffffff; border: 1px solid #aeb9be; }
 
 .empty-state { min-height: 530px; display: grid; place-content: center; justify-items: center; text-align: center; color: #66737b; }
 .empty-state h2 { margin: 16px 0 6px; color: #253138; }
@@ -86,6 +87,11 @@ button { min-height: 40px; padding: 0 16px; border: 0; border-radius: 6px; font-
 .timeline-step.done { color: #177245; }
 .timeline-step.done > span { border-color: #177245; background: #177245; }
 .timeline-step.failed-step { color: #a03737; }
+.timeline-step.failed-step > span { border-color: #a03737; background: #a03737; }
+.timeline-step.awaiting-step { color: #8a5b12; }
+.timeline-step.awaiting-step > span { border-color: #c58a27; background: #fff1c9; }
+.timeline-step.expired-step { color: #76551d; }
+.timeline-step.expired-step > span { border-color: #b18439; background: #f3dfb8; }
 .demo-controls { display: flex; align-items: center; justify-content: space-between; gap: 18px; margin-top: 12px; padding: 17px 18px; border: 1px solid #dfe4e6; background: #f7f9f9; }
 .demo-controls h3 { margin: 3px 0 0; font-size: 15px; }
 .button-row { display: flex; gap: 8px; }

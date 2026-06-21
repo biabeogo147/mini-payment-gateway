@@ -4,6 +4,7 @@ from app.controllers.errors import app_error_handler
 from app.controllers.health_controller import router as health_router
 from app.controllers.internal_auth_controller import router as internal_auth_router
 from app.controllers.internal_user_controller import router as internal_user_router
+from app.controllers.merchant_api_auth_controller import router as merchant_api_auth_router
 from app.controllers.merchant_portal_auth_controller import router as merchant_portal_auth_router
 from app.controllers.merchant_portal_controller import router as merchant_portal_router
 from app.controllers.ops_dashboard_controller import router as ops_dashboard_router
@@ -22,6 +23,7 @@ app.add_exception_handler(AppError, app_error_handler)
 app.include_router(health_router)
 app.include_router(internal_auth_router)
 app.include_router(internal_user_router)
+app.include_router(merchant_api_auth_router)
 app.include_router(merchant_portal_auth_router)
 app.include_router(merchant_portal_router)
 app.include_router(ops_dashboard_router)

@@ -11,6 +11,14 @@ class _FakeGatewayClient:
     def __init__(self) -> None:
         self.create_calls = []
         self.simulate_calls = []
+        self.verify_calls = []
+        self.verify_error = None
+
+    def verify_integration(self, *, integration):
+        self.verify_calls.append(integration)
+        if self.verify_error is not None:
+            raise self.verify_error
+        return {"authenticated": True, "merchant_id": integration.merchant_id}
 
     def create_payment(self, *, integration, order_id, amount, description, ttl_seconds):
         self.create_calls.append(
@@ -93,6 +101,24 @@ class DemoMerchantAppTest(unittest.TestCase):
         self.assertEqual(response.status_code, 200)
         self.assertIn("Thanh toán VietQR", response.text)
         self.assertIn("Mô phỏng ngân hàng", response.text)
+        self.assertIn('id="new-order"', response.text)
+
+    def test_health_restores_configured_merchant_without_exposing_credentials(self) -> None:
+        unconfigured = self.client.get("/health")
+        self.assertEqual(
+            unconfigured.json(),
+            {"status": "ok", "configured": False, "merchant_id": None},
+        )
+
+        self.configure()
+        configured = self.client.get("/health")
+
+        self.assertEqual(
+            configured.json(),
+            {"status": "ok", "configured": True, "merchant_id": "m_demo"},
+        )
+        self.assertNotIn("access_key", configured.text)
+        self.assertNotIn("secret", configured.text)
 
     def test_stylesheet_keeps_hidden_checkout_states_out_of_layout(self) -> None:
         response = self.client.get("/static/styles.css")
@@ -109,6 +135,7 @@ class DemoMerchantAppTest(unittest.TestCase):
         self.assertEqual(missing_setup.json()["detail"], "Demo merchant is not configured.")
 
         self.configure()
+        self.assertEqual(len(self.gateway.verify_calls), 1)
         created = self.create_order().json()
 
         self.assertEqual(created["status"], "PENDING")
@@ -116,6 +143,24 @@ class DemoMerchantAppTest(unittest.TestCase):
         self.assertEqual(created["qr_reference"], "PDEMO1001")
         self.assertTrue(created["qr_image_base64"].startswith("data:image/png;base64,"))
         self.assertEqual(len(self.gateway.create_calls), 1)
+
+    def test_setup_rejects_invalid_gateway_credential_without_persisting_it(self) -> None:
+        from demo_merchant.gateway_client import GatewayClientError
+
+        self.gateway.verify_error = GatewayClientError("Merchant authentication failed.", 401)
+
+        response = self.client.put(
+            "/api/setup",
+            json={
+                "merchant_id": "m_wrong",
+                "access_key": "ak_wrong",
+                "secret_key": "wrong-secret",
+            },
+        )
+
+        self.assertEqual(response.status_code, 401)
+        self.assertEqual(response.json()["detail"], "Merchant authentication failed.")
+        self.assertEqual(self.client.get("/health").json()["configured"], False)
 
     def test_simulator_waits_for_webhook_before_terminal_status(self) -> None:
         self.configure()
