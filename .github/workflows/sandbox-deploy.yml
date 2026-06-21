@@ -109,6 +109,7 @@ jobs:
           SANDBOX_HEALTH_URL: ${{ vars.SANDBOX_HEALTH_URL }}
           SANDBOX_OPS_DASHBOARD_URL: ${{ vars.SANDBOX_OPS_DASHBOARD_URL }}
           SANDBOX_MERCHANT_DASHBOARD_URL: ${{ vars.SANDBOX_MERCHANT_DASHBOARD_URL }}
+          SANDBOX_DEMO_MERCHANT_URL: ${{ vars.SANDBOX_DEMO_MERCHANT_URL }}
         run: |
           set -euo pipefail
 
@@ -117,6 +118,7 @@ jobs:
           HEALTH_URL="${SANDBOX_HEALTH_URL:-}"
           OPS_DASHBOARD_URL="${SANDBOX_OPS_DASHBOARD_URL:-}"
           MERCHANT_DASHBOARD_URL="${SANDBOX_MERCHANT_DASHBOARD_URL:-}"
+          DEMO_MERCHANT_URL="${SANDBOX_DEMO_MERCHANT_URL:-}"
 
           cd "$APP_DIR"
           git fetch --prune origin main
@@ -128,4 +130,5 @@ jobs:
           HEALTH_URL="$HEALTH_URL" \
           OPS_DASHBOARD_URL="$OPS_DASHBOARD_URL" \
           MERCHANT_DASHBOARD_URL="$MERCHANT_DASHBOARD_URL" \
+          DEMO_MERCHANT_URL="$DEMO_MERCHANT_URL" \
           bash deploy/sandbox_deploy.sh

@@ -53,7 +53,7 @@ probe_host_for_bind_addr() {
 print_failure_context() {
   log "Deployment failed. Recent compose state and logs:"
   docker compose -f "$COMPOSE_FILE" ps || true
-  docker compose -f "$COMPOSE_FILE" logs --tail 100 backend worker ops-dashboard merchant-dashboard postgres || true
+  docker compose -f "$COMPOSE_FILE" logs --tail 100 backend worker demo-merchant ops-dashboard merchant-dashboard postgres || true
 }
 
 trap 'print_failure_context' ERR
@@ -85,18 +85,24 @@ OPS_DASHBOARD_BIND_ADDR_VALUE="$(env_value_or_default OPS_DASHBOARD_BIND_ADDR 12
 OPS_DASHBOARD_PORT_VALUE="$(env_value_or_default OPS_DASHBOARD_PORT 4173)"
 MERCHANT_DASHBOARD_BIND_ADDR_VALUE="$(env_value_or_default MERCHANT_DASHBOARD_BIND_ADDR 127.0.0.1)"
 MERCHANT_DASHBOARD_PORT_VALUE="$(env_value_or_default MERCHANT_DASHBOARD_PORT 4174)"
+DEMO_MERCHANT_BIND_ADDR_VALUE="$(env_value_or_default DEMO_MERCHANT_BIND_ADDR 127.0.0.1)"
+DEMO_MERCHANT_PORT_VALUE="$(env_value_or_default DEMO_MERCHANT_PORT 8100)"
 
 HEALTH_URL="${HEALTH_URL:-http://$(probe_host_for_bind_addr "$BACKEND_BIND_ADDR_VALUE"):${BACKEND_PORT_VALUE}/health}"
 OPS_DASHBOARD_URL="${OPS_DASHBOARD_URL:-http://$(probe_host_for_bind_addr "$OPS_DASHBOARD_BIND_ADDR_VALUE"):${OPS_DASHBOARD_PORT_VALUE}/}"
 MERCHANT_DASHBOARD_URL="${MERCHANT_DASHBOARD_URL:-http://$(probe_host_for_bind_addr "$MERCHANT_DASHBOARD_BIND_ADDR_VALUE"):${MERCHANT_DASHBOARD_PORT_VALUE}/}"
+DEMO_MERCHANT_URL="${DEMO_MERCHANT_URL:-http://$(probe_host_for_bind_addr "$DEMO_MERCHANT_BIND_ADDR_VALUE"):${DEMO_MERCHANT_PORT_VALUE}/health}"
 
 log "Updating checkout to origin/main"
 git fetch --prune origin main
 git checkout main
 git pull --ff-only origin main
 
-log "Building backend, worker, and dashboard images"
-docker compose -f "$COMPOSE_FILE" build backend worker ops-dashboard merchant-dashboard
+log "Validating sandbox Compose configuration"
+docker compose -f "$COMPOSE_FILE" config --quiet
+
+log "Building backend, worker, demo merchant, and dashboard images"
+docker compose -f "$COMPOSE_FILE" build backend worker demo-merchant ops-dashboard merchant-dashboard
 
 log "Starting PostgreSQL"
 docker compose -f "$COMPOSE_FILE" up -d postgres
@@ -104,8 +110,8 @@ docker compose -f "$COMPOSE_FILE" up -d postgres
 log "Applying Alembic migrations"
 docker compose -f "$COMPOSE_FILE" run --rm backend python -m alembic upgrade head
 
-log "Starting backend, worker, and dashboards"
-docker compose -f "$COMPOSE_FILE" up -d backend worker ops-dashboard merchant-dashboard
+log "Starting backend, worker, demo merchant, and dashboards"
+docker compose -f "$COMPOSE_FILE" up -d backend worker demo-merchant ops-dashboard merchant-dashboard
 
 log "Polling backend health endpoint: $HEALTH_URL"
 for ((attempt = 1; attempt <= HEALTH_ATTEMPTS; attempt++)); do
@@ -139,11 +145,25 @@ log "Polling merchant dashboard root: $MERCHANT_DASHBOARD_URL"
 for ((attempt = 1; attempt <= HEALTH_ATTEMPTS; attempt++)); do
   if curl -fsS "$MERCHANT_DASHBOARD_URL" >/dev/null; then
     log "Merchant dashboard check passed on attempt $attempt"
+    break
+  fi
+  sleep "$HEALTH_SLEEP_SECONDS"
+done
+
+if ! curl -fsS "$MERCHANT_DASHBOARD_URL" >/dev/null; then
+  log "Merchant dashboard check did not pass after $HEALTH_ATTEMPTS attempts"
+  exit 1
+fi
+
+log "Polling demo merchant health endpoint: $DEMO_MERCHANT_URL"
+for ((attempt = 1; attempt <= HEALTH_ATTEMPTS; attempt++)); do
+  if curl -fsS "$DEMO_MERCHANT_URL" >/dev/null; then
+    log "Demo merchant health check passed on attempt $attempt"
     git rev-parse --short HEAD
     exit 0
   fi
   sleep "$HEALTH_SLEEP_SECONDS"
 done
 
-log "Merchant dashboard check did not pass after $HEALTH_ATTEMPTS attempts"
+log "Demo merchant health check did not pass after $HEALTH_ATTEMPTS attempts"
 exit 1
