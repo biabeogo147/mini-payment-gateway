@@ -31,6 +31,8 @@ walkthrough.
 
 ## Reset To A Clean Demo
 
+### Local `.venv`
+
 Stop the worker before resetting, then run:
 
 ```powershell
@@ -43,6 +45,29 @@ The script refuses to run unless the environment is `local`, `demo`, or `test`,
 the database is PostgreSQL on `localhost`, `127.0.0.1`, or `::1`, and the
 confirmation flag is present. It clears business tables, preserves
 `alembic_version`, and resets the in-memory demo merchant when it is running.
+
+### Sandbox Server
+
+The sandbox has a separate guarded host-side reset command. This deletes all
+business data on the sandbox, including Admin/OPS users, merchants, payments,
+callbacks, webhooks, and audit logs:
+
+```bash
+sudo -u github-runner bash -lc '
+  cd /opt/mini-payment-gateway &&
+  bash deploy/reset_sandbox_demo.sh --confirm-reset
+'
+```
+
+The script stops the backend, worker, and Demo Merchant, creates a compressed
+database backup under
+`/home/github-runner/backups/mini-payment-gateway/`, truncates business tables,
+preserves `alembic_version`, restarts the services, and waits for both health
+checks. An exit trap attempts to restart the services if backup or truncate
+fails.
+
+After it finishes, open the Ops Dashboard and bootstrap the first Admin again.
+The Demo Merchant checkout also returns to its unconfigured state.
 
 ## Start Five Terminals
 
