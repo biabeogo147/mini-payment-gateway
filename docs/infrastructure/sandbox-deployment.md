@@ -120,6 +120,7 @@ Success means:
 - `postgres` is healthy
 - `backend` is healthy
 - `worker` is healthy
+- `demo-merchant` is healthy
 - `ops-dashboard` is healthy
 - `merchant-dashboard` is healthy
 
@@ -129,12 +130,14 @@ Success means:
 curl -fsS http://<sandbox-host>:<backend-port>/health
 curl -fsS http://<sandbox-host>:<ops-dashboard-port>/
 curl -fsS http://<sandbox-host>:<merchant-dashboard-port>/
+curl -fsS http://<sandbox-host>:<demo-merchant-port>/health
 curl -fsS http://<sandbox-host>:<backend-port>/v1/internal/auth/bootstrap-status
 ```
 
 Success means:
 
 - `/health` returns `{"status":"ok"}`
+- the demo merchant health endpoint returns a JSON object with `"status":"ok"`
 - both dashboard roots return HTML
 - internal auth bootstrap-status responds successfully
 
@@ -151,14 +154,15 @@ Treat the deploy as complete only when all three layers are true:
 ### Layer 2: Host Runtime
 
 - host checkout is the expected commit
-- `postgres`, `backend`, `worker`, `ops-dashboard`, and `merchant-dashboard`
-  are healthy
+- `postgres`, `backend`, `worker`, `demo-merchant`, `ops-dashboard`, and
+  `merchant-dashboard` are healthy
 
 ### Layer 3: Application
 
 - backend health endpoint responds successfully
 - Ops Dashboard root responds successfully
 - Merchant Dashboard root responds successfully
+- Demo Merchant checkout responds successfully
 - published PostgreSQL port is reachable when direct DB access is expected
 
 ## Manual Recovery Procedure
@@ -298,6 +302,20 @@ sudo -u github-runner bash -lc 'cd /opt/mini-payment-gateway && docker compose -
 sudo -u github-runner bash -lc 'cd /opt/mini-payment-gateway && docker compose -f docker-compose.sandbox.yml ps'
 ```
 
+### Demo Merchant Fails
+
+Usually means its provider secret does not match the gateway mapping, the
+backend is unhealthy, or port `8100` is not available on the configured bind
+address.
+
+Check:
+
+```bash
+curl -v http://<sandbox-host>:<demo-merchant-port>/health
+sudo -u github-runner bash -lc 'cd /opt/mini-payment-gateway && docker compose -f docker-compose.sandbox.yml logs --tail 100 demo-merchant'
+sudo -u github-runner bash -lc 'cd /opt/mini-payment-gateway && docker compose -f docker-compose.sandbox.yml ps demo-merchant'
+```
+
 ### Backend Health Fails
 
 Usually means the app did not finish startup or is unhealthy after boot.
@@ -333,6 +351,12 @@ Worker logs:
 
 ```bash
 sudo -u github-runner bash -lc 'cd /opt/mini-payment-gateway && docker compose -f docker-compose.sandbox.yml logs --tail 100 worker'
+```
+
+Demo Merchant logs:
+
+```bash
+sudo -u github-runner bash -lc 'cd /opt/mini-payment-gateway && docker compose -f docker-compose.sandbox.yml logs --tail 100 demo-merchant'
 ```
 
 Dashboard logs:
